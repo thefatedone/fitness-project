@@ -1,5 +1,55 @@
-node_modules/ 
-.env 
-__pycache__/ 
-*.pyc 
-.next/ 
+# Dependencies
+node_modules/
+.npm
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv/
+ENV/
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# Next.js
+.next/
+out/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.tgz
+*.tar.gz
+
+# Debug
+.npm
+.node_repl_history
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.bak
+*.tmp
+temp/
