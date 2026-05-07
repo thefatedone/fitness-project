@@ -11,7 +11,17 @@ from app.schemas.food import (
 from app.api.v1.routes.users import get_current_user
 from datetime import datetime, date
 from typing import Optional
+from pydantic import BaseModel
 import uuid
+import google.generativeai as genai
+import json
+import re
+
+
+class ImageAnalyzeRequest(BaseModel):
+    image: str  # base64 encoded image
+import json
+import re
 
 router = APIRouter()
 
@@ -213,3 +223,52 @@ async def get_weight_history(
         {"date": log.date.strftime("%Y-%m-%d"), "weight": log.weight}
         for log in logs
     ]
+
+
+@router.post("/analyze-image")
+async def analyze_food_image(
+    data: ImageAnalyzeRequest,
+    current_user: User = Depends(get_current_user),
+):
+    from app.core.config import settings
+
+    if not settings.GOOGLE_GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API key not configured")
+
+    try:
+        genai.configure(api_key=settings.GOOGLE_GEMINI_API_KEY)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+
+        # Clean base64 string (remove data URL prefix if present)
+        image_data = data.image
+        if "," in image_data:
+            image_data = image_data.split(",")[1]
+
+        import base64
+        image_bytes = base64.b64decode(image_data)
+
+        prompt = """You are a nutrition expert. Analyze this food and estimate its calories and macros per 100g.
+Respond ONLY with valid JSON in this exact format, no other text:
+{"name": "food name", "calories_per_100g": number, "protein_per_100g": number, "carbs_per_100g": number, "fat_per_100g": number}"""
+
+        image_part = {"mime_type": "image/jpeg", "data": image_bytes}
+        response = model.generate_content([prompt, image_part])
+
+        # Parse JSON response
+        response_text = response.text.strip()
+        # Remove markdown code blocks if present
+        response_text = re.sub(r"```json\s*", "", response_text)
+        response_text = re.sub(r"```\s*", "", response_text)
+        result = json.loads(response_text)
+
+        return {
+            "name": result.get("name", "Unknown Food"),
+            "calories_per_100g": float(result.get("calories_per_100g", 0)),
+            "protein_per_100g": float(result.get("protein_per_100g", 0)),
+            "carbs_per_100g": float(result.get("carbs_per_100g", 0)),
+            "fat_per_100g": float(result.get("fat_per_100g", 0)),
+        }
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse AI response: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Image analysis failed: {str(e)}")

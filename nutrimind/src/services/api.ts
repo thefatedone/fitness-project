@@ -1,11 +1,9 @@
 // API wrapper for backend calls
-// This will be implemented when the backend is ready
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
-interface RequestConfig {
+interface RequestConfig extends RequestInit {
   headers?: Record<string, string>;
-  signal?: AbortSignal;
 }
 
 export async function apiClient<T>(
@@ -20,6 +18,8 @@ export async function apiClient<T>(
       ...options.headers,
     },
     signal: options.signal,
+    method: options.method,
+    body: options.body,
   };
 
   const response = await fetch(url, config);
@@ -32,12 +32,12 @@ export async function apiClient<T>(
 }
 
 export const api = {
-  get: <T>(endpoint: string, config?: RequestConfig) =>
+  get: <T>(endpoint: string, config?: Omit<RequestConfig, 'method' | 'body'>) =>
     apiClient<T>(endpoint, { ...config, method: "GET" }),
-  post: <T>(endpoint: string, data?: unknown, config?: RequestConfig) =>
+  post: <T>(endpoint: string, data?: unknown, config?: Omit<RequestConfig, 'method' | 'body'>) =>
     apiClient<T>(endpoint, { ...config, method: "POST", body: JSON.stringify(data) }),
-  put: <T>(endpoint: string, data?: unknown, config?: RequestConfig) =>
+  put: <T>(endpoint: string, data?: unknown, config?: Omit<RequestConfig, 'method' | 'body'>) =>
     apiClient<T>(endpoint, { ...config, method: "PUT", body: JSON.stringify(data) }),
-  delete: <T>(endpoint: string, config?: RequestConfig) =>
+  delete: <T>(endpoint: string, config?: Omit<RequestConfig, 'method' | 'body'>) =>
     apiClient<T>(endpoint, { ...config, method: "DELETE" }),
 };
