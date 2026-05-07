@@ -128,7 +128,6 @@ export default function AddFoodModal({
       });
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Failed to analyze image");
-      setSelectedImage(null);
     } finally {
       setIsAnalyzing(false);
     }
