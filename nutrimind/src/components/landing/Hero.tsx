@@ -46,7 +46,7 @@ export default function Hero() {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <a
-                href="/(auth)/register"
+                href="/register"
                 className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-[#22c55e] text-black font-semibold hover:bg-[#16a34a] active:scale-[0.98] transition-all duration-300"
               >
                 Start Free

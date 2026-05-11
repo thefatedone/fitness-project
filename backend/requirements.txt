@@ -12,3 +12,4 @@ httpx==0.27.1
 anthropic==0.31.0
 slowapi==0.1.9
 redis==5.0.7
+google-generativeai==0.8.5

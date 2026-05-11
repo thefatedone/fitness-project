@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { X, Search, Plus } from "lucide-react";
+import { X, Search, Plus, Paperclip, Loader2 } from "lucide-react";
 
 interface FoodResult {
   id: number;
@@ -39,7 +39,11 @@ export default function AddFoodModal({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -76,6 +80,65 @@ export default function AddFoodModal({
     setSelectedFood(food);
     setQuantity("100");
     setUnit("g");
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      setSelectedImage(base64);
+      await analyzeImage(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const analyzeImage = async (imageData: string) => {
+    const token = localStorage.getItem("nutrimind_token");
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+    setIsAnalyzing(true);
+    setAnalyzeError("");
+    setManualMode(true);
+
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/tracker/analyze-image`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ image: imageData }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Failed to analyze image");
+      }
+
+      const data = await res.json();
+      setManualData({
+        name: data.name || "",
+        calories: data.calories_per_100g?.toString() || "",
+        protein: data.protein_per_100g?.toString() || "",
+        carbs: data.carbs_per_100g?.toString() || "",
+        fat: data.fat_per_100g?.toString() || "",
+      });
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Failed to analyze image");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setAnalyzeError("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleSubmit = async () => {
@@ -151,20 +214,68 @@ export default function AddFoodModal({
         {/* Search */}
         {!selectedFood && (
           <div className="p-4 border-b border-[#1a1a1a]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <div className="relative flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Search foods..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-gray-400 hover:text-white hover:border-green-500 transition-colors"
+                title="Analyze food image"
+              >
+                <Paperclip className="w-5 h-5" />
+              </button>
               <input
-                ref={inputRef}
-                type="text"
-                placeholder="Search foods..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors"
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
               />
             </div>
             {isLoading && (
               <div className="mt-3 flex justify-center">
                 <div className="w-5 h-5 border-2 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
+              </div>
+            )}
+
+            {/* Image Preview */}
+            {selectedImage && (
+              <div className="mt-3 relative">
+                <div className="relative inline-block">
+                  <img
+                    src={selectedImage}
+                    alt="Selected food"
+                    className="h-20 w-20 object-cover rounded-lg border border-[#2a2a2a]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+                {isAnalyzing && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-gray-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Analyzing image...
+                  </div>
+                )}
+                {analyzeError && (
+                  <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                    {analyzeError}
+                  </div>
+                )}
               </div>
             )}
           </div>
