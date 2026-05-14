@@ -15,5 +15,11 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
 
+    @property
+    def async_database_url(self) -> str:
+        if self.DATABASE_URL.startswith("postgresql+asyncpg://"):
+            return self.DATABASE_URL
+        return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 
 settings = Settings()
