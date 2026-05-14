@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     ANTHROPIC_API_KEY: str
     USDA_API_KEY: str = "DEMO_KEY"
+    FRONTEND_URL: str = "http://localhost:3000"
 
     class Config:
         env_file = ".env"
