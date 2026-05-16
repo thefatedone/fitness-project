@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 from logging.handlers import RotatingFileHandler
 import json
 from datetime import datetime
@@ -22,6 +23,10 @@ class JSONFormatter(logging.Formatter):
 
 
 def setup_logging(log_file: str = "/app/logs/app.log"):
+    log_dir = os.path.dirname(log_file)
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
