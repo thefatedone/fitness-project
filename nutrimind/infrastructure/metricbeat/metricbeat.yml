@@ -1,0 +1,16 @@
+metricbeat.modules:
+- module: system
+  metricsets:
+    - cpu
+    - memory
+    - network
+    - process
+  period: 30s
+  processes: ['.*']
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  index: "metricbeat-%{+yyyy.MM.dd}"
+
+setup.kibana:
+  host: "kibana:5601"
