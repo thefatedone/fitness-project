@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:16-alpine
-    restart: unless-stopped
     environment:
       POSTGRES_DB: nutrimind
       POSTGRES_USER: nutrimind
@@ -18,23 +17,58 @@ services:
 
   redis:
     image: redis:7-alpine
-    restart: unless-stopped
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.12.0
+    ports:
+      - "5044:5044"
+    volumes:
+      - ./infrastructure/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
 
   backend:
     build: ./backend
-    restart: unless-stopped
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - ./backend/.env
     volumes:
       - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - ./logs:/app/logs
+    command: uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+    profiles:
+      - app
 
   frontend:
     build: ./nutrimind
@@ -44,6 +78,14 @@ services:
       - backend
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+    profiles:
+      - app
 
 volumes:
   postgres_data:
+  redis_data:
+  elasticsearch_data:
+
+networks:
+  default:
+    name: nutrimind-network
