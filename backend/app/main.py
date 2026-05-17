@@ -8,25 +8,25 @@ from app.core.redis_client import redis_client
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("=== LIFESPAN STARTING ===")
+    print("=== LIFESPAN STARTING ===", flush=True)
 
     try:
         await redis_client.connect()
-        logger.info("Redis connected")
+        print("Redis connected", flush=True)
     except Exception as e:
-        logger.error(f"Redis connection failed: {e}")
+        print(f"Redis connection failed: {e}", flush=True)
 
     try:
         from app.core.database import engine, Base
         from app.models.user import User
         from app.models.food_log import FoodLog, WeightLog, WaterLog
         from app.models.chat import ChatMessage
-        logger.info("=== CREATING TABLES NOW ===")
+        print("=== CREATING TABLES NOW ===", flush=True)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables verified/created")
+        print("Database tables verified/created", flush=True)
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
+        print(f"Database initialization failed: {e}", flush=True)
 
     yield
 
@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
         await redis_client.disconnect()
     except Exception:
         pass
-    logger.info("Shutting down NutriMind API")
+    print("Shutting down NutriMind API", flush=True)
 
 
 app = FastAPI(title="NutriMind API", version="1.0.0", docs_url="/api/docs")
