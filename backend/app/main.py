@@ -18,7 +18,10 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    await redis_client.disconnect()
+    try:
+        await redis_client.disconnect()
+    except Exception:
+        pass
     logger.info("Shutting down NutriMind API")
 
 
@@ -32,14 +35,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.api.v1.routes import auth, users, tracker, ai
+
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
+app.include_router(tracker.router, prefix="/api/v1")
+app.include_router(ai.router, prefix="/api/v1")
+
 
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": "1.0.0"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    import os
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
