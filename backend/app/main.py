@@ -8,7 +8,7 @@ from app.core.redis_client import redis_client
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting NutriMind API")
+    logger.info("=== LIFESPAN STARTING ===")
 
     try:
         await redis_client.connect()
@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI):
         from app.models.user import User
         from app.models.food_log import FoodLog, WeightLog, WaterLog
         from app.models.chat import ChatMessage
+        logger.info("=== CREATING TABLES NOW ===")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables verified/created")
