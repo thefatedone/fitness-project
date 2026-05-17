@@ -7,6 +7,8 @@ RUN npm install
 
 COPY . .
 
+ENV NEXT_PUBLIC_API_URL=https://fitness-service-production.up.railway.app
+
 RUN npm run build
 
 EXPOSE 3000
