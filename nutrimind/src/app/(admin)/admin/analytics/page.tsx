@@ -27,7 +27,7 @@ export default function AdminAnalyticsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const token = typeof window !== "undefined" ? localStorage.getItem("nutrimind_token") : null;
-  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const API = process.env.NEXT_PUBLIC_API_URL ;
 
   useEffect(() => {
     const fetchUsers = async () => {

@@ -58,7 +58,7 @@ export default function TrackerPage() {
     setError("");
     try {
       const token = localStorage.getItem("nutrimind_token");
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ;
       const res = await fetch(`${apiUrl}/api/v1/tracker/daily?date=${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` },
       });

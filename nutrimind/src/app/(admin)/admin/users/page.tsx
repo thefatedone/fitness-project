@@ -50,7 +50,7 @@ export default function AdminUsersPage() {
   const [showPanel, setShowPanel] = useState(false);
 
   const token = typeof window !== "undefined" ? localStorage.getItem("nutrimind_token") : null;
-  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const API = process.env.NEXT_PUBLIC_API_URL ;
 
   useEffect(() => {
     const fetchUsers = async () => {

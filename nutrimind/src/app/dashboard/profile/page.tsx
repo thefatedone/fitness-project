@@ -114,7 +114,7 @@ export default function ProfilePage() {
   const [logWeight, setLogWeight] = useState("");
 
   const token = typeof window !== "undefined" ? localStorage.getItem("nutrimind_token") : null;
-  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const API = process.env.NEXT_PUBLIC_API_URL ;
 
   useEffect(() => {
     if (!token) {

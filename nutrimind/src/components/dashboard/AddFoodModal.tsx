@@ -57,7 +57,7 @@ export default function AddFoodModal({
     const searchTimeout = setTimeout(async () => {
       setIsLoading(true);
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL ;
         const token = localStorage.getItem("nutrimind_token");
         const res = await fetch(`${apiUrl}/api/v1/food/search?q=${encodeURIComponent(query)}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -97,7 +97,7 @@ export default function AddFoodModal({
 
   const analyzeImage = async (imageData: string) => {
     const token = localStorage.getItem("nutrimind_token");
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ;
 
     setIsAnalyzing(true);
     setAnalyzeError("");
@@ -143,7 +143,7 @@ export default function AddFoodModal({
 
   const handleSubmit = async () => {
     const token = localStorage.getItem("nutrimind_token");
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ;
 
     try {
       let payload;
