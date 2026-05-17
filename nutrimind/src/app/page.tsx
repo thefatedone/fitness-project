@@ -1,3 +1,4 @@
+// Force rebuild - API_URL: ${process.env.NEXT_PUBLIC_API_URL}
 import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
