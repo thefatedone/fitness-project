@@ -7,7 +7,7 @@ RUN npm install
 
 COPY . .
 
-ENV NEXT_PUBLIC_API_URL=https://fitness-service-production.up.railway.app
+ENV NEXT_PUBLIC_API_URL=https://backend-fitness-production-3829.up.railway.app/
 
 RUN npm run build
 
