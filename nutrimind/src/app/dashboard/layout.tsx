@@ -44,7 +44,7 @@ export default function DashboardLayout({
 
     const fetchUser = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ;
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         const res = await fetch(`${apiUrl}/api/v1/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -84,12 +84,12 @@ export default function DashboardLayout({
       <aside className="fixed left-0 top-0 bottom-0 w-64 bg-[#0d0d0d] border-r border-[#1a1a1a] flex flex-col z-50">
         {/* Logo */}
         <div className="p-6 border-b border-[#1a1a1a]">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-[#22c55e] flex items-center justify-center">
               <span className="text-black font-bold text-xl">N</span>
             </div>
             <span className="text-white font-bold text-xl">NutriMind</span>
-          </div>
+          </Link>
         </div>
 
         {/* Nav Items */}

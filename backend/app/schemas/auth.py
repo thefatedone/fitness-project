@@ -5,7 +5,7 @@ class UserCreate(BaseModel):
     email: str | None = None
     phone: str | None = None
     password: str
-    name: str
+    full_name: str
 
 
 class UserLogin(BaseModel):
@@ -22,5 +22,5 @@ class Token(BaseModel):
 class UserResponse(BaseModel):
     id: str
     email: str | None
-    name: str
+    full_name: str
     role: str

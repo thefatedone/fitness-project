@@ -9,12 +9,23 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     ANTHROPIC_API_KEY: str
+    GOOGLE_GEMINI_API_KEY: str
     USDA_API_KEY: str = "DEMO_KEY"
     FRONTEND_URL: str = "http://localhost:3000"
     ELASTIC_APM_SERVICE_NAME: str = "nutrimind-backend"
     ELASTIC_APM_SERVER_URL: str = "http://localhost:8200"
     ELASTIC_APM_ENABLED: bool = False
     CACHE_TTL: int = 300
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_OWNER_CHAT_ID: str = ""
+    GEMINI_API_KEY: str = ""
+    SMTP_HOST: str = "mailhog"
+    SMTP_PORT: int = 1025
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "noreply@nutrimind.app"
+    SMTP_FROM_NAME: str = "NutriMind"
+    SMTP_TLS: bool = False
 
     class Config:
         env_file = ".env"

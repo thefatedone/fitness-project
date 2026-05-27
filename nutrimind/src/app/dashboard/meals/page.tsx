@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { ChefHat, Sparkles, Plus, Clock, Flame, BrainCircuit, X } from "lucide-react";
+import { ChefHat, Sparkles, Plus, Clock, Flame, BrainCircuit, X, Camera } from "lucide-react";
 import AddFoodModal from "@/components/dashboard/AddFoodModal";
+import PhotoLogModal from "@/components/dashboard/PhotoLogModal";
 
 interface FoodItem {
   id: string;
@@ -27,6 +28,7 @@ interface DailyData {
   fat_consumed: number;
   fat_target: number;
   water_consumed: number;
+  water_target: number;
   meals: {
     breakfast: FoodItem[];
     lunch: FoodItem[];
@@ -92,10 +94,11 @@ export default function MealsPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [showAddFood, setShowAddFood] = useState(false);
   const [addFoodMealType, setAddFoodMealType] = useState("breakfast");
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
 
   const token = typeof window !== "undefined" ? localStorage.getItem("nutrimind_token") : null;
-  const API = process.env.NEXT_PUBLIC_API_URL ;
+  const API = process.env.NEXT_PUBLIC_API_URL;
 
   useEffect(() => {
     if (!token) {
@@ -119,7 +122,7 @@ export default function MealsPage() {
         }
 
         const promises = weekDates.map((date) =>
-          fetch(`${API}/api/v1/tracker/daily?date=${date}`, {
+          fetch(`${API}/api/v1/tracker/daily?date_str=${date}`, {
             headers: { Authorization: `Bearer ${token}` },
           }).then((r) => (r.ok ? r.json() : null))
         );
@@ -127,7 +130,52 @@ export default function MealsPage() {
 
         const dataMap: Record<string, DailyData> = {};
         weekDates.forEach((date, i) => {
-          dataMap[date] = results[i];
+          const logs = results[i] || [];
+          const mealsMap: { breakfast: FoodItem[]; lunch: FoodItem[]; dinner: FoodItem[]; snack: FoodItem[] } = {
+            breakfast: [],
+            lunch: [],
+            dinner: [],
+            snack: [],
+          };
+          let calories_consumed = 0;
+          let protein_consumed = 0;
+          let carbs_consumed = 0;
+          let fat_consumed = 0;
+
+          for (const log of logs) {
+            const mealKey = log.meal_type?.toLowerCase() as keyof typeof mealsMap;
+            if (mealKey in mealsMap) {
+              mealsMap[mealKey].push({
+                id: log.id,
+                food_name: log.food_name,
+                calories: log.calories,
+                protein: log.protein,
+                carbs: log.carbs,
+                fat: log.fat,
+                quantity: log.quantity,
+                unit: log.unit,
+              });
+            }
+            calories_consumed += log.calories || 0;
+            protein_consumed += log.protein || 0;
+            carbs_consumed += log.carbs || 0;
+            fat_consumed += log.fat || 0;
+          }
+
+          dataMap[date] = {
+            date,
+            calories_consumed,
+            calories_target: 2000,
+            protein_consumed,
+            protein_target: 150,
+            carbs_consumed,
+            carbs_target: 250,
+            fat_consumed,
+            fat_target: 65,
+            water_consumed: 0,
+            water_target: 2000,
+            meals: mealsMap,
+          };
         });
         setWeekData(dataMap);
       } catch (error) {
@@ -143,12 +191,59 @@ export default function MealsPage() {
   const refreshSelectedDate = useCallback(async () => {
     if (!token || !selectedDate) return;
     try {
-      const res = await fetch(`${API}/api/v1/tracker/daily?date=${selectedDate}`, {
+      const res = await fetch(`${API}/api/v1/tracker/daily?date_str=${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data = await res.json();
-        setWeekData((prev) => ({ ...prev, [selectedDate]: data }));
+        const logs = await res.json();
+        const mealsMap: { breakfast: FoodItem[]; lunch: FoodItem[]; dinner: FoodItem[]; snack: FoodItem[] } = {
+          breakfast: [],
+          lunch: [],
+          dinner: [],
+          snack: [],
+        };
+        let calories_consumed = 0;
+        let protein_consumed = 0;
+        let carbs_consumed = 0;
+        let fat_consumed = 0;
+
+        for (const log of logs) {
+          const mealKey = log.meal_type?.toLowerCase() as keyof typeof mealsMap;
+          if (mealKey in mealsMap) {
+            mealsMap[mealKey].push({
+              id: log.id,
+              food_name: log.food_name,
+              calories: log.calories,
+              protein: log.protein,
+              carbs: log.carbs,
+              fat: log.fat,
+              quantity: log.quantity,
+              unit: log.unit,
+            });
+          }
+          calories_consumed += log.calories || 0;
+          protein_consumed += log.protein || 0;
+          carbs_consumed += log.carbs || 0;
+          fat_consumed += log.fat || 0;
+        }
+
+        setWeekData((prev) => ({
+          ...prev,
+          [selectedDate]: {
+            date: selectedDate,
+            calories_consumed,
+            calories_target: 2000,
+            protein_consumed,
+            protein_target: 150,
+            carbs_consumed,
+            carbs_target: 250,
+            fat_consumed,
+            fat_target: 65,
+            water_consumed: 0,
+            water_target: 2000,
+            meals: mealsMap,
+          },
+        }));
       }
     } catch (error) {
       console.error("Failed to refresh date:", error);
@@ -244,6 +339,11 @@ export default function MealsPage() {
           <h1 className="text-2xl font-bold text-white">Meal Planner</h1>
           <p className="text-gray-500 text-sm">Plan and track your weekly nutrition</p>
         </div>
+        <button onClick={() => setShowPhotoModal(true)}
+          className="ml-auto flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-600 text-black font-semibold rounded-xl transition-all shadow-lg shadow-green-500/20 hover:-translate-y-0.5">
+          <Camera className="w-5 h-5" />
+          Log Food by Photo
+        </button>
       </div>
 
       {/* Week Strip */}
@@ -405,6 +505,13 @@ export default function MealsPage() {
         onClose={() => setShowAddFood(false)}
         mealType={addFoodMealType}
         onFoodAdded={refreshSelectedDate}
+      />
+
+      {/* Photo Log Modal */}
+      <PhotoLogModal
+        isOpen={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+        onSuccess={() => { setShowPhotoModal(false); refreshSelectedDate(); }}
       />
 
       {/* Sticky Summary Bar */}

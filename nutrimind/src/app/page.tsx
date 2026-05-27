@@ -1,10 +1,10 @@
-// Force rebuild - API_URL: ${process.env.NEXT_PUBLIC_API_URL}
 import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import HowItWorks from "@/components/landing/HowItWorks";
 import Testimonials from "@/components/landing/Testimonials";
 import Pricing from "@/components/landing/Pricing";
+import ContactSection from "@/components/landing/ContactSection";
 import Footer from "@/components/landing/Footer";
 
 export default function Home() {
@@ -16,6 +16,7 @@ export default function Home() {
       <HowItWorks />
       <Testimonials />
       <Pricing />
+      <ContactSection />
       <Footer />
     </main>
   );

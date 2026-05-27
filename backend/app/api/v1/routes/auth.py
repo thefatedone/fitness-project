@@ -9,7 +9,7 @@ from app.models.user import User
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register")
 async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     if not user_data.email and not user_data.phone:
         raise HTTPException(status_code=400, detail="Email or phone required")
@@ -27,12 +27,13 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         email=user_data.email,
         phone=user_data.phone,
         password_hash=hashed_pw,
-        name=user_data.name,
+        full_name=user_data.full_name,
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
-    return new_user
+    access_token = create_access_token(data={"sub": new_user.id, "role": new_user.role})
+    return {"access_token": access_token, "user": new_user}
 
 
 @router.post("/login", response_model=Token)

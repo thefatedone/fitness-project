@@ -66,3 +66,19 @@ class WeightLogResponse(WeightLogBase):
 
     class Config:
         from_attributes = True
+
+
+class WeightLogHistoryResponse(BaseModel):
+    id: str
+    date: str  # yyyy-MM-dd format
+    weight: float
+    note: Optional[str] = None
+
+    @classmethod
+    def from_weight_log(cls, wl):
+        return cls(
+            id=wl.id,
+            date=wl.date.strftime("%Y-%m-%d") if hasattr(wl.date, 'strftime') else str(wl.date)[:10],
+            weight=wl.weight,
+            note=wl.note,
+        )

@@ -33,6 +33,8 @@ services:
       - "9200:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+    profiles:
+      - elk
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.12.0
@@ -42,6 +44,8 @@ services:
       - ./infrastructure/logstash/pipeline:/usr/share/logstash/pipeline:ro
     depends_on:
       - elasticsearch
+    profiles:
+      - elk
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.12.0
@@ -51,9 +55,48 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
       - elasticsearch
+    profiles:
+      - elk
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.12.0
+    user: root
+    volumes:
+      - ./infrastructure/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs:/var/log/app:ro
+    depends_on:
+      - logstash
+    command: filebeat -e -strict.perms=false -c /usr/share/filebeat/filebeat.yml
+    profiles:
+      - elk
+
+  metricbeat:
+    image: docker.elastic.co/beats/metricbeat:8.12.0
+    user: root
+    volumes:
+      - ./infrastructure/metricbeat/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - elasticsearch
+    command: metricbeat -e -strict.perms=false -c /usr/share/metricbeat/metricbeat.yml
+    profiles:
+      - elk
+
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.12.0
+    ports:
+      - "8200:8200"
+    environment:
+      - output.elasticsearch.hosts=elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    profiles:
+      - elk
 
   backend:
-    build: ./backend
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     depends_on:
@@ -62,24 +105,39 @@ services:
       redis:
         condition: service_started
     env_file:
-      - ./backend/.env
+      - ../backend/.env
     volumes:
-      - ./backend:/app
+      - ../backend:/app
       - ./logs:/app/logs
     command: uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
-    profiles:
-      - app
 
   frontend:
-    build: ./nutrimind
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     depends_on:
       - backend
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
-    profiles:
-      - app
+
+  telegram-bot:
+    build:
+      context: ../backend
+      dockerfile: telegram.Dockerfile
+    depends_on:
+      - redis
+    env_file:
+      - ../backend/.env
+    command: python -m app.core.telegram_bot
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   postgres_data:

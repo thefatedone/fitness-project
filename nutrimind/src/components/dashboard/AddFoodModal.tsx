@@ -57,7 +57,7 @@ export default function AddFoodModal({
     const searchTimeout = setTimeout(async () => {
       setIsLoading(true);
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ;
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         const token = localStorage.getItem("nutrimind_token");
         const res = await fetch(`${apiUrl}/api/v1/food/search?q=${encodeURIComponent(query)}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -97,7 +97,7 @@ export default function AddFoodModal({
 
   const analyzeImage = async (imageData: string) => {
     const token = localStorage.getItem("nutrimind_token");
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
     setIsAnalyzing(true);
     setAnalyzeError("");
@@ -143,7 +143,8 @@ export default function AddFoodModal({
 
   const handleSubmit = async () => {
     const token = localStorage.getItem("nutrimind_token");
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const dateStr = new Date().toISOString().split("T")[0];
 
     try {
       let payload;
@@ -152,7 +153,7 @@ export default function AddFoodModal({
         const qty = parseFloat(quantity) || 100;
         const multiplier = qty / 100;
         payload = {
-          name: selectedFood.name,
+          food_name: selectedFood.name,
           calories: Math.round(selectedFood.calories_per_100g * multiplier),
           protein: Math.round(selectedFood.protein_per_100g * multiplier * 10) / 10,
           carbs: Math.round(selectedFood.carbs_per_100g * multiplier * 10) / 10,
@@ -160,10 +161,11 @@ export default function AddFoodModal({
           quantity: qty,
           unit,
           meal_type: mealType.toLowerCase(),
+          date: dateStr,
         };
       } else {
         payload = {
-          name: manualData.name,
+          food_name: manualData.name,
           calories: parseInt(manualData.calories) || 0,
           protein: parseFloat(manualData.protein) || 0,
           carbs: parseFloat(manualData.carbs) || 0,
@@ -171,6 +173,7 @@ export default function AddFoodModal({
           quantity: parseFloat(quantity) || 100,
           unit,
           meal_type: mealType.toLowerCase(),
+          date: dateStr,
         };
       }
 

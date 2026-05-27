@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
@@ -12,23 +12,23 @@ class UserBase(BaseModel):
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
-    name: Optional[str] = None
-    date_of_birth: Optional[datetime] = None
+    full_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
     sex: Optional[str] = None
     height: Optional[float] = None
     current_weight: Optional[float] = None
     target_weight: Optional[float] = None
     activity_level: Optional[str] = None
     primary_goal: Optional[str] = None
-    dietary_prefs: Optional[str] = None
-    allergies: Optional[str] = None
+    dietary_preferences: Optional[str] = None
+    food_allergies: Optional[str] = None
     weight_loss_pace: Optional[float] = None
 
 
 class UserResponse(BaseModel):
     id: str
     email: Optional[str]
-    name: str
+    full_name: str
     role: str
     phone: Optional[str] = None
     date_of_birth: Optional[datetime] = None
@@ -38,8 +38,8 @@ class UserResponse(BaseModel):
     target_weight: Optional[float] = None
     activity_level: Optional[str] = None
     primary_goal: Optional[str] = None
-    dietary_prefs: Optional[str] = None
-    allergies: Optional[str] = None
+    dietary_preferences: Optional[str] = None
+    food_allergies: Optional[str] = None
     weight_loss_pace: Optional[float] = None
     bmr: Optional[float] = None
     tdee: Optional[float] = None

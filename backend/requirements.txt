@@ -7,8 +7,11 @@ pydantic==2.8.2
 pydantic-settings==2.3.4
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
 python-multipart==0.0.9
 httpx==0.27.1
 anthropic==0.31.0
 slowapi==0.1.9
 redis==5.0.7
+python-telegram-bot>=20.0
+google-generativeai==0.8.3

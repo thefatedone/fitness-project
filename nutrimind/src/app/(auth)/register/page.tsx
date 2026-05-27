@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Check, Mail, Phone, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, User, Ruler, Target } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ;
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface FormData {
   email: string;
@@ -40,8 +40,8 @@ const allergyOptions = [
 
 const activityLevels = [
   { id: "sedentary", icon: "🪑", label: "Sedentary", desc: "Desk job, little exercise" },
-  { id: "light", icon: "🚶", label: "Lightly Active", desc: "Exercise 1-3 days/week" },
-  { id: "moderate", icon: "🏃", label: "Moderately Active", desc: "Exercise 3-5 days/week" },
+  { id: "lightly_active", icon: "🚶", label: "Lightly Active", desc: "Exercise 1-3 days/week" },
+  { id: "moderately_active", icon: "🏃", label: "Moderately Active", desc: "Exercise 3-5 days/week" },
   { id: "very_active", icon: "💪", label: "Very Active", desc: "Hard exercise 6-7 days/week" },
   { id: "extra_active", icon: "🔥", label: "Extra Active", desc: "Physical job + daily training" },
 ];
@@ -137,7 +137,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           [formData.loginMethod]: formData.loginMethod === "email" ? formData.email : formData.phone,
           password: formData.password,
-          name: formData.name,
+          full_name: formData.name,
         }),
       });
 
@@ -185,8 +185,8 @@ export default function RegisterPage() {
           target_weight: targetWeightKg,
           activity_level: formData.activityLevel,
           primary_goal: formData.primaryGoal,
-          dietary_prefs: formData.dietaryPrefs.join(","),
-          allergies: formData.allergies.join(","),
+          dietary_preferences: formData.dietaryPrefs.join(","),
+          food_allergies: formData.allergies.join(","),
           weight_loss_pace: formData.weightPace,
         }),
       });

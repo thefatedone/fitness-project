@@ -41,7 +41,7 @@ app = FastAPI(title="NutriMind API", version="1.0.0", docs_url="/api/docs")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "https://backend-fitness-production-3829.up.railway.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,11 +49,13 @@ app.add_middleware(
 
 print(f"CORS allowed origins: http://localhost:3000, {settings.FRONTEND_URL}", flush=True)
 
-from app.api.v1.routes import auth, users, tracker, ai
+from app.api.v1.routes import auth, users, tracker, ai, contact, food_recognition
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(tracker.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
+app.include_router(contact.router, prefix="/api/v1")
+app.include_router(food_recognition.router, prefix="/api/v1")
 
 
 @app.get("/health")

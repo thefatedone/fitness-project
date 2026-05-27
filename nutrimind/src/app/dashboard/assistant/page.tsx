@@ -31,6 +31,7 @@ export default function AssistantPage() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isStreaming) return
+    const currentToken = localStorage.getItem('nutrimind_token');
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, created_at: new Date().toISOString() }
     setMessages(prev => [...prev, userMsg])
     setIsStreaming(true)
@@ -40,7 +41,7 @@ export default function AssistantPage() {
     try {
       const res = await fetch(`${API}/api/v1/ai/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}` },
         body: JSON.stringify({ message: text }),
       })
       const reader = res.body?.getReader()
@@ -67,7 +68,8 @@ export default function AssistantPage() {
   }
 
   const clearHistory = async () => {
-    await fetch(`${API}/api/v1/ai/history`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+    const currentToken = localStorage.getItem('nutrimind_token');
+    await fetch(`${API}/api/v1/ai/history`, { method: 'DELETE', headers: { Authorization: `Bearer ${currentToken}` } })
     setMessages([])
   }
 

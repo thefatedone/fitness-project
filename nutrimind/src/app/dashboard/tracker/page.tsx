@@ -58,13 +58,58 @@ export default function TrackerPage() {
     setError("");
     try {
       const token = localStorage.getItem("nutrimind_token");
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ;
-      const res = await fetch(`${apiUrl}/api/v1/tracker/daily?date=${selectedDate}`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const res = await fetch(`${apiUrl}/api/v1/tracker/daily?date_str=${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
-        setDailyData(data);
+        // Transform flat array into meals grouped by meal_type
+        const mealsMap: { breakfast: FoodItem[]; lunch: FoodItem[]; dinner: FoodItem[]; snack: FoodItem[] } = {
+          breakfast: [],
+          lunch: [],
+          dinner: [],
+          snack: [],
+        };
+        let calories_consumed = 0;
+        let protein_consumed = 0;
+        let carbs_consumed = 0;
+        let fat_consumed = 0;
+
+        for (const log of data) {
+          const mealKey = log.meal_type?.toLowerCase() as keyof typeof mealsMap;
+          if (mealKey in mealsMap) {
+            mealsMap[mealKey].push({
+              id: log.id,
+              name: log.food_name,
+              calories: log.calories,
+              protein: log.protein,
+              carbs: log.carbs,
+              fat: log.fat,
+              quantity: log.quantity,
+              unit: log.unit,
+            });
+          }
+          calories_consumed += log.calories || 0;
+          protein_consumed += log.protein || 0;
+          carbs_consumed += log.carbs || 0;
+          fat_consumed += log.fat || 0;
+        }
+
+        setDailyData({
+          date: selectedDate,
+          calories_consumed,
+          calories_target: 2000,
+          protein_consumed,
+          protein_target: 150,
+          carbs_consumed,
+          carbs_target: 250,
+          fat_consumed,
+          fat_target: 65,
+          water_consumed: 0,
+          water_target: 2000,
+          meals: mealsMap,
+        });
       } else if (res.status === 404) {
         setDailyData({
           date: selectedDate,
@@ -97,6 +142,20 @@ export default function TrackerPage() {
   const handleAddFood = (mealType: string) => {
     setSelectedMeal(mealType);
     setModalOpen(true);
+  };
+
+  const deleteFood = async (foodId: number) => {
+    const token = localStorage.getItem("nutrimind_token");
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    try {
+      await fetch(`${apiUrl}/api/v1/tracker/food/${foodId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchDailyData();
+    } catch (error) {
+      console.error("Failed to delete food:", error);
+    }
   };
 
   const navigateDate = (direction: number) => {
@@ -223,6 +282,7 @@ export default function TrackerPage() {
               emoji={meal.emoji}
               items={(dailyData?.meals as Record<string, FoodItem[]>) [meal.key] || []}
               onAddFood={handleAddFood}
+              onDeleteFood={deleteFood}
             />
           ))}
         </div>

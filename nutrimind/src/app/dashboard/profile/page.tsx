@@ -114,7 +114,7 @@ export default function ProfilePage() {
   const [logWeight, setLogWeight] = useState("");
 
   const token = typeof window !== "undefined" ? localStorage.getItem("nutrimind_token") : null;
-  const API = process.env.NEXT_PUBLIC_API_URL ;
+  const API = process.env.NEXT_PUBLIC_API_URL;
 
   useEffect(() => {
     if (!token) {
@@ -135,15 +135,15 @@ export default function ProfilePage() {
         const data = await userRes.json();
         setProfile(data);
         setFullName(data.full_name || "");
-        setDateOfBirth(data.date_of_birth || "");
+        setDateOfBirth(data.date_of_birth ? data.date_of_birth.split("T")[0] : "");
         setSex(data.sex || "");
         setHeight(data.height?.toString() || "");
         setCurrentWeight(data.current_weight?.toString() || "");
         setTargetWeight(data.target_weight?.toString() || "");
         setActivityLevel(data.activity_level || "moderately_active");
         setPrimaryGoal(data.primary_goal || "maintain");
-        setDietaryPrefs(data.dietary_preferences || []);
-        setAllergies(data.food_allergies || []);
+        setDietaryPrefs(data.dietary_preferences ? data.dietary_preferences.split(",").filter(Boolean) : []);
+        setAllergies(data.food_allergies ? data.food_allergies.split(",").filter(Boolean) : []);
       }
 
       if (weightRes.ok) {
@@ -169,7 +169,7 @@ export default function ProfilePage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${localStorage.getItem("nutrimind_token")}`,
         },
         body: JSON.stringify({
           full_name: fullName,
@@ -180,8 +180,8 @@ export default function ProfilePage() {
           target_weight: parseFloat(targetWeight) || null,
           activity_level: activityLevel,
           primary_goal: primaryGoal,
-          dietary_preferences: dietaryPrefs,
-          food_allergies: allergies,
+          dietary_preferences: dietaryPrefs.join(",") || null,
+          food_allergies: allergies.join(",") || null,
         }),
       });
 
@@ -205,13 +205,16 @@ export default function ProfilePage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${localStorage.getItem("nutrimind_token")}`,
         },
         body: JSON.stringify({
           height: parseFloat(height) || null,
           current_weight: parseFloat(currentWeight) || null,
           target_weight: parseFloat(targetWeight) || null,
           activity_level: activityLevel,
+          primary_goal: primaryGoal,
+          dietary_preferences: dietaryPrefs.join(",") || null,
+          food_allergies: allergies.join(",") || null,
         }),
       });
 
@@ -235,12 +238,12 @@ export default function ProfilePage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${localStorage.getItem("nutrimind_token")}`,
         },
         body: JSON.stringify({
           primary_goal: primaryGoal,
-          dietary_preferences: dietaryPrefs,
-          food_allergies: allergies,
+          dietary_preferences: dietaryPrefs.join(",") || null,
+          food_allergies: allergies.join(",") || null,
         }),
       });
 
@@ -357,10 +360,11 @@ export default function ProfilePage() {
               {/* Fields */}
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-gray-500 text-xs mb-1 block">Full Name</label>
+                  <label htmlFor="fullName" className="text-gray-500 text-xs mb-1 block">Full Name</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <input
+                      id="fullName"
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
@@ -381,10 +385,11 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-gray-500 text-xs mb-1 block">Date of Birth</label>
+                  <label htmlFor="dateOfBirth" className="text-gray-500 text-xs mb-1 block">Date of Birth</label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <input
+                      id="dateOfBirth"
                       type="date"
                       value={dateOfBirth}
                       onChange={(e) => setDateOfBirth(e.target.value)}
@@ -427,10 +432,11 @@ export default function ProfilePage() {
             <h2 className="text-white font-semibold mb-4">Measurements</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="text-gray-500 text-xs mb-1 block">Height (cm)</label>
+                <label htmlFor="height" className="text-gray-500 text-xs mb-1 block">Height (cm)</label>
                 <div className="relative">
                   <Ruler className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
+                    id="height"
                     type="number"
                     value={height}
                     onChange={(e) => setHeight(e.target.value)}
@@ -440,10 +446,11 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label className="text-gray-500 text-xs mb-1 block">Current Weight (kg)</label>
+                <label htmlFor="currentWeight" className="text-gray-500 text-xs mb-1 block">Current Weight (kg)</label>
                 <div className="relative">
                   <Weight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
+                    id="currentWeight"
                     type="number"
                     value={currentWeight}
                     onChange={(e) => setCurrentWeight(e.target.value)}
@@ -453,10 +460,11 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label className="text-gray-500 text-xs mb-1 block">Target Weight (kg)</label>
+                <label htmlFor="targetWeight" className="text-gray-500 text-xs mb-1 block">Target Weight (kg)</label>
                 <div className="relative">
                   <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
+                    id="targetWeight"
                     type="number"
                     value={targetWeight}
                     onChange={(e) => setTargetWeight(e.target.value)}
@@ -468,8 +476,9 @@ export default function ProfilePage() {
             </div>
 
             <div className="mb-4">
-              <label className="text-gray-500 text-xs mb-1 block">Activity Level</label>
+              <label htmlFor="activityLevel" className="text-gray-500 text-xs mb-1 block">Activity Level</label>
               <select
+                id="activityLevel"
                 value={activityLevel}
                 onChange={(e) => setActivityLevel(e.target.value)}
                 className="w-full px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white focus:outline-none focus:border-green-500 transition-colors"
@@ -484,10 +493,11 @@ export default function ProfilePage() {
 
             {showPaceSlider && (
               <div className="mb-4">
-                <label className="text-gray-500 text-xs mb-1 block">
+                <label htmlFor="goalPace" className="text-gray-500 text-xs mb-1 block">
                   Weight Goal Pace: {goalPace} kg/week
                 </label>
                 <input
+                  id="goalPace"
                   type="range"
                   min="0.25"
                   max="1.0"
@@ -676,12 +686,14 @@ export default function ProfilePage() {
                 {/* Log new weight */}
                 <div className="flex gap-2">
                   <input
+                    id="logDate"
                     type="date"
                     value={logDate}
                     onChange={(e) => setLogDate(e.target.value)}
                     className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white text-sm focus:outline-none focus:border-green-500"
                   />
                   <input
+                    id="logWeight"
                     type="number"
                     value={logWeight}
                     onChange={(e) => setLogWeight(e.target.value)}
@@ -702,12 +714,14 @@ export default function ProfilePage() {
                 <p className="text-gray-500 text-sm">Start logging your weight to see progress</p>
                 <div className="flex gap-2 mt-4">
                   <input
+                    id="logDate"
                     type="date"
                     value={logDate}
                     onChange={(e) => setLogDate(e.target.value)}
                     className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white text-sm focus:outline-none focus:border-green-500"
                   />
                   <input
+                    id="logWeight"
                     type="number"
                     value={logWeight}
                     onChange={(e) => setLogWeight(e.target.value)}
