@@ -1,30 +1,149 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-geist-mono);
-
   --color-brand: #22c55e;
   --color-brand-dark: #16a34a;
   --color-brand-light: #4ade80;
 }
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+:root,
+[data-theme="dark"] {
+  --background: #0a0a0a;
+  --background-secondary: #111111;
+  --background-tertiary: #0d0d0d;
+  --foreground: #ededed;
+  --foreground-muted: #6b6b6b;
+  --foreground-subtle: #3f3f3f;
+  --border: #1a1a1a;
+  --border-hover: #2a2a2a;
+  --card: #111111;
+  --nav: rgba(10, 10, 10, 0.95);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-theme="light"] {
+  --background: #f8fafc;
+  --background-secondary: #ffffff;
+  --background-tertiary: #f1f5f9;
+  --foreground: #0f172a;
+  --foreground-muted: #64748b;
+  --foreground-subtle: #94a3b8;
+  --border: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --card: #ffffff;
+  --nav: rgba(248, 250, 252, 0.95);
+}
+
+* {
+  box-sizing: border-box;
+  transition: background-color 500ms ease-in-out, border-color 500ms ease-in-out, color 500ms ease-in-out !important;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Noto Sans Georgian', var(--font-inter);
+  font-family: 'Noto Sans Georgian', 'Noto Sans', Arial, sans-serif;
+  transition: background-color 0.5s ease-in-out, color 0.5s ease-in-out;
+}
+
+::selection {
+  background: var(--color-brand);
+  color: #000;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground-subtle);
+}
+
+/* Light theme overrides */
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  background: var(--background-secondary);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: var(--foreground-subtle);
+}
+
+/* Theme-aware hover utilities */
+.link-muted {
+  color: var(--foreground-muted);
+  transition: color 0.2s ease;
+}
+.link-muted:hover {
+  color: var(--foreground);
+}
+
+.card-bg {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+}
+
+.section-bg {
+  background-color: var(--background);
+}
+
+.section-bg-alt {
+  background-color: var(--background-secondary);
+}
+
+/* Theme toggle button animation */
+.theme-toggle-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.theme-toggle-btn:hover {
+  background-color: var(--border);
+}
+.theme-toggle-btn:active {
+  transform: scale(0.92);
+}
+
+/* Hero secondary CTA button — light theme hover override */
+.hero-secondary:hover {
+  background-color: var(--card) !important;
+  border-color: var(--border-hover) !important;
+}
+
+/* Pricing normal CTA button — light theme hover */
+.pricing-cta:hover {
+  background-color: var(--border-hover) !important;
+}
+
+/* Footer link — light theme hover */
+.footer-link {
+  color: var(--foreground-muted);
+  transition: color 0.2s ease;
+}
+.footer-link:hover {
+  color: var(--foreground);
+}
+
+/* Global button cursor - all buttons get pointer cursor */
+button, [role="button"], a, select, [onClick], .clickable {
+  cursor: pointer;
 }

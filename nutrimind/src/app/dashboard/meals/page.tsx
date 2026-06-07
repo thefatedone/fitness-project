@@ -39,6 +39,12 @@ interface DailyData {
 
 interface UserData {
   primary_goal?: string;
+  daily_cal_target?: number;
+  protein_target?: number;
+  carbs_target?: number;
+  fat_target?: number;
+  tdee?: number;
+  bmr?: number;
 }
 
 const mealConfig = [
@@ -279,50 +285,42 @@ export default function MealsPage() {
     return "bg-green-500";
   };
 
-  const generateMealPlan = async () => {
+  const generateMealPlan = async (type: "bulk" | "cut") => {
     if (!token) return;
     const dayData = weekData[selectedDate];
-    const remaining = (dayData?.calories_target || 2000) - (dayData?.calories_consumed || 0);
+    const userData = user;
 
-    setIsStreaming(true);
-    setAiSuggestion("");
+    // Calculate calories based on type
+    const baseTarget = userData?.daily_cal_target || 2000;
+    const caloriesForPlan = type === "bulk"
+      ? Math.round(baseTarget * 1.15)  // +15% for bulking
+      : Math.round(baseTarget * 0.75); // -25% for cutting
 
-    const userGoal = user?.primary_goal || "maintain";
-    const promptMessage = `Generate a complete meal plan for ${formatSelectedDate(selectedDate)}. I have ${remaining} calories remaining today. My goal is ${userGoal}. Include specific foods with portions and calorie counts for each meal.`;
+    const remaining = caloriesForPlan - (dayData?.calories_consumed || 0);
+    const calorieLabel = type === "bulk" ? "surplus" : "deficit";
+    const proteinTarget = userData?.protein_target || 150;
 
-    try {
-      const res = await fetch(`${API}/api/v1/ai/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ message: promptMessage }),
-      });
+    const promptMessage = `Generate a complete ${type === "bulk" ? "muscle building" : "fat loss"} meal plan for ${formatSelectedDate(selectedDate)}.
 
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      if (!reader) return;
+USER PROFILE:
+- Daily calorie target: ${baseTarget} kcal
+- For ${type === "bulk" ? "muscle building" : "fat loss"}: ${caloriesForPlan} kcal (${calorieLabel})
+- Protein target: ${proteinTarget}g
+- Remaining calories today: ${remaining} kcal
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n").filter((l) => l.startsWith("data: "));
-        for (const line of lines) {
-          const data = line.replace("data: ", "");
-          if (data === "[DONE]") break;
-          try {
-            const { text } = JSON.parse(data);
-            setAiSuggestion((prev) => prev + text);
-          } catch {}
-        }
-      }
-    } catch (error) {
-      console.error("Failed to get AI suggestion:", error);
-    } finally {
-      setIsStreaming(false);
-    }
+REQUIREMENTS:
+1. Create a detailed meal plan with breakfast, lunch, dinner, and snacks
+2. For each meal include: food name, portion size, calories, protein, carbs, fat
+3. Total daily calories should be approximately ${caloriesForPlan} kcal
+4. Protein should be around ${proteinTarget}g (${type === "bulk" ? "to support muscle growth" : "to preserve muscle during fat loss"})
+5. Make foods delicious and practical for ${type === "bulk" ? "building muscle" : "losing fat"}
+6. Suggest specific brands or preparation methods where helpful
+
+Format the response clearly with meal headers and nutritional information.`;
+
+    // Store message in localStorage and navigate to AI assistant
+    localStorage.setItem("pending_ai_message", promptMessage);
+    window.location.href = "/dashboard/assistant";
   };
 
   const selectedDayData = weekData[selectedDate];
@@ -362,10 +360,10 @@ export default function MealsPage() {
                 onClick={() => setSelectedDate(date)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`flex-shrink-0 w-20 p-3 rounded-2xl transition-all ${
+                className={`flex-shrink-0 w-20 p-3 rounded-2xl transition-all cursor-pointer ${
                   isSelected
                     ? "bg-green-500/10 border-2 border-green-500"
-                    : "bg-[#111111] border border-[#1a1a1a]"
+                    : "bg-[#111111] border border-[#1a1a1a] hover:border-green-500/50"
                 }`}
               >
                 <div className="flex flex-col items-center">
@@ -442,7 +440,7 @@ export default function MealsPage() {
                   {/* Add Food Button */}
                   <button
                     onClick={() => handleAddFood(meal.key)}
-                    className="w-full flex items-center justify-center gap-2 py-2 border border-dashed border-[#2a2a2a] rounded-xl text-gray-400 hover:text-green-400 hover:border-green-500/50 transition-colors text-sm"
+                    className="w-full flex items-center justify-center gap-2 py-2 border border-dashed border-[#2a2a2a] rounded-xl text-gray-400 hover:text-green-400 hover:border-green-500/50 transition-colors text-sm cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     Add Food
@@ -461,40 +459,48 @@ export default function MealsPage() {
               <h3 className="text-white font-semibold">AI Meal Suggestions</h3>
             </div>
 
-            <p className="text-gray-500 text-sm mb-4">
-              Remaining: <span className={remainingCalories > 0 ? "text-green-400" : "text-red-400"}>{remainingCalories} kcal</span>
-            </p>
-
-            <button
-              onClick={generateMealPlan}
-              disabled={isStreaming}
-              className="w-full py-3 rounded-xl bg-[#22c55e] text-black font-semibold hover:bg-[#16a34a] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              {isStreaming ? "Generating..." : "Generate Meal Plan"}
-            </button>
-
-            {(aiSuggestion || isStreaming) && (
-              <div className="mt-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-500 text-xs">AI Suggestion</span>
-                  <button
-                    onClick={() => setAiSuggestion("")}
-                    className="text-gray-500 hover:text-white text-xs"
-                  >
-                    Clear
-                  </button>
+            {/* User's Daily Targets */}
+            <div className="bg-[#0a0a0a] rounded-xl p-4 mb-4">
+              <p className="text-gray-500 text-xs mb-2">Your Daily Targets</p>
+              <div className="flex items-center gap-4">
+                <div>
+                  <p className="text-green-400 text-lg font-bold">{user?.daily_cal_target || 2000}</p>
+                  <p className="text-gray-500 text-xs">kcal base</p>
                 </div>
-                <div className="bg-[#0a0a0a] border-l-2 border-green-500 p-4 rounded-r-xl">
-                  <pre className="text-gray-300 text-sm whitespace-pre-wrap font-sans">
-                    {aiSuggestion}
-                    {isStreaming && (
-                      <span className="inline-block w-2 h-4 bg-green-400 ml-1 animate-pulse" />
-                    )}
-                  </pre>
+                <div className="w-px h-8 bg-[#2a2a2a]" />
+                <div>
+                  <p className="text-blue-400 text-lg font-bold">{user?.protein_target || 150}g</p>
+                  <p className="text-gray-500 text-xs">protein</p>
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Two Generate Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Bulk/Mass Button */}
+              <button
+                onClick={() => generateMealPlan("bulk")}
+                className="py-3 px-4 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-white font-semibold hover:from-orange-600 hover:to-red-700 active:scale-[0.98] transition-all flex flex-col items-center gap-1 cursor-pointer"
+              >
+                <span className="text-lg">💪</span>
+                <span className="text-xs">Bulk / Mass</span>
+                <span className="text-[10px] opacity-70">+15% calories</span>
+              </button>
+
+              {/* Cut/Deficit Button */}
+              <button
+                onClick={() => generateMealPlan("cut")}
+                className="py-3 px-4 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-semibold hover:from-cyan-600 hover:to-blue-700 active:scale-[0.98] transition-all flex flex-col items-center gap-1 cursor-pointer"
+              >
+                <span className="text-lg">🔥</span>
+                <span className="text-xs">Cut / Deficit</span>
+                <span className="text-[10px] opacity-70">-25% calories</span>
+              </button>
+            </div>
+
+            <p className="text-gray-600 text-xs text-center mt-3">
+              Opens AI Assistant with your meal plan
+            </p>
           </div>
         </div>
       </div>

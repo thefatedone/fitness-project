@@ -6,11 +6,14 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 import json
-from jose import jwt
+import logging
 from app.core.database import get_db
 from app.core.redis_client import redis_client
+from app.core.security import get_current_user_id
 from app.models.user import User
 from app.models.chat import ChatMessage
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -30,29 +33,13 @@ class ChatResponse(BaseModel):
     conversation_id: str
 
 
-def get_user_id_from_token(authorization: str = None) -> Optional[str]:
-    try:
-        if not authorization or not authorization.startswith("Bearer "):
-            return None
-        token = authorization.replace("Bearer ", "")
-        from app.core.config import settings
-        payload = jwt.decode(token, settings.JWT_SECRET, options={"verify_signature": False})
-        return payload.get("sub")
-    except Exception:
-        return None
-
-
 @router.post("/chat")
 async def chat(
     request: ChatRequest,
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Send a message to the AI assistant and get a streaming response"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
     conversation_id = request.conversation_id or f"user_{user_id}"
 
     # Get user info for personalization
@@ -94,17 +81,29 @@ Keep responses concise and helpful. Focus on nutrition, fitness, and wellness to
 
             # Store messages in DB after streaming completes
             try:
-                user_msg = ChatMessage(user_id=user_id, role="user", content=request.message)
-                ai_msg = ChatMessage(user_id=user_id, role="assistant", content=ai_text)
+                user_msg = ChatMessage(
+                    user_id=user_id,
+                    role="user",
+                    content=request.message,
+                    conversation_id=conversation_id
+                )
+                ai_msg = ChatMessage(
+                    user_id=user_id,
+                    role="assistant",
+                    content=ai_text,
+                    conversation_id=conversation_id
+                )
                 db.add(user_msg)
                 db.add(ai_msg)
                 await db.commit()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Failed to save chat messages: {e}")
+                await db.rollback()
 
             yield "data: [DONE]\n\n"
 
         except Exception as e:
+            logger.error(f"AI chat error: {e}")
             yield f"data: {json.dumps({'text': 'I am having trouble connecting to my AI brain right now. Please try again.'})}\n\n"
             yield "data: [DONE]\n\n"
 
@@ -113,15 +112,13 @@ Keep responses concise and helpful. Focus on nutrition, fitness, and wellness to
 
 @router.get("/history", response_model=List[dict])
 async def get_all_chat_history(
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+    user_id_from_auth = user_id  # already the user_id from auth dependency
     result = await db.execute(
         select(ChatMessage)
-        .where(ChatMessage.user_id == user_id)
+        .where(ChatMessage.user_id == user_id_from_auth)
         .order_by(ChatMessage.created_at.asc())
     )
     messages = result.scalars().all()
@@ -130,13 +127,10 @@ async def get_all_chat_history(
 
 @router.delete("/history")
 async def delete_all_chat_history(
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete all chat messages for the authenticated user"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
     await db.execute(
         delete(ChatMessage).where(ChatMessage.user_id == user_id)
     )
@@ -147,17 +141,16 @@ async def delete_all_chat_history(
 @router.get("/history/{conversation_id}")
 async def get_chat_history(
     conversation_id: str,
-    authorization: str = None,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Get chat history for a conversation"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
     result = await db.execute(
         select(ChatMessage)
-        .where(ChatMessage.user_id == user_id)
+        .where(
+            ChatMessage.user_id == user_id,
+            ChatMessage.conversation_id == conversation_id
+        )
         .order_by(ChatMessage.created_at.asc())
     )
     messages = result.scalars().all()

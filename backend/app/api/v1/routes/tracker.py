@@ -1,49 +1,44 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from datetime import datetime
-from typing import Optional, List
-from jose import jwt
+from typing import List
 from app.core.database import get_db
+from app.core.security import get_current_user_id
 from app.models.food_log import FoodLog, WeightLog, WaterLog
 from app.schemas.food import FoodLogCreate, FoodLogResponse, WaterLogCreate, WaterLogResponse, WeightLogCreate, WeightLogResponse, WeightLogHistoryResponse
 
 router = APIRouter(prefix="/tracker", tags=["tracker"])
 
 
-def get_user_id_from_token(authorization: str = None) -> Optional[str]:
+def parse_query_date(date_str: str) -> datetime:
+    """Parse date string with error handling."""
     try:
-        if not authorization or not authorization.startswith("Bearer "):
-            return None
-        token = authorization.replace("Bearer ", "")
-        payload = jwt.decode(token, "secret", options={"verify_signature": False})
-        return payload.get("sub")
-    except Exception:
-        return None
+        return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD or ISO format.")
 
 
 @router.get("/daily", response_model=List[FoodLogResponse])
 async def get_daily_food(
     date_str: str = Query(...),
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Get all food logs for a specific date"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    try:
-        query_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-    except ValueError:
-        query_date = datetime.strptime(date_str, "%Y-%m-%d")
+    query_date = parse_query_date(date_str)
+    start_of_day = query_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = query_date.replace(hour=23, minute=59, second=59, microsecond=999999)
 
     result = await db.execute(
         select(FoodLog).where(
             and_(
                 FoodLog.user_id == user_id,
-                FoodLog.date >= query_date.replace(hour=0, minute=0, second=0),
-                FoodLog.date < query_date.replace(hour=23, minute=59, second=59)
+                FoodLog.date >= start_of_day,
+                FoodLog.date <= end_of_day
             )
         )
     )
@@ -53,14 +48,10 @@ async def get_daily_food(
 @router.post("/food", response_model=FoodLogResponse)
 async def add_food_log(
     food_data: FoodLogCreate,
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Add a new food log entry"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
     food_log = FoodLog(
         user_id=user_id,
         date=food_data.date,
@@ -86,14 +77,10 @@ async def add_food_log(
 @router.delete("/food/{food_id}")
 async def delete_food_log(
     food_id: str,
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a food log entry"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
     result = await db.execute(
         select(FoodLog).where(and_(FoodLog.id == food_id, FoodLog.user_id == user_id))
     )
@@ -110,25 +97,20 @@ async def delete_food_log(
 @router.get("/water", response_model=List[WaterLogResponse])
 async def get_water_logs(
     date_str: str = Query(...),
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Get water logs for a specific date"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    try:
-        query_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-    except ValueError:
-        query_date = datetime.strptime(date_str, "%Y-%m-%d")
+    query_date = parse_query_date(date_str)
+    start_of_day = query_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = query_date.replace(hour=23, minute=59, second=59, microsecond=999999)
 
     result = await db.execute(
         select(WaterLog).where(
             and_(
                 WaterLog.user_id == user_id,
-                WaterLog.date >= query_date.replace(hour=0, minute=0, second=0),
-                WaterLog.date < query_date.replace(hour=23, minute=59, second=59)
+                WaterLog.date >= start_of_day,
+                WaterLog.date <= end_of_day
             )
         )
     )
@@ -138,14 +120,10 @@ async def get_water_logs(
 @router.post("/water", response_model=WaterLogResponse)
 async def add_water_log(
     water_data: WaterLogCreate,
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Add a water log entry"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
     water_log = WaterLog(
         user_id=user_id,
         date=water_data.date,
@@ -160,14 +138,10 @@ async def add_water_log(
 
 @router.get("/weight", response_model=List[WeightLogResponse])
 async def get_weight_logs(
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Get all weight logs for current user"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
     result = await db.execute(
         select(WeightLog).where(WeightLog.user_id == user_id).order_by(WeightLog.date.desc())
     )
@@ -177,14 +151,10 @@ async def get_weight_logs(
 @router.post("/weight", response_model=WeightLogResponse)
 async def add_weight_log(
     weight_data: WeightLogCreate,
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Add a weight log entry"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
     weight_log = WeightLog(
         user_id=user_id,
         date=weight_data.date,
@@ -200,14 +170,10 @@ async def add_weight_log(
 
 @router.get("/weight/history", response_model=List[WeightLogHistoryResponse])
 async def get_weight_logs_history(
-    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """Get all weight logs for current user with date as yyyy-MM-dd string"""
-    user_id = get_user_id_from_token(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
     result = await db.execute(
         select(WeightLog).where(WeightLog.user_id == user_id).order_by(WeightLog.date.desc())
     )

@@ -34,5 +34,5 @@ async def send_contact_confirmation_email(email: str, user_name: str) -> bool:
             server.sendmail(settings.SMTP_FROM_EMAIL, [email], msg.as_string())
 
     # Run blocking SMTP in executor to keep it non-blocking
-    await asyncio.get_event_loop().run_in_executor(None, _send)
+    await asyncio.to_thread(_send)
     return True

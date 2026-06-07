@@ -18,9 +18,11 @@ import {
   TrendingUp,
   Clock,
   Award,
+  X,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
+import ProfilePhotoCrop from "@/components/dashboard/ProfilePhotoCrop";
 
 interface UserProfile {
   id: number;
@@ -43,6 +45,7 @@ interface UserProfile {
   bmr?: number;
   tdee?: number;
   created_at?: string;
+  profile_photo?: string | null;
 }
 
 interface WeightEntry {
@@ -56,8 +59,7 @@ const DIETARY_OPTIONS = [
 ];
 
 const ALLERGY_OPTIONS = [
-  "None", "Peanuts", "Tree Nuts", "Milk", "Eggs",
-  "Wheat", "Soy", "Fish", "Shellfish", "Sesame"
+  "Nuts", "Shellfish", "Eggs", "Soy", "Wheat", "Fish", "Milk"
 ];
 
 const ACTIVITY_LEVELS = [
@@ -112,6 +114,8 @@ export default function ProfilePage() {
   // Weight log form
   const [logDate, setLogDate] = useState(new Date().toISOString().split("T")[0]);
   const [logWeight, setLogWeight] = useState("");
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const token = typeof window !== "undefined" ? localStorage.getItem("nutrimind_token") : null;
   const API = process.env.NEXT_PUBLIC_API_URL;
@@ -242,8 +246,8 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({
           primary_goal: primaryGoal,
-          dietary_preferences: dietaryPrefs.join(",") || null,
-          food_allergies: allergies.join(",") || null,
+          dietary_preferences: dietaryPrefs.filter(Boolean).length > 0 ? dietaryPrefs.filter(Boolean).join(",") : null,
+          food_allergies: allergies.filter(a => a && a.trim()).length > 0 ? allergies.filter(a => a && a.trim()).join(",") : null,
         }),
       });
 
@@ -271,7 +275,6 @@ export default function ProfilePage() {
       if (res.ok) {
         showToast("Weight logged!", "success");
         setLogWeight("");
-        // Refresh weight history
         const weightRes = await fetch(`${API}/api/v1/tracker/weight/history`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -289,6 +292,28 @@ export default function ProfilePage() {
       setter(current.filter((v) => v !== value));
     } else {
       setter([...current, value]);
+    }
+  };
+
+  const handlePhotoCropped = async (base64: string) => {
+    try {
+      const res = await fetch(`${API}/api/v1/users/me/photo`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ image: base64 }),
+      });
+      if (res.ok) {
+        const { url } = await res.json();
+        setProfile((prev) => (prev ? { ...prev, profile_photo: url } : prev));
+        showToast("Profile photo updated!", "success");
+      } else {
+        showToast("Failed to upload photo", "error");
+      }
+    } catch {
+      showToast("Failed to upload photo", "error");
     }
   };
 
@@ -337,6 +362,38 @@ export default function ProfilePage() {
         </motion.div>
       )}
 
+      {/* Lightbox for viewing full-size profile photo */}
+      {lightboxOpen && profile?.profile_photo && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-sm"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.9 }}
+            className="relative max-w-2xl max-h-[80vh] w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={`${API}${profile.profile_photo}`}
+              alt="Full size"
+              className="w-full h-full object-contain rounded-2xl"
+            />
+            <button
+              onClick={() => setLightboxOpen(false)}
+              className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <p className="text-center text-gray-400 text-sm mt-4">Click outside to close</p>
+          </motion.div>
+        </motion.div>
+      )}
+
       <h1 className="text-2xl font-bold text-white mb-6">My Profile</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -348,12 +405,31 @@ export default function ProfilePage() {
             <div className="flex items-start gap-6">
               {/* Avatar */}
               <div className="flex flex-col items-center gap-2">
-                <div className="w-20 h-20 rounded-full bg-[#22c55e] flex items-center justify-center">
-                  <span className="text-black text-2xl font-bold">{initials}</span>
+                <div
+                  className="w-20 h-20 rounded-full bg-[#22c55e] flex items-center justify-center overflow-hidden cursor-pointer group relative"
+                  onClick={() => profile?.profile_photo && setLightboxOpen(true)}
+                >
+                  {profile?.profile_photo ? (
+                    <>
+                      <img
+                        src={`${API}${profile.profile_photo}`}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-white text-xs">View</span>
+                      </div>
+                    </>
+                  ) : (
+                    <span className="text-black text-2xl font-bold">{initials}</span>
+                  )}
                 </div>
-                <button className="flex items-center gap-1 text-gray-400 hover:text-white text-xs">
+                <button
+                  onClick={() => setCropModalOpen(true)}
+                  className="flex items-center gap-1 text-gray-400 hover:text-white text-xs transition-colors"
+                >
                   <Camera className="w-3 h-3" />
-                  Upload
+                  {profile?.profile_photo ? "Change" : "Upload"}
                 </button>
               </div>
 
@@ -547,40 +623,96 @@ export default function ProfilePage() {
             {/* Dietary Preferences */}
             <div className="mb-6">
               <label className="text-gray-500 text-xs mb-2 block">Dietary Preferences</label>
-              <div className="flex flex-wrap gap-2">
-                {DIETARY_OPTIONS.map((pref) => (
-                  <button
-                    key={pref}
-                    onClick={() => toggleChip(pref, dietaryPrefs, setDietaryPrefs)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      dietaryPrefs.includes(pref)
-                        ? "bg-green-500/20 text-green-400 border border-green-500/50"
-                        : "bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a]"
-                    }`}
-                  >
-                    {pref}
-                  </button>
+              <div className="space-y-3">
+                {dietaryPrefs.map((_, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder={index === 0 ? "e.g. Keto, Vegetarian, Paleo..." : `Dietary preference #${index + 1}`}
+                      value={dietaryPrefs[index] || ""}
+                      onChange={(e) => {
+                        const updated = [...dietaryPrefs];
+                        updated[index] = e.target.value;
+                        setDietaryPrefs(updated);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && dietaryPrefs[index]?.trim()) {
+                          e.preventDefault();
+                          if (dietaryPrefs.length < 3) {
+                            setDietaryPrefs([...dietaryPrefs, ""]);
+                          }
+                        }
+                      }}
+                      className="flex-1 px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-green-500 transition-all text-sm"
+                    />
+                    {dietaryPrefs.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setDietaryPrefs(dietaryPrefs.filter((_, i) => i !== index))}
+                        className="px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-gray-500 hover:text-red-400 hover:border-red-500/50 transition-all"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 ))}
+                {dietaryPrefs.length < 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setDietaryPrefs([...dietaryPrefs, ""])}
+                    className="w-full py-2 border border-dashed border-[#2a2a2a] rounded-xl text-gray-500 hover:text-green-400 hover:border-green-500/50 transition-all text-sm"
+                  >
+                    + Add another preference
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Food Allergies */}
             <div className="mb-6">
               <label className="text-gray-500 text-xs mb-2 block">Food Allergies / Intolerances</label>
-              <div className="flex flex-wrap gap-2">
-                {ALLERGY_OPTIONS.map((allergy) => (
-                  <button
-                    key={allergy}
-                    onClick={() => toggleChip(allergy, allergies, setAllergies)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      allergies.includes(allergy)
-                        ? "bg-red-500/20 text-red-400 border border-red-500/50"
-                        : "bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a]"
-                    }`}
-                  >
-                    {allergy}
-                  </button>
+              <div className="space-y-3">
+                {allergies.map((_, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder={index === 0 ? "e.g. Nuts, Gluten, Dairy..." : `Food preference #${index + 1}`}
+                      value={allergies[index] || ""}
+                      onChange={(e) => {
+                        const updated = [...allergies];
+                        updated[index] = e.target.value;
+                        setAllergies(updated);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && allergies[index]?.trim()) {
+                          e.preventDefault();
+                          if (allergies.length < 3) {
+                            setAllergies([...allergies, ""]);
+                          }
+                        }
+                      }}
+                      className="flex-1 px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-green-500 transition-all text-sm"
+                    />
+                    {allergies.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setAllergies(allergies.filter((_, i) => i !== index))}
+                        className="px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-gray-500 hover:text-red-400 hover:border-red-500/50 transition-all"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 ))}
+                {allergies.length < 3 && (
+                  <button
+                    type="button"
+                    onClick={() => setAllergies([...allergies, ""])}
+                    className="w-full py-2 border border-dashed border-[#2a2a2a] rounded-xl text-gray-500 hover:text-green-400 hover:border-green-500/50 transition-all text-sm"
+                  >
+                    + Add another allergy
+                  </button>
+                )}
               </div>
             </div>
 
@@ -785,6 +917,14 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Profile Photo Crop Modal */}
+      <ProfilePhotoCrop
+        isOpen={cropModalOpen}
+        onClose={() => setCropModalOpen(false)}
+        onCropped={handlePhotoCropped}
+        currentPhoto={profile?.profile_photo ? `${API}${profile.profile_photo}` : undefined}
+      />
     </div>
   );
 }

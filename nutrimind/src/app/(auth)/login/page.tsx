@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Mail, Phone, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { tokenStorage, api } from "@/services/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,8 +20,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await fetch(`${apiUrl}/api/v1/auth/login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -36,7 +36,7 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem("nutrimind_token", data.access_token);
+      tokenStorage.set(data.access_token);
       router.push("/dashboard/tracker");
     } catch {
       setError("Unable to connect to server");
@@ -167,7 +167,7 @@ export default function LoginPage() {
 
         {/* Register Link */}
         <p className="text-center text-gray-500 text-sm">
-          Don&apos;t have an account?{" "}
+          Don't have an account?{" "}
           <a href="/register" className="text-[#22c55e] hover:underline font-medium">
             Start Free
           </a>

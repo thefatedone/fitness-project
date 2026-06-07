@@ -3,7 +3,7 @@ import httpx
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8725184372:AAHgBmhg5KnXEHaVYVr67vrDT15fLSKVQRY")
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 OWNER_CHAT_ID = os.getenv("TELEGRAM_OWNER_CHAT_ID", "")
 
 WELCOME_MESSAGE = """👋 Welcome to NutriMind!

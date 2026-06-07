@@ -97,6 +97,16 @@ export default function RegisterPage() {
   const handleNext = () => setStep((s) => Math.min(s + 1, 4));
   const handleBack = () => setStep((s) => Math.max(s - 1, 1));
 
+  const validatePassword = (pw: string) => {
+    if (pw.length < 8) return false;
+    if (!/[A-Z]/.test(pw[0])) return false;
+    if (!/\d/.test(pw)) return false;
+    return true;
+  };
+
+  const isPasswordValid = validatePassword(formData.password);
+  const doPasswordsMatch = formData.password === formData.confirmPassword && formData.confirmPassword.length > 0;
+
   const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? 300 : -300,
@@ -314,7 +324,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Password */}
-              <div className="relative mb-4">
+              <div className="relative mb-2">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type="password"
@@ -325,6 +335,22 @@ export default function RegisterPage() {
                 />
               </div>
 
+              {/* Password Requirements */}
+              <div className="mb-4 text-xs space-y-1 pl-1">
+                <div className={`flex items-center gap-2 ${formData.password.length >= 8 ? "text-green-400" : "text-gray-500"}`}>
+                  <span>{formData.password.length >= 8 ? "✓" : "○"}</span>
+                  <span>At least 8 characters</span>
+                </div>
+                <div className={`flex items-center gap-2 ${formData.password.length > 0 && formData.password[0] === formData.password[0].toUpperCase() && /[A-Z]/.test(formData.password[0]) ? "text-green-400" : "text-gray-500"}`}>
+                  <span>{formData.password.length > 0 && /[A-Z]/.test(formData.password[0]) ? "✓" : "○"}</span>
+                  <span>Starts with capital letter</span>
+                </div>
+                <div className={`flex items-center gap-2 ${/\d/.test(formData.password) ? "text-green-400" : "text-gray-500"}`}>
+                  <span>{/\d/.test(formData.password) ? "✓" : "○"}</span>
+                  <span>Contains a number</span>
+                </div>
+              </div>
+
               {/* Confirm Password */}
               <div className="relative mb-5">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -333,7 +359,11 @@ export default function RegisterPage() {
                   placeholder="Confirm password"
                   value={formData.confirmPassword}
                   onChange={(e) => updateField("confirmPassword", e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/20 transition-all"
+                  className={`w-full pl-12 pr-4 py-3 bg-[#1a1a1a] border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-1 transition-all ${
+                    formData.confirmPassword.length > 0 && !doPasswordsMatch
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-[#2a2a2a] focus:border-green-500 focus:ring-green-500/20"
+                  }`}
                 />
               </div>
 
@@ -353,7 +383,8 @@ export default function RegisterPage() {
 
               <button
                 onClick={handleStep1Submit}
-                className="w-full py-3.5 rounded-xl bg-[#22c55e] text-black font-semibold hover:bg-[#16a34a] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                disabled={!isPasswordValid || !doPasswordsMatch || !formData.termsAccepted || !formData.name || !(formData.loginMethod === "email" ? formData.email : formData.phone)}
+                className="w-full py-3.5 rounded-xl bg-[#22c55e] text-black font-semibold hover:bg-[#16a34a] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Continue <ArrowRight className="w-4 h-4" />
               </button>
@@ -609,28 +640,52 @@ export default function RegisterPage() {
 
               {/* Allergies */}
               <div className="mb-5">
-                <label className="block text-gray-400 text-sm mb-3">Food Allergies</label>
-                <div className="flex flex-wrap gap-2">
-                  {allergyOptions.map((allergy) => (
-                    <button
-                      key={allergy}
-                      type="button"
-                      onClick={() => {
-                        const current = formData.allergies;
-                        if (current.includes(allergy)) {
-                          updateField("allergies", current.filter((a) => a !== allergy));
-                        } else {
-                          updateField("allergies", [...current, allergy]);
-                        }
-                      }}
-                      className={`px-3 py-1.5 rounded-full text-sm transition-all duration-300 ${
-                        formData.allergies.includes(allergy)
-                          ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                          : "bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a] hover:border-gray-600"
-                      }`}
-                    >
-                      {allergy}
-                    </button>
+                <label className="block text-gray-400 text-sm mb-3">Food Allergies / Intolerances</label>
+                <div className="space-y-3">
+                  {[0, 1, 2].map((index) => (
+                    <div key={index}>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder={index === 0 ? "e.g. Nuts, Gluten, Dairy..." : `Food preference #${index + 1}`}
+                          value={formData.allergies[index] || ""}
+                          onChange={(e) => {
+                            const updated = [...formData.allergies];
+                            updated[index] = e.target.value;
+                            updateField("allergies", updated.filter(Boolean));
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && formData.allergies[index]?.trim()) {
+                              e.preventDefault();
+                              const updated = [...formData.allergies];
+                              if (index === 2) {
+                                updated.push("");
+                                updateField("allergies", updated);
+                              } else if (index === formData.allergies.length - 1 && formData.allergies.length < 3) {
+                                updated.push("");
+                                updateField("allergies", updated);
+                              }
+                            }
+                          }}
+                          className="flex-1 px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-green-500 transition-all text-sm"
+                        />
+                        {formData.allergies.length > 1 && formData.allergies[index] && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = formData.allergies.filter((_, i) => i !== index);
+                              updateField("allergies", updated);
+                            }}
+                            className="px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-gray-500 hover:text-red-400 hover:border-red-500/50 transition-all"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      {index === formData.allergies.length - 1 && formData.allergies.length < 3 && formData.allergies[index]?.trim() && (
+                        <p className="text-xs text-green-400 mt-1">Press Enter to add another</p>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>

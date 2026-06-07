@@ -25,6 +25,14 @@ export default function AssistantPage() {
     fetch(`${API}/api/v1/ai/history`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(data => { if (Array.isArray(data)) setMessages(data); })
       .catch(() => {})
+
+    // Check for pending message from meal planner
+    const pendingMessage = localStorage.getItem('pending_ai_message');
+    if (pendingMessage) {
+      localStorage.removeItem('pending_ai_message');
+      // Small delay to ensure page is loaded
+      setTimeout(() => sendMessage(pendingMessage), 500);
+    }
   }, [])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])

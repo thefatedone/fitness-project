@@ -23,6 +23,7 @@ class UserUpdate(BaseModel):
     dietary_preferences: Optional[str] = None
     food_allergies: Optional[str] = None
     weight_loss_pace: Optional[float] = None
+    profile_photo: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -49,6 +50,7 @@ class UserResponse(BaseModel):
     fat_target: Optional[float] = None
     is_active: bool = True
     created_at: datetime
+    profile_photo: Optional[str] = None
 
     class Config:
         from_attributes = True

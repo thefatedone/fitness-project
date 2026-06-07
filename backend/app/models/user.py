@@ -2,7 +2,12 @@ from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, Text
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def utc_now():
+    """Return current UTC time as naive datetime for database compatibility."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class User(Base):
@@ -33,8 +38,8 @@ class User(Base):
     role             = Column(String, default="USER", nullable=False)
     is_active        = Column(Boolean, default=True)
     onboarding_step  = Column(Integer, default=1)
-    created_at       = Column(DateTime, default=datetime.utcnow)
-    updated_at       = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at       = Column(DateTime, default=utc_now)
+    updated_at       = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     food_logs     = relationship("FoodLog", back_populates="user", cascade="all, delete")
     weight_logs   = relationship("WeightLog", back_populates="user", cascade="all, delete")

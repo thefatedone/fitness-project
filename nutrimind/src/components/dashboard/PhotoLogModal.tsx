@@ -14,6 +14,7 @@ quantity: number
 unit: string
 confidence: 'high' | 'medium' | 'low'
 description: string
+ingredients?: string[]
 }
 
 interface PhotoLogModalProps {
@@ -32,6 +33,8 @@ const [selectedFile, setSelectedFile] = useState<File | null>(null)
 const [mealType, setMealType] = useState(defaultMealType)
 const [result, setResult] = useState<NutritionResult | null>(null)
 const [errorMsg, setErrorMsg] = useState('')
+const [allergyWarnings, setAllergyWarnings] = useState<string[]>([])
+const [showAllergyWarning, setShowAllergyWarning] = useState(false)
 const fileInputRef = useRef<HTMLInputElement>(null)
 
 const mealTypes = [
@@ -67,6 +70,11 @@ body: formData,
 if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Analysis failed') }
 const data = await res.json()
 setResult(data.nutrition)
+if (data.allergy_warning) {
+  setErrorMsg('')
+  setAllergyWarnings(data.allergy_warning)
+  setShowAllergyWarning(true)
+}
 setStep('result')
 } catch (err: any) {
 setErrorMsg(err.message || 'Something went wrong')
@@ -76,7 +84,7 @@ setStep('error')
 
 const handleClose = () => {
 setStep('upload'); setSelectedImage(null); setSelectedFile(null)
-setResult(null); setErrorMsg(''); onClose()
+setResult(null); setErrorMsg(''); setAllergyWarnings([]); setShowAllergyWarning(false); onClose()
 }
 
 if (!isOpen) return null
@@ -171,6 +179,25 @@ className="relative w-full max-w-md bg-[#111111] border border-[#1a1a1a] rounded
       {/* STEP: Result */}
       {step === 'result' && result && (
         <div className="space-y-4">
+          {/* Allergy Warning Banner */}
+          {showAllergyWarning && allergyWarnings.length > 0 && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-red-400 font-semibold text-sm mb-1">⚠️ Allergy Alert</p>
+                  {allergyWarnings.map((warning, i) => (
+                    <p key={i} className="text-red-300 text-xs mt-1">{warning}</p>
+                  ))}
+                  <p className="text-gray-500 text-xs mt-2">Please review before consuming this food</p>
+                </div>
+                <button onClick={() => setShowAllergyWarning(false)} className="text-red-400 hover:text-red-300 p-1">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-3 p-3 bg-[#1a1a1a] rounded-xl">
             <img src={selectedImage!} alt="Food" className="w-14 h-14 object-cover rounded-xl flex-shrink-0" />
             <div className="flex-1 min-w-0">

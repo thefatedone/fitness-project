@@ -2,7 +2,12 @@ from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean, Foreig
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def utc_now():
+    """Return current UTC time as naive datetime for database compatibility."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class FoodLog(Base):
@@ -22,7 +27,7 @@ class FoodLog(Base):
     unit         = Column(String, nullable=False)
     photo_url    = Column(String, nullable=True)
     ai_generated = Column(Boolean, default=False)
-    created_at   = Column(DateTime, default=datetime.utcnow)
+    created_at   = Column(DateTime, default=utc_now)
 
     user = relationship("User", back_populates="food_logs")
 
@@ -35,7 +40,7 @@ class WeightLog(Base):
     weight     = Column(Float, nullable=False)
     date       = Column(DateTime, nullable=False)
     note       = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     user = relationship("User", back_populates="weight_logs")
 
@@ -47,6 +52,6 @@ class WaterLog(Base):
     user_id    = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     amount     = Column(Integer, nullable=False)
     date       = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     user = relationship("User", back_populates="water_logs")

@@ -109,6 +109,7 @@ services:
     volumes:
       - ../backend:/app
       - ./logs:/app/logs
+      - backend_uploads:/uploads
     command: uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
 
   frontend:
@@ -143,6 +144,7 @@ volumes:
   postgres_data:
   redis_data:
   elasticsearch_data:
+  backend_uploads:
 
 networks:
   default:

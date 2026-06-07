@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.logging_config import logger
 from app.core.redis_client import redis_client
+import os
 
 
 @asynccontextmanager
@@ -28,6 +30,10 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Database initialization failed: {e}", flush=True)
 
+    # Create uploads directory (on named volume, not bind mount)
+    upload_dir = "/uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+
     yield
 
     try:
@@ -41,7 +47,7 @@ app = FastAPI(title="NutriMind API", version="1.0.0", docs_url="/api/docs")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://backend-fitness-production-3829.up.railway.app"],
+    allow_origins=[settings.FRONTEND_URL, "http://localhost:3000"],  # Allow configured URL and localhost for dev
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,6 +62,15 @@ app.include_router(tracker.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
 app.include_router(contact.router, prefix="/api/v1")
 app.include_router(food_recognition.router, prefix="/api/v1")
+
+
+@app.get("/uploads/{filename}")
+async def serve_upload(filename: str):
+    """Serve uploaded files from the uploads volume."""
+    file_path = f"/uploads/{filename}"
+    if not os.path.exists(file_path):
+        return FileResponse(status_code=404)
+    return FileResponse(file_path)
 
 
 @app.get("/health")
