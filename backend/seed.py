@@ -49,7 +49,7 @@ async def seed():
                 user = User(
                     email=user_data["email"],
                     password_hash=get_password_hash(user_data["password"]),
-                    name=user_data["name"],
+                    full_name=user_data["name"],
                     role=user_data["role"],
                 )
                 db.add(user)

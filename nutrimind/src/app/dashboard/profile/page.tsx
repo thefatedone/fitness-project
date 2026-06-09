@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 import {
   User,
@@ -91,6 +92,7 @@ function getBMICategory(bmi: number): { label: string; color: string } {
 }
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [weightHistory, setWeightHistory] = useState<WeightEntry[]>([]);
@@ -394,14 +396,14 @@ export default function ProfilePage() {
         </motion.div>
       )}
 
-      <h1 className="text-2xl font-bold text-white mb-6">My Profile</h1>
+      <h1 className="text-2xl font-bold text-white mb-6">{t("profile.title")}</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* LEFT COLUMN - 60% */}
         <div className="lg:col-span-3 space-y-6">
           {/* Card 1: Personal Info */}
           <div className="bg-[#111111] border border-[#1a1a1a] rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-4">Personal Information</h2>
+            <h2 className="text-white font-semibold mb-4">{t("profile.personalInformation")}</h2>
             <div className="flex items-start gap-6">
               {/* Avatar */}
               <div className="flex flex-col items-center gap-2">
@@ -436,7 +438,7 @@ export default function ProfilePage() {
               {/* Fields */}
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="fullName" className="text-gray-500 text-xs mb-1 block">Full Name</label>
+                  <label htmlFor="fullName" className="text-gray-500 text-xs mb-1 block">{t("profile.fullName")}</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <input
@@ -449,7 +451,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-gray-500 text-xs mb-1 block">Email</label>
+                  <label className="text-gray-500 text-xs mb-1 block">{t("profile.email")}</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <input
@@ -461,7 +463,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="dateOfBirth" className="text-gray-500 text-xs mb-1 block">Date of Birth</label>
+                  <label htmlFor="dateOfBirth" className="text-gray-500 text-xs mb-1 block">{t("profile.dateOfBirth")}</label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <input
@@ -474,19 +476,23 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-gray-500 text-xs mb-1 block">Sex</label>
+                  <label className="text-gray-500 text-xs mb-1 block">{t("profile.sex")}</label>
                   <div className="flex gap-2">
-                    {["male", "female", "prefer_not_to_say"].map((s) => (
+                    {[
+                      { value: "male", label: t("profile.male") },
+                      { value: "female", label: t("profile.female") },
+                      { value: "prefer_not_to_say", label: t("profile.preferNotToSay") },
+                    ].map((s) => (
                       <button
-                        key={s}
-                        onClick={() => setSex(s)}
+                        key={s.value}
+                        onClick={() => setSex(s.value)}
                         className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                          sex === s
+                          sex === s.value
                             ? "bg-[#22c55e] text-black"
                             : "bg-[#1a1a1a] text-gray-400 hover:bg-[#2a2a2a]"
                         }`}
                       >
-                        {s === "prefer_not_to_say" ? "Prefer not to say" : s.charAt(0).toUpperCase() + s.slice(1)}
+                        {s.label}
                       </button>
                     ))}
                   </div>
@@ -499,16 +505,16 @@ export default function ProfilePage() {
               className="mt-4 w-full py-3 rounded-xl bg-[#22c55e] text-black font-semibold hover:bg-[#16a34a] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
-              Save Changes
+              {t("profile.saveChanges")}
             </button>
           </div>
 
           {/* Card 2: Measurements */}
           <div className="bg-[#111111] border border-[#1a1a1a] rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-4">Measurements</h2>
+            <h2 className="text-white font-semibold mb-4">{t("profile.measurements")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label htmlFor="height" className="text-gray-500 text-xs mb-1 block">Height (cm)</label>
+                <label htmlFor="height" className="text-gray-500 text-xs mb-1 block">{t("profile.heightCm")}</label>
                 <div className="relative">
                   <Ruler className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -522,7 +528,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label htmlFor="currentWeight" className="text-gray-500 text-xs mb-1 block">Current Weight (kg)</label>
+                <label htmlFor="currentWeight" className="text-gray-500 text-xs mb-1 block">{t("profile.currentWeightKg")}</label>
                 <div className="relative">
                   <Weight className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -536,7 +542,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label htmlFor="targetWeight" className="text-gray-500 text-xs mb-1 block">Target Weight (kg)</label>
+                <label htmlFor="targetWeight" className="text-gray-500 text-xs mb-1 block">{t("profile.targetWeightKg")}</label>
                 <div className="relative">
                   <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
@@ -552,7 +558,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="mb-4">
-              <label htmlFor="activityLevel" className="text-gray-500 text-xs mb-1 block">Activity Level</label>
+              <label htmlFor="activityLevel" className="text-gray-500 text-xs mb-1 block">{t("profile.activityLevel")}</label>
               <select
                 id="activityLevel"
                 value={activityLevel}
@@ -561,7 +567,7 @@ export default function ProfilePage() {
               >
                 {ACTIVITY_LEVELS.map((level) => (
                   <option key={level.value} value={level.value}>
-                    {level.label}
+                    {level.label === "Lightly Active" ? t("profile.lightlyActive") : level.label}
                   </option>
                 ))}
               </select>
@@ -570,7 +576,7 @@ export default function ProfilePage() {
             {showPaceSlider && (
               <div className="mb-4">
                 <label htmlFor="goalPace" className="text-gray-500 text-xs mb-1 block">
-                  Weight Goal Pace: {goalPace} kg/week
+                  {t("profile.weightGoalPace")}: {goalPace} {t("profile.kgPerWeek")}
                 </label>
                 <input
                   id="goalPace"
@@ -591,17 +597,17 @@ export default function ProfilePage() {
               className="w-full py-3 rounded-xl bg-[#22c55e] text-black font-semibold hover:bg-[#16a34a] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
-              Save & Recalculate
+              {t("profile.saveAndRecalculate")}
             </button>
           </div>
 
           {/* Card 3: Dietary Preferences */}
           <div className="bg-[#111111] border border-[#1a1a1a] rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-4">Dietary Preferences</h2>
+            <h2 className="text-white font-semibold mb-4">{t("profile.dietaryPreferences")}</h2>
 
             {/* Primary Goal */}
             <div className="mb-6">
-              <label className="text-gray-500 text-xs mb-2 block">Primary Goal</label>
+              <label className="text-gray-500 text-xs mb-2 block">{t("profile.primaryGoal")}</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {GOALS.map((goal) => (
                   <button
@@ -622,7 +628,7 @@ export default function ProfilePage() {
 
             {/* Dietary Preferences */}
             <div className="mb-6">
-              <label className="text-gray-500 text-xs mb-2 block">Dietary Preferences</label>
+              <label className="text-gray-500 text-xs mb-2 block">{t("profile.dietaryPreferences")}</label>
               <div className="space-y-3">
                 {dietaryPrefs.map((_, index) => (
                   <div key={index} className="flex gap-2">
@@ -731,29 +737,29 @@ export default function ProfilePage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Card 4: Daily Targets */}
           <div className="bg-[#111111] border border-[#1a1a1a] rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-1">Your Daily Targets</h2>
-            <p className="text-gray-500 text-xs mb-4">Calculated from your profile</p>
+            <h2 className="text-white font-semibold mb-1">{t("profile.yourDailyTargets")}</h2>
+            <p className="text-gray-500 text-xs mb-4">{t("profile.calculatedFromProfile")}</p>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
               <div className="bg-[#1a1a1a] rounded-xl p-4 flex flex-col items-center">
                 <Flame className="w-5 h-5 text-orange-400 mb-2" />
                 <span className="text-2xl font-bold text-white">{profile?.daily_cal_target || 2000}</span>
-                <span className="text-xs text-gray-500">Calories kcal</span>
+                <span className="text-xs text-gray-500">{t("profile.caloriesKcal")}</span>
               </div>
               <div className="bg-[#1a1a1a] rounded-xl p-4 flex flex-col items-center">
                 <Beef className="w-5 h-5 text-blue-400 mb-2" />
                 <span className="text-2xl font-bold text-white">{profile?.protein_target || 150}g</span>
-                <span className="text-xs text-gray-500">Protein</span>
+                <span className="text-xs text-gray-500">{t("profile.protein")}</span>
               </div>
               <div className="bg-[#1a1a1a] rounded-xl p-4 flex flex-col items-center">
                 <Wheat className="w-5 h-5 text-orange-400 mb-2" />
                 <span className="text-2xl font-bold text-white">{profile?.carbs_target || 250}g</span>
-                <span className="text-xs text-gray-500">Carbs</span>
+                <span className="text-xs text-gray-500">{t("profile.carbs")}</span>
               </div>
               <div className="bg-[#1a1a1a] rounded-xl p-4 flex flex-col items-center">
                 <Droplet className="w-5 h-5 text-purple-400 mb-2" />
                 <span className="text-2xl font-bold text-white">{profile?.fat_target || 65}g</span>
-                <span className="text-xs text-gray-500">Fat</span>
+                <span className="text-xs text-gray-500">{t("profile.fat")}</span>
               </div>
             </div>
 
@@ -761,9 +767,9 @@ export default function ProfilePage() {
             {bmi > 0 && (
               <div className="bg-[#1a1a1a] rounded-xl p-4 mb-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400 text-sm">BMI</span>
+                  <span className="text-gray-400 text-sm">{t("profile.bmi")}</span>
                   <span className={`font-semibold ${bmiCategory.color}`}>
-                    {bmi.toFixed(1)} - {bmiCategory.label}
+                    {bmi.toFixed(1)} - {bmiCategory.label === "Obese" ? t("profile.obese") : bmiCategory.label}
                   </span>
                 </div>
               </div>
@@ -771,22 +777,22 @@ export default function ProfilePage() {
 
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">BMR (base)</span>
-                <span className="text-white">{profile?.bmr || "—"} kcal/day</span>
+                <span className="text-gray-500">{t("profile.bmrBase")}</span>
+                <span className="text-white">{profile?.bmr || "—"} {t("profile.kcalPerDay")}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">TDEE (with activity)</span>
-                <span className="text-white">{profile?.tdee || "—"} kcal/day</span>
+                <span className="text-gray-500">{t("profile.tdeeWithActivity")}</span>
+                <span className="text-white">{profile?.tdee || "—"} {t("profile.kcalPerDay")}</span>
               </div>
             </div>
             <p className="text-gray-600 text-xs mt-4">
-              Targets update automatically when you save measurements
+              {t("profile.targetsUpdateAutomatically")}
             </p>
           </div>
 
           {/* Card 5: Weight Progress */}
           <div className="bg-[#111111] border border-[#1a1a1a] rounded-2xl p-6">
-            <h2 className="text-white font-semibold mb-4">Weight Progress</h2>
+            <h2 className="text-white font-semibold mb-4">{t("profile.weightProgress")}</h2>
 
             {weightHistory.length > 0 ? (
               <>
@@ -836,14 +842,14 @@ export default function ProfilePage() {
                     onClick={logNewWeight}
                     className="px-4 py-2 bg-[#22c55e] text-black rounded-xl text-sm font-medium hover:bg-[#16a34a] transition-colors"
                   >
-                    Log
+                    {t("profile.log")}
                   </button>
                 </div>
               </>
             ) : (
               <div className="text-center py-8">
                 <TrendingUp className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">Start logging your weight to see progress</p>
+                <p className="text-gray-500 text-sm">{t("profile.startLoggingWeight")}</p>
                 <div className="flex gap-2 mt-4">
                   <input
                     id="logDate"
@@ -864,7 +870,7 @@ export default function ProfilePage() {
                     onClick={logNewWeight}
                     className="px-4 py-2 bg-[#22c55e] text-black rounded-xl text-sm font-medium hover:bg-[#16a34a] transition-colors"
                   >
-                    Log
+                    {t("profile.log")}
                   </button>
                 </div>
               </div>

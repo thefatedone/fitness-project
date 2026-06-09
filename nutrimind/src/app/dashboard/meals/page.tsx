@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { ChefHat, Sparkles, Plus, Clock, Flame, BrainCircuit, X, Camera } from "lucide-react";
 import AddFoodModal from "@/components/dashboard/AddFoodModal";
@@ -92,6 +93,7 @@ function isToday(dateStr: string): boolean {
 }
 
 export default function MealsPage() {
+  const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [weekDates, setWeekDates] = useState<string[]>([]);
   const [weekData, setWeekData] = useState<Record<string, DailyData>>({});
@@ -334,13 +336,13 @@ Format the response clearly with meal headers and nutritional information.`;
           <ChefHat className="w-6 h-6 text-green-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">Meal Planner</h1>
-          <p className="text-gray-500 text-sm">Plan and track your weekly nutrition</p>
+          <h1 className="text-2xl font-bold text-white">{t("meals.title")}</h1>
+          <p className="text-gray-500 text-sm">{t("meals.subtitle")}</p>
         </div>
         <button onClick={() => setShowPhotoModal(true)}
           className="ml-auto flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-600 text-black font-semibold rounded-xl transition-all shadow-lg shadow-green-500/20 hover:-translate-y-0.5">
           <Camera className="w-5 h-5" />
-          Log Food by Photo
+          {t("meals.logFoodByPhoto")}
         </button>
       </div>
 
@@ -405,7 +407,7 @@ Format the response clearly with meal headers and nutritional information.`;
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{meal.emoji}</span>
-                      <span className="text-white font-medium">{meal.label}</span>
+                      <span className="text-white font-medium">{t(`tracker.${meal.key}`)}</span>
                     </div>
                     <span className="text-green-400 text-sm font-medium">{totalCal} kcal</span>
                   </div>
@@ -433,7 +435,7 @@ Format the response clearly with meal headers and nutritional information.`;
                         </div>
                       ))
                     ) : (
-                      <p className="text-gray-600 text-sm italic py-4 text-center">No foods logged</p>
+                      <p className="text-gray-600 text-sm italic py-4 text-center">{t("meals.noFoodsLogged")}</p>
                     )}
                   </div>
 
@@ -443,7 +445,7 @@ Format the response clearly with meal headers and nutritional information.`;
                     className="w-full flex items-center justify-center gap-2 py-2 border border-dashed border-[#2a2a2a] rounded-xl text-gray-400 hover:text-green-400 hover:border-green-500/50 transition-colors text-sm cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
-                    Add Food
+                    {t("meals.addFood")}
                   </button>
                 </div>
               );
@@ -456,21 +458,21 @@ Format the response clearly with meal headers and nutritional information.`;
           <div className="bg-[#111111] border border-[#1a1a1a] rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <BrainCircuit className="w-5 h-5 text-green-400" />
-              <h3 className="text-white font-semibold">AI Meal Suggestions</h3>
+              <h3 className="text-white font-semibold">{t("meals.aiMealSuggestions")}</h3>
             </div>
 
             {/* User's Daily Targets */}
             <div className="bg-[#0a0a0a] rounded-xl p-4 mb-4">
-              <p className="text-gray-500 text-xs mb-2">Your Daily Targets</p>
+              <p className="text-gray-500 text-xs mb-2">{t("meals.yourDailyTargets")}</p>
               <div className="flex items-center gap-4">
                 <div>
                   <p className="text-green-400 text-lg font-bold">{user?.daily_cal_target || 2000}</p>
-                  <p className="text-gray-500 text-xs">kcal base</p>
+                  <p className="text-gray-500 text-xs">{t("meals.kcalBase", { kcal: user?.daily_cal_target || 2000 })}</p>
                 </div>
                 <div className="w-px h-8 bg-[#2a2a2a]" />
                 <div>
                   <p className="text-blue-400 text-lg font-bold">{user?.protein_target || 150}g</p>
-                  <p className="text-gray-500 text-xs">protein</p>
+                  <p className="text-gray-500 text-xs">{t("meals.protein")}</p>
                 </div>
               </div>
             </div>
@@ -483,8 +485,8 @@ Format the response clearly with meal headers and nutritional information.`;
                 className="py-3 px-4 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-white font-semibold hover:from-orange-600 hover:to-red-700 active:scale-[0.98] transition-all flex flex-col items-center gap-1 cursor-pointer"
               >
                 <span className="text-lg">💪</span>
-                <span className="text-xs">Bulk / Mass</span>
-                <span className="text-[10px] opacity-70">+15% calories</span>
+                <span className="text-xs">{t("meals.bulkMass")}</span>
+                <span className="text-[10px] opacity-70">{t("meals.bulkMassDesc")}</span>
               </button>
 
               {/* Cut/Deficit Button */}
@@ -493,13 +495,13 @@ Format the response clearly with meal headers and nutritional information.`;
                 className="py-3 px-4 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-semibold hover:from-cyan-600 hover:to-blue-700 active:scale-[0.98] transition-all flex flex-col items-center gap-1 cursor-pointer"
               >
                 <span className="text-lg">🔥</span>
-                <span className="text-xs">Cut / Deficit</span>
-                <span className="text-[10px] opacity-70">-25% calories</span>
+                <span className="text-xs">{t("meals.cutDeficit")}</span>
+                <span className="text-[10px] opacity-70">{t("meals.cutDeficitDesc")}</span>
               </button>
             </div>
 
             <p className="text-gray-600 text-xs text-center mt-3">
-              Opens AI Assistant with your meal plan
+              {t("meals.opensAiAssistant")}
             </p>
           </div>
         </div>

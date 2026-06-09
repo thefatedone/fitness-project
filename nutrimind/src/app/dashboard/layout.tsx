@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -10,6 +11,8 @@ import {
   LogOut,
   Target,
 } from "lucide-react";
+import "@/i18n/index";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface UserData {
   id: number;
@@ -18,11 +21,11 @@ interface UserData {
   full_name?: string;
 }
 
-const navItems = [
-  { icon: BarChart3, label: "Tracker", href: "/dashboard/tracker" },
-  { icon: Utensils, label: "Meals", href: "/dashboard/meals" },
-  { icon: MessageSquare, label: "AI Assistant", href: "/dashboard/assistant" },
-  { icon: User, label: "Profile", href: "/dashboard/profile" },
+const NAV_KEYS = [
+  { icon: BarChart3, key: "tracker", href: "/dashboard/tracker" },
+  { icon: Utensils, key: "meals", href: "/dashboard/meals" },
+  { icon: MessageSquare, key: "aiAssistant", href: "/dashboard/assistant" },
+  { icon: User, key: "profile", href: "/dashboard/profile" },
 ];
 
 export default function DashboardLayout({
@@ -30,6 +33,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
@@ -94,7 +98,7 @@ export default function DashboardLayout({
 
         {/* Nav Items */}
         <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => {
+          {NAV_KEYS.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
@@ -107,7 +111,7 @@ export default function DashboardLayout({
                 }`}
               >
                 <item.icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
+                <span className="font-medium">{t(`nav.${item.key}`)}</span>
               </Link>
             );
           })}
@@ -130,12 +134,15 @@ export default function DashboardLayout({
               </p>
             </div>
           </div>
+          <div className="mb-3">
+            <LanguageSwitcher />
+          </div>
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 w-full px-4 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors text-sm"
           >
             <LogOut className="w-4 h-4" />
-            Logout
+            {t("nav.logout")}
           </button>
         </div>
       </aside>
@@ -146,7 +153,7 @@ export default function DashboardLayout({
       {/* Mobile Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-[#0d0d0d] border-t border-[#1a1a1a] md:hidden z-50">
         <div className="flex justify-around py-3">
-          {navItems.map((item) => {
+          {NAV_KEYS.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
@@ -157,7 +164,7 @@ export default function DashboardLayout({
                 }`}
               >
                 <item.icon className="w-5 h-5" />
-                <span className="text-xs">{item.label}</span>
+                <span className="text-xs">{t(`nav.${item.key}`)}</span>
               </Link>
             );
           })}

@@ -49,6 +49,15 @@ body {
   transition: background-color 0.5s ease-in-out, color 0.5s ease-in-out;
 }
 
+/* Georgian script — use Noto Sans Georgian when lang is "ka" */
+html[lang="ka"] body {
+  font-family: 'Noto Sans Georgian', 'Noto Sans', Arial, sans-serif;
+}
+
+html[lang="en"] body {
+  font-family: 'Noto Sans', Arial, sans-serif;
+}
+
 ::selection {
   background: var(--color-brand);
   color: #000;

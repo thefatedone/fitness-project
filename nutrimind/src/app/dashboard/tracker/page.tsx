@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import CalorieRing from "@/components/dashboard/CalorieRing";
 import MacroBar from "@/components/dashboard/MacroBar";
@@ -46,6 +47,7 @@ const mealConfig = [
 ];
 
 export default function TrackerPage() {
+  const { t } = useTranslation();
   const [dailyData, setDailyData] = useState<DailySummary | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [isLoading, setIsLoading] = useState(true);
@@ -194,7 +196,7 @@ export default function TrackerPage() {
     <div className="p-6">
       {/* Header with date navigation */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Daily Tracker</h1>
+        <h1 className="text-2xl font-bold text-white">{t("tracker.title")}</h1>
         <div className="flex items-center gap-2 bg-[#111111] border border-[#1a1a1a] rounded-xl p-1">
           <button
             onClick={() => navigateDate(-1)}
@@ -240,21 +242,21 @@ export default function TrackerPage() {
 
           {/* Macro Bars */}
           <div className="bg-[#111111] border border-[#1a1a1a] rounded-2xl p-6 space-y-5">
-            <h2 className="text-white font-semibold mb-4">Macronutrients</h2>
+            <h2 className="text-white font-semibold mb-4">{t("tracker.macronutrients")}</h2>
             <MacroBar
-              label="Protein"
+              label={t("tracker.protein")}
               current={dailyData?.protein_consumed || 0}
               target={dailyData?.protein_target || 150}
               color="#3b82f6"
             />
             <MacroBar
-              label="Carbohydrates"
+              label={t("tracker.carbohydrates")}
               current={dailyData?.carbs_consumed || 0}
               target={dailyData?.carbs_target || 250}
               color="#f97316"
             />
             <MacroBar
-              label="Fat"
+              label={t("tracker.fat")}
               current={dailyData?.fat_consumed || 0}
               target={dailyData?.fat_target || 65}
               color="#a855f7"
@@ -273,12 +275,12 @@ export default function TrackerPage() {
         {/* Right Column - Meal Cards */}
         <div className="space-y-4">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-white font-semibold">Meals</h2>
+            <h2 className="text-white font-semibold">{t("tracker.meals")}</h2>
           </div>
           {mealConfig.map((meal) => (
             <MealCard
               key={meal.key}
-              mealType={meal.label}
+              mealType={t(`tracker.${meal.key}`)}
               emoji={meal.emoji}
               items={(dailyData?.meals as Record<string, FoodItem[]>) [meal.key] || []}
               onAddFood={handleAddFood}
@@ -292,14 +294,14 @@ export default function TrackerPage() {
       {!dailyData && !isLoading && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <span className="text-6xl mb-4">🍎</span>
-          <h2 className="text-xl font-semibold text-white mb-2">No meals logged yet</h2>
+          <h2 className="text-xl font-semibold text-white mb-2">{t("tracker.noItemsYet")}</h2>
           <p className="text-gray-500 mb-6">Start tracking your nutrition journey today!</p>
           <button
             onClick={() => handleAddFood("Breakfast")}
             className="flex items-center gap-2 px-6 py-3 bg-[#22c55e] text-black font-semibold rounded-xl hover:bg-[#16a34a] transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add First Meal
+            {t("tracker.addFood")}
           </button>
         </div>
       )}

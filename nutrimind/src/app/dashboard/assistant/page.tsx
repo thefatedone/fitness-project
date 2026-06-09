@@ -1,24 +1,27 @@
 "use client"
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from 'i18next'
 import { PromptInputBox } from '@/components/ui/ai-prompt-box'
 import { BrainCircuit, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Message { id: string; role: 'user' | 'assistant'; content: string; created_at: string; }
 
-const SUGGESTIONS = [
-  "What should I eat for lunch?",
-  "Analyze today's nutrition",
-  "High-protein snack ideas",
-  "Am I hitting my goals today?",
+const SUGGESTION_KEYS = [
+  "assistant.suggestions.lunch",
+  "assistant.suggestions.analyze",
+  "assistant.suggestions.snacks",
+  "assistant.suggestions.goals",
 ]
 
 export default function AssistantPage() {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const token = typeof window !== 'undefined' ? localStorage.getItem('nutrimind_token') : null
-  const API = process.env.NEXT_PUBLIC_API_URL 
+  const API = process.env.NEXT_PUBLIC_API_URL
 
   useEffect(() => {
     if (!token) { window.location.href = '/login'; return; }
@@ -40,6 +43,16 @@ export default function AssistantPage() {
   const sendMessage = async (text: string) => {
     if (!text.trim() || isStreaming) return
     const currentToken = localStorage.getItem('nutrimind_token');
+    const currentLang = i18n.language || 'en';
+
+    // Build language instruction for the AI backend
+    const langInstruction = currentLang === 'ka'
+      ? 'Always respond in Georgian (ქართული) language.'
+      : 'Always respond in English.';
+
+    // Prepend language instruction to the user message so the backend passes it to the AI
+    const prefixedMessage = `${langInstruction}\n\n${text}`;
+
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, created_at: new Date().toISOString() }
     setMessages(prev => [...prev, userMsg])
     setIsStreaming(true)
@@ -50,7 +63,7 @@ export default function AssistantPage() {
       const res = await fetch(`${API}/api/v1/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}` },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: prefixedMessage }),
       })
       const reader = res.body?.getReader()
       const decoder = new TextDecoder()
@@ -90,12 +103,12 @@ export default function AssistantPage() {
             <BrainCircuit className="w-5 h-5 text-green-400" />
           </div>
           <div>
-            <h1 className="text-white font-semibold">NutriMind AI</h1>
-            <p className="text-xs text-gray-500">Your personal nutrition coach</p>
+            <h1 className="text-white font-semibold">{t("assistant.title")}</h1>
+            <p className="text-xs text-gray-500">{t("assistant.subtitle")}</p>
           </div>
         </div>
         <button onClick={clearHistory} className="flex items-center gap-2 text-gray-500 hover:text-red-400 transition-colors text-sm px-3 py-2 rounded-lg hover:bg-red-500/10">
-          <Trash2 className="w-4 h-4" /> Clear chat
+          <Trash2 className="w-4 h-4" /> {t("assistant.clearChat")}
         </button>
       </div>
 
@@ -107,13 +120,13 @@ export default function AssistantPage() {
             <div className="w-16 h-16 rounded-2xl bg-green-500/20 flex items-center justify-center mb-4">
               <BrainCircuit className="w-8 h-8 text-green-400" />
             </div>
-            <h2 className="text-white text-xl font-semibold mb-2">How can I help you today?</h2>
-            <p className="text-gray-500 text-sm max-w-sm mb-8">I know your nutrition goals and today's intake. Ask me anything about food, calories, or health.</p>
+            <h2 className="text-white text-xl font-semibold mb-2">{t("assistant.howCanIHelp")}</h2>
+            <p className="text-gray-500 text-sm max-w-sm mb-8">{t("assistant.knowsNutritionGoals")}</p>
             <div className="grid grid-cols-2 gap-3 w-full max-w-md">
-              {SUGGESTIONS.map(s => (
-                <button key={s} onClick={() => sendMessage(s)}
+              {SUGGESTION_KEYS.map((key) => (
+                <button key={key} onClick={() => sendMessage(t(key))}
                   className="text-left px-4 py-3 rounded-xl bg-[#111111] border border-[#1a1a1a] text-gray-300 text-sm hover:border-green-500/50 hover:text-white transition-all">
-                  {s}
+                  {t(key)}
                 </button>
               ))}
             </div>
@@ -147,7 +160,7 @@ export default function AssistantPage() {
         <PromptInputBox
           onSend={(message) => sendMessage(message)}
           isLoading={isStreaming}
-          placeholder="Ask your nutrition coach..."
+          placeholder={t("assistant.placeholder")}
         />
       </div>
     </div>
