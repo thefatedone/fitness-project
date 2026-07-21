@@ -136,6 +136,26 @@ async def add_water_log(
     return water_log
 
 
+@router.delete("/water/{water_id}")
+async def delete_water_log(
+    water_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a single water log entry (scoped to the current user)."""
+    result = await db.execute(
+        select(WaterLog).where(and_(WaterLog.id == water_id, WaterLog.user_id == user_id))
+    )
+    water_log = result.scalar_one_or_none()
+
+    if not water_log:
+        raise HTTPException(status_code=404, detail="Water log not found")
+
+    await db.delete(water_log)
+    await db.commit()
+    return {"message": "Deleted"}
+
+
 @router.get("/weight", response_model=List[WeightLogResponse])
 async def get_weight_logs(
     user_id: str = Depends(get_current_user_id),

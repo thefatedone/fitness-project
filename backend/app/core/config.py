@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     ANTHROPIC_API_KEY: str
+    ANTHROPIC_MODEL: str = "claude-sonnet-5"
     GOOGLE_GEMINI_API_KEY: str
     USDA_API_KEY: str = "DEMO_KEY"
     FRONTEND_URL: str = "http://localhost:3000"

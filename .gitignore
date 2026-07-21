@@ -7,6 +7,10 @@ node_modules/
 .env.local
 .env.*.local
 *.env
+# Allow tracked templates even though *.env would otherwise ignore them
+!.env.example
+!backend/.env.example
+!.env.*.example
 
 # Python
 __pycache__/

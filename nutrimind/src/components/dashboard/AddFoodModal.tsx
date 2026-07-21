@@ -40,6 +40,7 @@ export default function AddFoodModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,16 +87,17 @@ export default function AddFoodModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setSelectedFile(file);
     const reader = new FileReader();
     reader.onload = async (event) => {
       const base64 = event.target?.result as string;
       setSelectedImage(base64);
-      await analyzeImage(base64);
+      await analyzeImage(file);
     };
     reader.readAsDataURL(file);
   };
 
-  const analyzeImage = async (imageData: string) => {
+  const analyzeImage = async (file: File) => {
     const token = localStorage.getItem("nutrimind_token");
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -104,28 +106,47 @@ export default function AddFoodModal({
     setManualMode(true);
 
     try {
-      const res = await fetch(`${apiUrl}/api/v1/tracker/analyze-image`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ image: imageData }),
-      });
+      // Send the original File as multipart/form-data to the real
+      // Gemini-powered endpoint at /api/v1/food/recognize-and-log.
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(
+        `${apiUrl}/api/v1/food/recognize-and-log?meal_type=${encodeURIComponent(
+          mealType.toLowerCase()
+        )}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        }
+      );
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.detail || "Failed to analyze image");
       }
 
       const data = await res.json();
+      const nutrition = data?.nutrition ?? {};
+
+      // /food/recognize-and-log returns TOTAL nutrition for the detected
+      // serving (not per-100g), so we write those totals straight into the
+      // manual fields. The submit handler sends them as-is to /tracker/food.
       setManualData({
-        name: data.name || "",
-        calories: data.calories_per_100g?.toString() || "",
-        protein: data.protein_per_100g?.toString() || "",
-        carbs: data.carbs_per_100g?.toString() || "",
-        fat: data.fat_per_100g?.toString() || "",
+        name: nutrition.food_name ?? "",
+        calories: nutrition.calories?.toString() ?? "",
+        protein: nutrition.protein?.toString() ?? "",
+        carbs: nutrition.carbs?.toString() ?? "",
+        fat: nutrition.fat?.toString() ?? "",
       });
+
+      if (nutrition.quantity) setQuantity(String(nutrition.quantity));
+      if (nutrition.unit) setUnit(String(nutrition.unit));
+
+      if (data.allergy_warning?.length) {
+        setAnalyzeError(`⚠️ Allergy alert: ${data.allergy_warning.join("; ")}`);
+      }
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Failed to analyze image");
     } finally {
@@ -135,6 +156,7 @@ export default function AddFoodModal({
 
   const handleRemoveImage = () => {
     setSelectedImage(null);
+    setSelectedFile(null);
     setAnalyzeError("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";

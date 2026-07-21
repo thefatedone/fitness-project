@@ -30,7 +30,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-nutrimind}
       POSTGRES_USER: ${POSTGRES_USER:-nutrimind}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_local_dev}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -67,7 +67,7 @@ services:
     env_file: .env
     environment:
       # Override DB / Redis URLs so the backend talks to compose services
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nutrimind}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-nutrimind}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nutrimind}:${POSTGRES_PASSWORD:-changeme_local_dev}@postgres:5432/${POSTGRES_DB:-nutrimind}
       REDIS_URL: redis://redis:6379
       SMTP_HOST: mailhog
       SMTP_PORT: "1025"
@@ -130,7 +130,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nutrimind}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-nutrimind}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nutrimind}:${POSTGRES_PASSWORD:-changeme_local_dev}@postgres:5432/${POSTGRES_DB:-nutrimind}
       REDIS_URL: redis://redis:6379
     depends_on:
       backend:

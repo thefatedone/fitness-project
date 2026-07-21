@@ -108,22 +108,15 @@ async def update_me(
     update_data = user_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         if field in ("dietary_preferences", "food_allergies"):
-            if value is None or value == "":
-                setattr(current_user, field, None)
-                continue
-            if isinstance(value, list):
-                value = ",".join(value)
-            setattr(current_user, field, value)
+            # Pydantic normalises these to list[str] | None; persist as CSV so the
+            # on-disk column shape stays unchanged.
+            setattr(current_user, field, ",".join(value) if value else None)
         elif value is not None:
             if field == "date_of_birth" and isinstance(value, str):
                 try:
                     value = datetime.strptime(value, "%Y-%m-%d").date()
                 except ValueError:
                     raise HTTPException(status_code=400, detail="Invalid date format for date_of_birth. Use YYYY-MM-DD")
-            if field == "dietary_preferences" and isinstance(value, list):
-                value = ",".join(value)
-            if field == "food_allergies" and isinstance(value, list):
-                value = ",".join(value)
             setattr(current_user, field, value)
 
     # Recalculate nutrition targets if measurements changed

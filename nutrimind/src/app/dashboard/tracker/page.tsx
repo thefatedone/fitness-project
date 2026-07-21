@@ -28,6 +28,16 @@ interface DailySummary {
   };
 }
 
+// Sensible fallbacks when the user hasn't completed their profile yet
+// (the backend leaves targets null until height/weight are known).
+const DEFAULT_TARGETS = {
+  calories: 2000,
+  protein: 150,
+  carbs: 250,
+  fat: 65,
+  water: 2000,
+};
+
 interface FoodItem {
   id: number;
   name: string;
@@ -61,11 +71,30 @@ export default function TrackerPage() {
     try {
       const token = localStorage.getItem("nutrimind_token");
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await fetch(`${apiUrl}/api/v1/tracker/daily?date_str=${selectedDate}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
+
+      // Fetch the food log and the user's per-day targets in parallel.
+      // Targets come back null from the backend when the user hasn't
+      // filled out height/weight yet — DEFAULT_TARGETS covers that case.
+      const [logsRes, profileRes] = await Promise.all([
+        fetch(`${apiUrl}/api/v1/tracker/daily?date_str=${selectedDate}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${apiUrl}/api/v1/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      const profile = profileRes.ok ? await profileRes.json() : null;
+      const targets = {
+        calories: profile?.daily_cal_target ?? DEFAULT_TARGETS.calories,
+        protein: profile?.protein_target ?? DEFAULT_TARGETS.protein,
+        carbs: profile?.carbs_target ?? DEFAULT_TARGETS.carbs,
+        fat: profile?.fat_target ?? DEFAULT_TARGETS.fat,
+        water: DEFAULT_TARGETS.water, // no per-user water target yet
+      };
+
+      if (logsRes.ok) {
+        const data = await logsRes.json();
         // Transform flat array into meals grouped by meal_type
         const mealsMap: { breakfast: FoodItem[]; lunch: FoodItem[]; dinner: FoodItem[]; snack: FoodItem[] } = {
           breakfast: [],
@@ -101,30 +130,30 @@ export default function TrackerPage() {
         setDailyData({
           date: selectedDate,
           calories_consumed,
-          calories_target: 2000,
+          calories_target: targets.calories,
           protein_consumed,
-          protein_target: 150,
+          protein_target: targets.protein,
           carbs_consumed,
-          carbs_target: 250,
+          carbs_target: targets.carbs,
           fat_consumed,
-          fat_target: 65,
+          fat_target: targets.fat,
           water_consumed: 0,
-          water_target: 2000,
+          water_target: targets.water,
           meals: mealsMap,
         });
-      } else if (res.status === 404) {
+      } else if (logsRes.status === 404) {
         setDailyData({
           date: selectedDate,
           calories_consumed: 0,
-          calories_target: 2000,
+          calories_target: targets.calories,
           protein_consumed: 0,
-          protein_target: 150,
+          protein_target: targets.protein,
           carbs_consumed: 0,
-          carbs_target: 250,
+          carbs_target: targets.carbs,
           fat_consumed: 0,
-          fat_target: 65,
+          fat_target: targets.fat,
           water_consumed: 0,
-          water_target: 2000,
+          water_target: targets.water,
           meals: { breakfast: [], lunch: [], dinner: [], snack: [] },
         });
       } else {
@@ -265,10 +294,7 @@ export default function TrackerPage() {
 
           {/* Water Tracker */}
           <div className="bg-[#111111] border border-[#1a1a1a] rounded-2xl p-6">
-            <WaterTracker
-              currentAmount={dailyData?.water_consumed || 0}
-              onUpdate={fetchDailyData}
-            />
+            <WaterTracker date={selectedDate} />
           </div>
         </div>
 

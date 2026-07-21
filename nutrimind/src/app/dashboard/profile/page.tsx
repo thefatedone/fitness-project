@@ -24,6 +24,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import ProfilePhotoCrop from "@/components/dashboard/ProfilePhotoCrop";
+import TagInput from "@/components/ui/tag-input";
 
 interface UserProfile {
   id: number;
@@ -53,15 +54,6 @@ interface WeightEntry {
   date: string;
   weight: number;
 }
-
-const DIETARY_OPTIONS = [
-  "None", "Vegetarian", "Vegan", "Keto", "Paleo",
-  "Low-Carb", "Low-Fat", "Mediterranean", "Dash", "Halal", "Kosher"
-];
-
-const ALLERGY_OPTIONS = [
-  "Nuts", "Shellfish", "Eggs", "Soy", "Wheat", "Fish", "Milk"
-];
 
 const ACTIVITY_LEVELS = [
   { value: "sedentary", label: "Sedentary" },
@@ -148,8 +140,8 @@ export default function ProfilePage() {
         setTargetWeight(data.target_weight?.toString() || "");
         setActivityLevel(data.activity_level || "moderately_active");
         setPrimaryGoal(data.primary_goal || "maintain");
-        setDietaryPrefs(data.dietary_preferences ? data.dietary_preferences.split(",").filter(Boolean) : []);
-        setAllergies(data.food_allergies ? data.food_allergies.split(",").filter(Boolean) : []);
+        setDietaryPrefs(Array.isArray(data.dietary_preferences) ? data.dietary_preferences.filter(Boolean) : []);
+        setAllergies(Array.isArray(data.food_allergies) ? data.food_allergies.filter(Boolean) : []);
       }
 
       if (weightRes.ok) {
@@ -186,8 +178,8 @@ export default function ProfilePage() {
           target_weight: parseFloat(targetWeight) || null,
           activity_level: activityLevel,
           primary_goal: primaryGoal,
-          dietary_preferences: dietaryPrefs.join(",") || null,
-          food_allergies: allergies.join(",") || null,
+          dietary_preferences: dietaryPrefs.length ? dietaryPrefs : null,
+          food_allergies: allergies.length ? allergies : null,
         }),
       });
 
@@ -219,8 +211,8 @@ export default function ProfilePage() {
           target_weight: parseFloat(targetWeight) || null,
           activity_level: activityLevel,
           primary_goal: primaryGoal,
-          dietary_preferences: dietaryPrefs.join(",") || null,
-          food_allergies: allergies.join(",") || null,
+          dietary_preferences: dietaryPrefs.length ? dietaryPrefs : null,
+          food_allergies: allergies.length ? allergies : null,
         }),
       });
 
@@ -248,8 +240,8 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({
           primary_goal: primaryGoal,
-          dietary_preferences: dietaryPrefs.filter(Boolean).length > 0 ? dietaryPrefs.filter(Boolean).join(",") : null,
-          food_allergies: allergies.filter(a => a && a.trim()).length > 0 ? allergies.filter(a => a && a.trim()).join(",") : null,
+          dietary_preferences: dietaryPrefs.filter(Boolean).length ? dietaryPrefs.filter(Boolean) : null,
+          food_allergies: allergies.filter((a) => a && a.trim()).length ? allergies.filter((a) => a && a.trim()) : null,
         }),
       });
 
@@ -286,14 +278,6 @@ export default function ProfilePage() {
       }
     } catch {
       showToast("Failed to log weight", "error");
-    }
-  };
-
-  const toggleChip = (value: string, current: string[], setter: (v: string[]) => void) => {
-    if (current.includes(value)) {
-      setter(current.filter((v) => v !== value));
-    } else {
-      setter([...current, value]);
     }
   };
 
@@ -629,97 +613,21 @@ export default function ProfilePage() {
             {/* Dietary Preferences */}
             <div className="mb-6">
               <label className="text-gray-500 text-xs mb-2 block">{t("profile.dietaryPreferences")}</label>
-              <div className="space-y-3">
-                {dietaryPrefs.map((_, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder={index === 0 ? "e.g. Keto, Vegetarian, Paleo..." : `Dietary preference #${index + 1}`}
-                      value={dietaryPrefs[index] || ""}
-                      onChange={(e) => {
-                        const updated = [...dietaryPrefs];
-                        updated[index] = e.target.value;
-                        setDietaryPrefs(updated);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && dietaryPrefs[index]?.trim()) {
-                          e.preventDefault();
-                          if (dietaryPrefs.length < 3) {
-                            setDietaryPrefs([...dietaryPrefs, ""]);
-                          }
-                        }
-                      }}
-                      className="flex-1 px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-green-500 transition-all text-sm"
-                    />
-                    {dietaryPrefs.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setDietaryPrefs(dietaryPrefs.filter((_, i) => i !== index))}
-                        className="px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-gray-500 hover:text-red-400 hover:border-red-500/50 transition-all"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {dietaryPrefs.length < 3 && (
-                  <button
-                    type="button"
-                    onClick={() => setDietaryPrefs([...dietaryPrefs, ""])}
-                    className="w-full py-2 border border-dashed border-[#2a2a2a] rounded-xl text-gray-500 hover:text-green-400 hover:border-green-500/50 transition-all text-sm"
-                  >
-                    + Add another preference
-                  </button>
-                )}
-              </div>
+              <TagInput
+                value={dietaryPrefs}
+                onChange={setDietaryPrefs}
+                placeholder="e.g. Keto, Vegetarian, Paleo…"
+              />
             </div>
 
             {/* Food Allergies */}
             <div className="mb-6">
-              <label className="text-gray-500 text-xs mb-2 block">Food Allergies / Intolerances</label>
-              <div className="space-y-3">
-                {allergies.map((_, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder={index === 0 ? "e.g. Nuts, Gluten, Dairy..." : `Food preference #${index + 1}`}
-                      value={allergies[index] || ""}
-                      onChange={(e) => {
-                        const updated = [...allergies];
-                        updated[index] = e.target.value;
-                        setAllergies(updated);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && allergies[index]?.trim()) {
-                          e.preventDefault();
-                          if (allergies.length < 3) {
-                            setAllergies([...allergies, ""]);
-                          }
-                        }
-                      }}
-                      className="flex-1 px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-green-500 transition-all text-sm"
-                    />
-                    {allergies.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setAllergies(allergies.filter((_, i) => i !== index))}
-                        className="px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-gray-500 hover:text-red-400 hover:border-red-500/50 transition-all"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {allergies.length < 3 && (
-                  <button
-                    type="button"
-                    onClick={() => setAllergies([...allergies, ""])}
-                    className="w-full py-2 border border-dashed border-[#2a2a2a] rounded-xl text-gray-500 hover:text-green-400 hover:border-green-500/50 transition-all text-sm"
-                  >
-                    + Add another allergy
-                  </button>
-                )}
-              </div>
+              <label className="text-gray-500 text-xs mb-2 block">{t("profile.foodAllergies")}</label>
+              <TagInput
+                value={allergies}
+                onChange={setAllergies}
+                placeholder="e.g. Nuts, Gluten, Dairy…"
+              />
             </div>
 
             <button

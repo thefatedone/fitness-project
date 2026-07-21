@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Check, Mail, Phone, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, User, Ruler, Target } from "lucide-react";
+import TagInput from "@/components/ui/tag-input";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -28,15 +29,6 @@ interface FormData {
   allergies: string[];
   weightPace: number;
 }
-
-const dietaryOptions = [
-  "Vegan", "Vegetarian", "Keto", "Paleo",
-  "Mediterranean", "Gluten-free", "Dairy-free"
-];
-
-const allergyOptions = [
-  "Nuts", "Shellfish", "Eggs", "Soy", "Wheat", "Fish", "Milk"
-];
 
 const activityLevels = [
   { id: "sedentary", icon: "🪑", label: "Sedentary", desc: "Desk job, little exercise" },
@@ -195,8 +187,8 @@ export default function RegisterPage() {
           target_weight: targetWeightKg,
           activity_level: formData.activityLevel,
           primary_goal: formData.primaryGoal,
-          dietary_preferences: formData.dietaryPrefs.join(","),
-          food_allergies: formData.allergies.join(","),
+          dietary_preferences: formData.dietaryPrefs,
+          food_allergies: formData.allergies,
           weight_loss_pace: formData.weightPace,
         }),
       });
@@ -613,81 +605,21 @@ export default function RegisterPage() {
               {/* Dietary Preferences */}
               <div className="mb-5">
                 <label className="block text-gray-400 text-sm mb-3">Dietary Preferences</label>
-                <div className="flex flex-wrap gap-2">
-                  {dietaryOptions.map((pref) => (
-                    <button
-                      key={pref}
-                      type="button"
-                      onClick={() => {
-                        const current = formData.dietaryPrefs;
-                        if (current.includes(pref)) {
-                          updateField("dietaryPrefs", current.filter((p) => p !== pref));
-                        } else {
-                          updateField("dietaryPrefs", [...current, pref]);
-                        }
-                      }}
-                      className={`px-3 py-1.5 rounded-full text-sm transition-all duration-300 ${
-                        formData.dietaryPrefs.includes(pref)
-                          ? "bg-[#22c55e] text-black"
-                          : "bg-[#1a1a1a] text-gray-400 border border-[#2a2a2a] hover:border-gray-600"
-                      }`}
-                    >
-                      {pref}
-                    </button>
-                  ))}
-                </div>
+                <TagInput
+                  value={formData.dietaryPrefs}
+                  onChange={(v) => updateField("dietaryPrefs", v)}
+                  placeholder="e.g. Vegan, Vegetarian, Gluten-free…"
+                />
               </div>
 
               {/* Allergies */}
               <div className="mb-5">
                 <label className="block text-gray-400 text-sm mb-3">Food Allergies / Intolerances</label>
-                <div className="space-y-3">
-                  {[0, 1, 2].map((index) => (
-                    <div key={index}>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder={index === 0 ? "e.g. Nuts, Gluten, Dairy..." : `Food preference #${index + 1}`}
-                          value={formData.allergies[index] || ""}
-                          onChange={(e) => {
-                            const updated = [...formData.allergies];
-                            updated[index] = e.target.value;
-                            updateField("allergies", updated.filter(Boolean));
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && formData.allergies[index]?.trim()) {
-                              e.preventDefault();
-                              const updated = [...formData.allergies];
-                              if (index === 2) {
-                                updated.push("");
-                                updateField("allergies", updated);
-                              } else if (index === formData.allergies.length - 1 && formData.allergies.length < 3) {
-                                updated.push("");
-                                updateField("allergies", updated);
-                              }
-                            }
-                          }}
-                          className="flex-1 px-4 py-2.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-green-500 transition-all text-sm"
-                        />
-                        {formData.allergies.length > 1 && formData.allergies[index] && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = formData.allergies.filter((_, i) => i !== index);
-                              updateField("allergies", updated);
-                            }}
-                            className="px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl text-gray-500 hover:text-red-400 hover:border-red-500/50 transition-all"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                      {index === formData.allergies.length - 1 && formData.allergies.length < 3 && formData.allergies[index]?.trim() && (
-                        <p className="text-xs text-green-400 mt-1">Press Enter to add another</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <TagInput
+                  value={formData.allergies}
+                  onChange={(v) => updateField("allergies", v)}
+                  placeholder="e.g. Nuts, Shellfish, Eggs…"
+                />
               </div>
 
               {/* Weight Pace (only if lose or gain) */}

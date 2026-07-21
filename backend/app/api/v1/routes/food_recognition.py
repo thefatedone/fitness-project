@@ -161,11 +161,13 @@ Rules:
     if user_allergies and ingredients:
         allergy_warnings = check_allergen_conflict(user_allergies, ingredients)
 
-    # Log to database
+    # Log to database — strip tzinfo so the value fits the
+    # TIMESTAMP WITHOUT TIME ZONE column (asyncpg can't subtract
+    # offset-aware from offset-naive datetimes).
     food_log = FoodLog(
         id=str(uuid.uuid4()),
         user_id=user_id,
-        date=datetime.now(timezone.utc),
+        date=datetime.now(timezone.utc).replace(tzinfo=None),
         meal_type=meal_type,
         food_name=nutrition_data["food_name"],
         calories=float(nutrition_data["calories"]),

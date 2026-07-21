@@ -2,12 +2,15 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Build-time variable so Next.js bakes the API base URL into the bundle.
+# Pass via `docker compose` build args (sourced from the root `.env`).
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
 COPY . .
-
-ENV NEXT_PUBLIC_API_URL=http://localhost:8000
 
 RUN npm run build
 
