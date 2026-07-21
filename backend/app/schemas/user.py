@@ -1,6 +1,32 @@
-from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
+from pydantic import BaseModel, field_validator
 from datetime import datetime
+
+
+def _coerce_tags(v):
+    """Accept list[str] OR a comma-separated string. Return a clean list[str] or None.
+
+    - Trims each item, drops blanks
+    - Deduplicates case-insensitively, preserving the first-seen casing
+    - Returns None when the input is empty / None / not a recognised shape, so the
+      column is cleared on save.
+    """
+    if v is None or v == "":
+        return None
+    if isinstance(v, str):
+        items = [s.strip() for s in v.split(",") if s.strip()]
+    elif isinstance(v, list):
+        items = [str(s).strip() for s in v if str(s).strip()]
+    else:
+        return None
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for item in items:
+        key = item.lower()
+        if key not in seen:
+            seen.add(key)
+            deduped.append(item)
+    return deduped or None
 
 
 class UserBase(BaseModel):
@@ -20,10 +46,15 @@ class UserUpdate(BaseModel):
     target_weight: Optional[float] = None
     activity_level: Optional[str] = None
     primary_goal: Optional[str] = None
-    dietary_preferences: Optional[str] = None
-    food_allergies: Optional[str] = None
+    dietary_preferences: Optional[List[str]] = None
+    food_allergies: Optional[List[str]] = None
     weight_loss_pace: Optional[float] = None
     profile_photo: Optional[str] = None
+
+    @field_validator("dietary_preferences", "food_allergies", mode="before")
+    @classmethod
+    def _coerce_tags_field(cls, v):
+        return _coerce_tags(v)
 
 
 class UserResponse(BaseModel):
@@ -39,8 +70,8 @@ class UserResponse(BaseModel):
     target_weight: Optional[float] = None
     activity_level: Optional[str] = None
     primary_goal: Optional[str] = None
-    dietary_preferences: Optional[str] = None
-    food_allergies: Optional[str] = None
+    dietary_preferences: Optional[List[str]] = None
+    food_allergies: Optional[List[str]] = None
     weight_loss_pace: Optional[float] = None
     bmr: Optional[float] = None
     tdee: Optional[float] = None
@@ -51,6 +82,11 @@ class UserResponse(BaseModel):
     is_active: bool = True
     created_at: datetime
     profile_photo: Optional[str] = None
+
+    @field_validator("dietary_preferences", "food_allergies", mode="before")
+    @classmethod
+    def _coerce_tags_field(cls, v):
+        return _coerce_tags(v)
 
     class Config:
         from_attributes = True

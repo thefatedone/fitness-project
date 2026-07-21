@@ -1,0 +1,244 @@
+name: nutrimind
+
+# NutriMind — OrbStack / Docker Compose setup
+# --------------------------------------------
+# Run:   docker compose up -d                 # core stack only
+#        docker compose --profile elk up -d   # core + observability
+#        docker compose --profile telegram up -d
+#        docker compose --profile elk --profile telegram up -d
+#
+# Service map (host ports shown):
+#   postgres       localhost:5432
+#   redis          localhost:6379
+#   backend (api)  localhost:8000  (FastAPI + Swagger at /api/docs)
+#   frontend       localhost:3000  (Next.js)
+#   mailhog        localhost:8025  (web UI)   SMTP localhost:1025
+#   telegram-bot   (no host port, profile: telegram)
+#   elasticsearch  localhost:9200  (profile: elk)
+#   kibana         localhost:5601  (profile: elk)
+#   logstash       localhost:5044  (profile: elk, beats input)
+#   apm-server     localhost:8200  (profile: elk)
+#
+# All inter-service communication uses compose DNS names (postgres, redis, backend).
+# The browser reaches the backend via http://localhost:8000 (host port mapping).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nutrimind-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nutrimind}
+      POSTGRES_USER: ${POSTGRES_USER:-nutrimind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nutrimind} -d ${POSTGRES_DB:-nutrimind}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nutrimind-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    container_name: nutrimind-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Override DB / Redis URLs so the backend talks to compose services
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nutrimind}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-nutrimind}
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_TLS: "false"
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      ELASTIC_APM_ENABLED: ${ELASTIC_APM_ENABLED:-false}
+      ELASTIC_APM_SERVER_URL: ${ELASTIC_APM_SERVER_URL:-http://apm-server:8200}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    volumes:
+      - backend_uploads:/uploads
+      # Shared with filebeat when the `elk` profile is active
+      - ./nutrimind/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./nutrimind
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    container_name: nutrimind-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: nutrimind-mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_WEB_PORT:-8025}:8025"
+
+  # ===========================================================================
+  # Telegram bot — opt-in via `--profile telegram`
+  # ===========================================================================
+  telegram-bot:
+    build:
+      context: ./backend
+      dockerfile: telegram.Dockerfile
+    container_name: nutrimind-telegram
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-nutrimind}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-nutrimind}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      backend:
+        condition: service_started
+    profiles: ["telegram"]
+
+  # ===========================================================================
+  # Observability — Elastic stack (logs, metrics, APM) — opt-in via `--profile elk`
+  # ===========================================================================
+  # Brings up Elasticsearch, Kibana, Logstash, Filebeat, Metricbeat, and
+  # APM Server. The backend will pick up APM automatically when apm-server
+  # is reachable and ELASTIC_APM_ENABLED=true in .env.
+  # ---------------------------------------------------------------------------
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: nutrimind-elasticsearch
+    restart: unless-stopped
+    profiles: ["elk"]
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms${ES_HEAP:-512m} -Xmx${ES_HEAP:-512m}"
+    ports:
+      - "${ELASTIC_PORT:-9200}:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    container_name: nutrimind-kibana
+    restart: unless-stopped
+    profiles: ["elk"]
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.12.0
+    container_name: nutrimind-logstash
+    restart: unless-stopped
+    profiles: ["elk"]
+    ports:
+      - "${LOGSTASH_PORT:-5044}:5044"
+    volumes:
+      - ./nutrimind/infrastructure/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.12.0
+    container_name: nutrimind-filebeat
+    user: root
+    restart: unless-stopped
+    profiles: ["elk"]
+    volumes:
+      - ./nutrimind/infrastructure/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./nutrimind/logs:/var/log/app:ro
+    depends_on:
+      - logstash
+    command: filebeat -e -strict.perms=false -c /usr/share/filebeat/filebeat.yml
+
+  metricbeat:
+    image: docker.elastic.co/beats/metricbeat:8.12.0
+    container_name: nutrimind-metricbeat
+    user: root
+    restart: unless-stopped
+    profiles: ["elk"]
+    volumes:
+      - ./nutrimind/infrastructure/metricbeat/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: metricbeat -e -strict.perms=false -c /usr/share/metricbeat/metricbeat.yml
+
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.12.0
+    container_name: nutrimind-apm-server
+    restart: unless-stopped
+    profiles: ["elk"]
+    ports:
+      - "${APM_PORT:-8200}:8200"
+    volumes:
+      - ./nutrimind/infrastructure/apm-server/apm-server.yml:/usr/share/apm-server/apm-server.yml:ro
+    environment:
+      - output.elasticsearch.hosts=elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_uploads:
+  elasticsearch_data:
+
+networks:
+  default:
+    name: nutrimind-app
+    driver: bridge
