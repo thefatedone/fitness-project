@@ -1,12 +1,26 @@
+import os
+import uuid
+from datetime import datetime, date
+
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional
-from datetime import datetime, date
+
 from app.core.database import get_db
-from app.core.security import get_current_user, get_current_user_id
+from app.core.security import (
+    get_current_user,
+    get_current_user_id,
+    verify_password,
+    get_password_hash,
+)
 from app.models.user import User
-from app.schemas.user import UserResponse, UserUpdate
+from app.schemas.user import (
+    UserResponse,
+    UserUpdate,
+    PasswordChangeRequest,
+    AccountDeletionRequest,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -62,6 +76,27 @@ def recalculate_nutrition_targets(user: User) -> dict:
         "carbs_target": round(carbs_target, 1),
         "fat_target": round(fat_target, 1),
     }
+
+
+def _deleteProfilePhotoFile(user: User) -> None:
+    """Best-effort delete of [user.profile_photo] from the local `/uploads`
+    directory.
+
+    Shared by the photo-upload endpoint (which clears the *old* photo
+    when a new one is uploaded) and the account-deletion endpoint
+    (which clears the photo as part of tearing down the user). Both
+    callers tolerate a missing file or a transient permission error
+    (`OSError` is silently swallowed) — a stale path on disk is a
+    leak we don't want to block either flow on.
+    """
+    if not user.profile_photo:
+        return
+    old_path = os.path.join("/uploads", os.path.basename(user.profile_photo))
+    if os.path.exists(old_path):
+        try:
+            os.remove(old_path)
+        except OSError:
+            pass
 
 
 @router.get("/me", response_model=UserResponse)
@@ -130,6 +165,95 @@ async def update_me(
     return current_user
 
 
+@router.put("/me/password")
+async def change_password(
+    body: PasswordChangeRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Change the authenticated user's password.
+
+    Requires the *current* password for verification — this is a
+    "I know my old password and want to set a new one" endpoint, not
+    a forgotten-password / reset flow (that's a separate concern that
+    will live behind email-token verification when added).
+
+    Flow:
+      1. `current_password` is verified against the stored bcrypt
+         hash. Wrong → 400 with a Russian hint (the mobile client
+         surfaces this `detail` directly in a SnackBar).
+      2. `new_password` is already validated by the
+         `PasswordChangeRequest.new_password` Pydantic field
+         validator (same three rules as registration). Failures
+         surface as 422 with the validator's `msg` field, which the
+         mobile client also surfaces directly.
+      3. On success, the hash is replaced and the row is committed.
+    """
+    if not verify_password(body.current_password, current_user.password_hash):
+        # Russian message here (rather than English) because the
+        # mobile app surfaces this `detail` field directly to the
+        # end-user via SnackBar — keeping the user-facing copy in
+        # Russian avoids a one-off client-side translation.
+        raise HTTPException(status_code=400, detail="Текущий пароль неверен.")
+
+    current_user.password_hash = get_password_hash(body.new_password)
+    await db.commit()
+
+    return {"message": "Пароль успешно изменён."}
+
+
+@router.delete("/me")
+async def delete_me(
+    body: AccountDeletionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Permanently delete the authenticated user's account and all
+    associated data — food logs, water logs, weight logs, chat
+    messages, everything in the `users.id` CASCADE tree. There is no
+    undo: the user row and every child row vanish in a single
+    transaction, and the user's profile photo file (if any) is
+    removed from the local `/uploads` directory beforehand.
+
+    Requires password re-confirmation as a safety gate. Deletion is
+    irreversible — the same principle as `PUT /users/me/password`'s
+    `current_password` check, applied at the "destroy" end of the
+    lifecycle rather than the "modify" end.
+
+    Flow:
+      1. Verify the body-supplied password against the stored hash.
+         Wrong → 400 with a Russian detail. **Nothing is touched.**
+      2. Best-effort delete of the profile photo file.
+      3. `db.delete(current_user)` + `db.commit()`. CASCADE foreign
+         keys in the related models take care of the relational
+         cleanup; no manual child-table iteration needed.
+      4. Return the success message. `AuthProvider.status` is now
+         `unauthenticated` (the JWT's `sub` no longer resolves to a
+         row), so any further request with the old token correctly
+         fails 401 — the existing `get_current_user` dependency
+         handles that path without any token-blacklist machinery.
+    """
+    # (1) Password gate. The 400 short-circuits the whole flow
+    # before *any* filesystem or database work happens, so a typo
+    # by the user never risks losing data.
+    if not verify_password(body.password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Неверный пароль.")
+
+    # (2) Best-effort file cleanup. The helper tolerates a missing
+    # file or a transient OSError (permissions, race with another
+    # process) so neither can block the account deletion.
+    _deleteProfilePhotoFile(current_user)
+
+    # (3) The relational cascade. SQLAlchemy issues a single
+    # DELETE on the users row; the CASCADE foreign keys on
+    # food_logs, water_logs, weight_logs, chat_messages, profile_photo
+    # (file on disk, handled above) all take care of themselves.
+    await db.delete(current_user)
+    await db.commit()
+
+    return {"message": "Аккаунт успешно удалён."}
+
+
 @router.post("/me/photo")
 async def upload_photo(
     body: dict,
@@ -156,21 +280,13 @@ async def upload_photo(
         raise HTTPException(status_code=400, detail="Image too large. Maximum size is 5MB")
 
     # Save to static/uploads/
-    import os
-    import uuid
     upload_dir = "/uploads"
     os.makedirs(upload_dir, exist_ok=True)
     filename = f"{uuid.uuid4()}.jpg"
     filepath = os.path.join(upload_dir, filename)
 
-    # Delete old photo if exists
-    if current_user.profile_photo:
-        old_path = os.path.join("/uploads", os.path.basename(current_user.profile_photo))
-        if os.path.exists(old_path):
-            try:
-                os.remove(old_path)
-            except OSError:
-                pass  # Ignore errors deleting old file
+    # Delete old photo if exists (shared with `DELETE /me`)
+    _deleteProfilePhotoFile(current_user)
 
     with open(filepath, "wb") as f:
         f.write(decoded)

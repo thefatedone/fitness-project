@@ -3,6 +3,8 @@ from typing import List, Optional
 from pydantic import BaseModel, field_validator
 from datetime import datetime
 
+from app.core.security import validate_password_strength
+
 
 def _coerce_tags(v):
     """Accept list[str] OR a comma-separated string. Return a clean list[str] or None.
@@ -58,6 +60,53 @@ class UserUpdate(BaseModel):
         return _coerce_tags(v)
 
 
+class PasswordChangeRequest(BaseModel):
+    """Body for `PUT /users/me/password`.
+
+    `current_password` is verified server-side against the user's
+    stored bcrypt hash before the swap — the endpoint isn't a password-
+    reset flow, just a "I know my old password and want to set a new
+    one" flow. `new_password` runs the same strength rules as
+    registration via the shared `validate_password_strength` helper.
+    """
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def _validate_new_password_strength(cls, v: str) -> str:
+        # Reuse the same rules as registration so the mobile app
+        # gives the user consistent feedback across both flows. On
+        # failure, Pydantic turns the ValueError into a 422 with
+        # this string in the `msg` of the first validation error,
+        # which the mobile client's `ApiException.fromDioError`
+        # extracts and surfaces in a SnackBar.
+        err = validate_password_strength(v)
+        if err:
+            raise ValueError(err)
+        return v
+
+
+class AccountDeletionRequest(BaseModel):
+    """Body for `DELETE /users/me`.
+
+    Deletion is destructive and irreversible, so the endpoint
+    requires password re-confirmation as a safety gate — same
+    principle as `PasswordChangeRequest`'s `current_password` check.
+    Wrong password → 400 with a Russian detail; nothing in the
+    database or filesystem is touched until the gate passes.
+    """
+    password: str
+
+
+class VerifyEmailRequest(BaseModel):
+    """Body for `POST /auth/verify-email`. Just the 6-digit code the
+    user typed from the email — the route already knows which user
+    is asking (via the JWT), so no email field is needed here.
+    """
+    code: str
+
+
 class UserResponse(BaseModel):
     id: str
     email: Optional[str]
@@ -83,6 +132,12 @@ class UserResponse(BaseModel):
     is_active: bool = True
     created_at: datetime
     profile_photo: Optional[str] = None
+    # Email-verification status — the mobile / web clients read this
+    # to drive a "verify your email" reminder banner. The column on
+    # the User model is nullable=False (a real boolean), so when it
+    # comes back from a `from_attributes` read this is `bool`, never
+    # `None`. We still type it as `bool` (not `Optional[bool]`) here.
+    is_email_verified: bool = False
 
     @field_validator("dietary_preferences", "food_allergies", mode="before")
     @classmethod

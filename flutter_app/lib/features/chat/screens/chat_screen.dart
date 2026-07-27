@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 
 import '../models/chat_message_model.dart';
@@ -347,6 +348,45 @@ class _MessageBubble extends StatelessWidget {
       align = Alignment.centerLeft;
     }
 
+    final Widget content;
+    if (isLastEmptyInFlight) {
+      // Stream-in-flight placeholder: never has markdown, never needs
+      // selection. The pulsing-dot indicator is its own tree.
+      content = _TypingIndicator(color: foreground);
+    } else if (isUser) {
+      // User messages are typed prose — no markdown, no parsing.
+      // SelectableText keeps "copy-paste my own draft" working.
+      content = SelectableText(
+        message.content,
+        // SelectableText doesn't pick up the bubble's `foreground`
+        // automatically when there's no DefaultTextStyle ancestor — set
+        // it explicitly.
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: foreground,
+          height: 1.35,
+        ),
+      );
+    } else {
+      // Assistant messages frequently contain markdown (**bold**, bullet
+      // lists, headings, etc.). Render via `flutter_markdown` so the
+      // formatting actually shows; wrap in `SelectionArea` so the user
+      // can still copy the advice — MarkdownBody does not have
+      // selectable-text behaviour on its own.
+      content = SelectionArea(
+        child: MarkdownBody(
+          data: message.content,
+          // Pull a coherent base from the active theme (handles font,
+          // color-scheme-derived link color, code-block styling, etc.)
+          // and then override just the paragraph + strong runs so they
+          // match the rest of the bubble's typography exactly — the
+          // defaults from `MarkdownStyleSheet.fromTheme` are designed
+          // for a full-page reading surface and would look out of
+          // place inside a chat bubble.
+          styleSheet: _assistantStyleSheet(theme, foreground),
+        ),
+      );
+    }
+
     final bubble = Container(
       constraints: BoxConstraints(
         maxWidth: MediaQuery.of(context).size.width * 0.78,
@@ -356,19 +396,7 @@ class _MessageBubble extends StatelessWidget {
         color: background,
         borderRadius: radius,
       ),
-      child: isLastEmptyInFlight
-          ? _TypingIndicator(color: foreground)
-          : SelectableText(
-              message.content,
-              // SelectableText is great for "copy AI advice" but it
-              // doesn't pick up the bubble's `foreground` automatically
-              // when there's no DefaultTextStyle ancestor — set it
-              // explicitly.
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: foreground,
-                height: 1.35,
-              ),
-            ),
+      child: content,
     );
 
     return Padding(
@@ -377,6 +405,26 @@ class _MessageBubble extends StatelessWidget {
         alignment: align,
         child: bubble,
       ),
+    );
+  }
+
+  /// Per-bubble MarkdownStyleSheet — keeps paragraph font, height and
+  /// color matching the rest of the chat UI (otherwise the markdown
+  /// package's defaults would clash with the bubble's own typography),
+  /// bolds **strong** runs, and inherits list / heading / link
+  /// styling from the theme so the rest of the chat looks consistent.
+  static MarkdownStyleSheet _assistantStyleSheet(ThemeData theme, Color foreground) {
+    final base = theme.textTheme.bodyMedium?.copyWith(
+      color: foreground,
+      height: 1.35,
+    );
+    return MarkdownStyleSheet.fromTheme(theme).copyWith(
+      p: base,
+      strong: base?.copyWith(fontWeight: FontWeight.w700),
+      // Lists, blockquotes, code blocks keep `MarkdownStyleSheet`'s
+      // default top/bottom margins — those defaults already account
+      // for the (modest) inner padding of the surrounding bubble
+      // Container, so they don't look cramped.
     );
   }
 }

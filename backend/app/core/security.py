@@ -20,6 +20,33 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
+def validate_password_strength(password: str) -> Optional[str]:
+    """Single source of truth for the app's password strength rules.
+
+    Returns `None` when [password] is acceptable; otherwise an English
+    error message describing the first rule it broke. Used by:
+
+      * `auth.py` register endpoint (raises `HTTPException(400)` on
+        failure, with the message as the wire `detail`).
+      * `schemas/user.py` `PasswordChangeRequest` Pydantic field
+        validator on `new_password` (raises `ValueError` on failure,
+        which FastAPI turns into a 422 response — the mobile client's
+        `ApiException.fromDioError` extracts the first `msg` from the
+        list-detail envelope).
+
+    Keeping the rules in one helper means a future rule change
+    (e.g. "must contain a special character") lives in one place
+    instead of needing to be edited in two call sites.
+    """
+    if len(password) < 8:
+        return "Password must be at least 8 characters long"
+    if not password[0].isupper():
+        return "Password must start with a capital letter"
+    if not any(c.isdigit() for c in password):
+        return "Password must contain at least one digit"
+    return None
+
+
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=30))

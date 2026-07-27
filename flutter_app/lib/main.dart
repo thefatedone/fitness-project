@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'features/auth/providers/auth_provider.dart';
+import 'features/auth/providers/password_reset_provider.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/chat/providers/chat_provider.dart';
+import 'features/profile/providers/profile_provider.dart';
 import 'features/tracker/providers/food_recognition_provider.dart';
 import 'features/tracker/providers/tracker_provider.dart';
 import 'features/tracker/screens/tracker_home_screen.dart';
@@ -48,6 +50,18 @@ class NutriMindApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<ChatProvider>(
           create: (_) => ChatProvider(),
+        ),
+        ChangeNotifierProvider<ProfileProvider>(
+          create: (_) => ProfileProvider(),
+        ),
+        // The password-reset flow runs while the user is unauthenticated,
+        // so this provider is created up-front (alongside the others)
+        // and read directly by the three reset screens via
+        // `context.read<PasswordResetProvider>()`. The flow calls
+        // `provider.reset()` on success so a subsequent attempt starts
+        // from a clean state.
+        ChangeNotifierProvider<PasswordResetProvider>(
+          create: (_) => PasswordResetProvider(),
         ),
       ],
       child: MaterialApp(

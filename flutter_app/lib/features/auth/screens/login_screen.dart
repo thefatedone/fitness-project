@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
-import 'register_screen.dart';
+import 'forgot_password_screen.dart';
+import 'onboarding_wizard_screen.dart';
 
 /// Email-only login screen.
 ///
@@ -136,8 +137,40 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
 
+                    // Forgot-password link. Placed directly under the
+                    // password field (right-aligned, low-emphasis
+                    // text button) so the user who's about to give up
+                    // because they can't remember the password sees
+                    // the alternative path right next to the input
+                    // they're stuck on. A11y label clarifies intent.
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: auth.isLoading
+                            ? null
+                            : () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ForgotPasswordScreen(),
+                                  ),
+                                );
+                              },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 0,
+                          ),
+                          minimumSize: const Size(0, 32),
+                          tapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Забыл пароль?'),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
                     FilledButton(
                       onPressed: auth.isLoading ? null : _onSubmit,
                       style: FilledButton.styleFrom(
@@ -160,8 +193,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: auth.isLoading
                           ? null
                           : () => Navigator.of(context).push(
+                                // New users land in the 4-step onboarding
+                                // wizard (auth credentials + full
+                                // profile), not the old single-screen
+                                // RegisterScreen. The old widget stays
+                                // in the codebase for now in case a
+                                // future deep link references it.
                                 MaterialPageRoute(
-                                  builder: (_) => const RegisterScreen(),
+                                  builder: (_) =>
+                                      const OnboardingWizardScreen(),
                                 ),
                               ),
                       child: const Text('Нет аккаунта? Зарегистрироваться'),

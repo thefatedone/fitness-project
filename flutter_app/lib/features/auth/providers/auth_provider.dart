@@ -157,6 +157,22 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Replaces the cached [currentUser] with [user] and notifies.
+  ///
+  /// Intended for OTHER providers (e.g. [ProfileProvider]) that just
+  /// completed a partial update and need the rest of the app — the
+  /// tracker summary, the weight chart, the navigation bar — to see
+  /// the new targets immediately on the next rebuild.
+  ///
+  /// Passing the new `UserModel` (rather than letting callers poke
+  /// at `_currentUser` directly) keeps the field properly private and
+  /// makes the call site read as "publish a fresh snapshot of the
+  /// user", which is exactly what's happening.
+  void updateCurrentUser(UserModel user) {
+    _currentUser = user;
+    notifyListeners();
+  }
+
   // ---- private helpers --------------------------------------------------------
 
   /// Shared body for [register] and [login].

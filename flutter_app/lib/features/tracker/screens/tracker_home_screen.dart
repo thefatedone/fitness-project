@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../shared/widgets/email_verification_banner.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../chat/screens/chat_screen.dart';
+import '../../profile/screens/profile_screen.dart';
 import '../models/food_log_model.dart';
 import '../providers/tracker_provider.dart';
 import 'add_food_screen.dart';
@@ -220,6 +222,16 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     // return the user lands back here with whatever state they left.
   }
 
+  Future<void> _openProfile() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+    // No reload — `ProfileProvider.saveProfile` pushes the new
+    // `UserModel` into `AuthProvider` directly, so any change the
+    // user just made (name, targets, photo) is already visible via
+    // the existing context.watch on this screen.
+  }
+
   IconData _iconForMeal(String key) {
     switch (key) {
       case 'breakfast':
@@ -256,6 +268,11 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
       appBar: AppBar(
         title: const Text('NutriMind'),
         actions: [
+          IconButton(
+            tooltip: 'Профиль',
+            icon: const Icon(Icons.person_outline),
+            onPressed: _openProfile,
+          ),
           IconButton(
             tooltip: 'Чат с NutriBot',
             icon: const Icon(Icons.chat_bubble_outline),
@@ -319,6 +336,14 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                   ),
                   onPickDate: _openDatePicker,
                 ),
+                const SizedBox(height: 12),
+                // Soft "verify your email" reminder. Renders SizedBox.shrink()
+                // when there's no user, the user has no email, the user
+                // already verified, or they dismissed the banner this
+                // session — so the line below is effectively a no-op for
+                // the vast majority of the time and the user never has
+                // to think about it.
+                const EmailVerificationBanner(),
                 const SizedBox(height: 12),
                 _CaloriesSummaryCard(
                   consumed: tracker.totalCalories,

@@ -88,12 +88,25 @@ class UserModel {
   /// URL of the uploaded profile photo on the backend, or `null`.
   final String? profilePhoto;
 
+  /// `true` once the user has verified ownership of their email via
+  /// the 6-digit-code flow. The backend's column is `nullable=False`
+  /// with a `default=False` server default, so this is never `null`
+  /// from a `from_attributes` read; we type it as plain `bool` rather
+  /// than `Optional<bool>`. The mobile app's "verify your email"
+  /// banner reads this flag to know whether to render.
+  ///
+  /// Verification is a *soft reminder* — the user can use the entire
+  /// app with this still false. The flag just drives the in-app
+  /// banner so the user notices and can verify on their own schedule.
+  final bool isEmailVerified;
+
   const UserModel({
     required this.id,
     required this.fullName,
     required this.role,
     required this.isActive,
     required this.createdAt,
+    required this.isEmailVerified,
     this.email,
     this.phone,
     this.dateOfBirth,
@@ -129,6 +142,10 @@ class UserModel {
       role: json['role'] as String? ?? 'USER',
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
+      // `is_email_verified` defaults to false on the server side too,
+      // so an absent key on a partially-built row collapses to
+      // false (which is correct — the user hasn't verified yet).
+      isEmailVerified: json['is_email_verified'] as bool? ?? false,
       email: json['email'] as String?,
       phone: json['phone'] as String?,
       dateOfBirth: _parseDate(json['date_of_birth']),
@@ -148,6 +165,49 @@ class UserModel {
       carbsTarget: _asDouble(json['carbs_target']),
       fatTarget: _asDouble(json['fat_target']),
       profilePhoto: json['profile_photo'] as String?,
+    );
+  }
+
+  /// Returns a new [UserModel] with the same field values as this one,
+  /// except where overridden by a non-`null` named argument.
+  ///
+  /// Intentionally minimal — only fields that the app needs to patch
+  /// locally are exposed. As more screens need to write subsets of
+  /// fields, add the relevant parameter to this method (and only
+  /// those). Keeping it minimal today sidesteps the maintenance
+  /// liability of a 25-parameter auto-generated copyWith.
+  ///
+  /// Each nullable parameter behaves the same way: `null` (the default)
+  /// keeps the current value. There's currently no caller wanting to
+  /// *clear* `profilePhoto` or `isEmailVerified` back to their empty
+  /// state, so a single nullable-arg shape is enough for each.
+  UserModel copyWith({String? profilePhoto, bool? isEmailVerified}) {
+    return UserModel(
+      id: id,
+      email: email,
+      phone: phone,
+      fullName: fullName,
+      role: role,
+      dateOfBirth: dateOfBirth,
+      sex: sex,
+      height: height,
+      currentWeight: currentWeight,
+      targetWeight: targetWeight,
+      activityLevel: activityLevel,
+      primaryGoal: primaryGoal,
+      dietaryPreferences: dietaryPreferences,
+      foodAllergies: foodAllergies,
+      weightLossPace: weightLossPace,
+      bmr: bmr,
+      tdee: tdee,
+      dailyCalTarget: dailyCalTarget,
+      proteinTarget: proteinTarget,
+      carbsTarget: carbsTarget,
+      fatTarget: fatTarget,
+      isActive: isActive,
+      createdAt: createdAt,
+      profilePhoto: profilePhoto ?? this.profilePhoto,
+      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
     );
   }
 

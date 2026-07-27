@@ -41,6 +41,25 @@ class User(Base):
     created_at       = Column(DateTime, default=utc_now)
     updated_at       = Column(DateTime, default=utc_now, onupdate=utc_now)
 
+    # ----- email verification (soft reminder, NOT an access gate) -----
+    #
+    # Email verification is a non-blocking soft reminder. A user who
+    # never verifies their email still has full access to the app —
+    # `is_email_verified` just drives the "please verify your email"
+    # banner on the home screen so the user notices and can verify
+    # on their own schedule. The original spec was explicit about
+    # this: never block login on unverified status.
+    #
+    # The two "code" columns hold an *active* 6-digit code per user.
+    # Unlike password reset, we don't need a separate history table
+    # here — a new code simply overwrites the old one. The code is
+    # hashed with bcrypt before being stored so a raw DB read never
+    # reveals a still-valid code. After a successful verify, the
+    # verify-email route wipes these two columns back to NULL.
+    is_email_verified = Column(Boolean, default=False, nullable=False)
+    email_verification_code_hash = Column(String, nullable=True)
+    email_verification_expires_at = Column(DateTime, nullable=True)
+
     food_logs     = relationship("FoodLog", back_populates="user", cascade="all, delete")
     weight_logs   = relationship("WeightLog", back_populates="user", cascade="all, delete")
     chat_messages = relationship("ChatMessage", back_populates="user", cascade="all, delete")
