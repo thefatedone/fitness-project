@@ -42,8 +42,6 @@ import '../../../shared/widgets/tag_input.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../tracker/screens/weight_history_screen.dart';
 import '../providers/profile_provider.dart';
-import 'change_password_screen.dart';
-import 'delete_account_screen.dart';
 
 /// Profile view/edit screen.
 ///
@@ -499,24 +497,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ---- navigation to other profile screens -------------------------------
 
-  Future<void> _openChangePassword() async {
-    // No reload needed on return — the change-password screen mutates
-    // the user's auth state on the backend; if the user comes back to
-    // here, the existing context.watch on AuthProvider/ProfileProvider
-    // is enough.
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-    );
-  }
-
-  Future<void> _openDeleteAccount() async {
-    // The delete-account screen handles its own auth-state teardown on
-    // success (logout + popUntil to base route), so we just push and
-    // don't need any return-state plumbing here.
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const DeleteAccountScreen()),
-    );
-  }
+  // (Settings now owns "Сменить пароль" and "Удалить аккаунт" —
+  // profile_screen stays focused on editable profile DATA only.
+  // The corresponding _openChangePassword / _openDeleteAccount
+  // methods, and the imports for ChangePasswordScreen /
+  // DeleteAccountScreen, were removed in the same edit.)
 
   // ---- build ----------------------------------------------------------------
 
@@ -620,85 +605,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     )
                   : const Text('Сохранить изменения'),
-            ),
-            const SizedBox(height: 12),
-
-            // Settings-style entry point. Below the save button so
-            // the form's primary action stays at the visual centre of
-            // the page; "Сменить пароль" is an out-of-form action and
-            // reads as settings, not data entry.
-            Card(
-              elevation: 0,
-              color: theme.colorScheme.surfaceContainerHighest,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                leading: Icon(
-                  Icons.lock_outline,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                title: const Text(
-                  'Сменить пароль',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                onTap: _openChangePassword,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 4,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Danger-zone entry point. Visually separated from the
-            // routine "change password" row above with a gap and an
-            // error-tinted card so it's impossible to tap by accident
-            // without noticing the visual weight change. Still inside
-            // the same ListView / single Card surface so it lives in
-            // the same logical group.
-            Card(
-              elevation: 0,
-              color: theme.colorScheme.surfaceContainerHighest,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: theme.colorScheme.error.withValues(alpha: 0.5),
-                  width: 1,
-                ),
-              ),
-              child: ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                leading: Icon(
-                  Icons.delete_forever,
-                  color: theme.colorScheme.error,
-                ),
-                title: Text(
-                  'Удалить аккаунт',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.error,
-                ),
-                onTap: _openDeleteAccount,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 4,
-                ),
-              ),
             ),
           ],
         ),

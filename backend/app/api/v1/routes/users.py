@@ -128,6 +128,7 @@ async def get_me(
         carbs_target=current_user.carbs_target,
         fat_target=current_user.fat_target,
         is_active=current_user.is_active,
+        is_email_verified=current_user.is_email_verified,
         created_at=current_user.created_at,
         profile_photo=current_user.profile_photo,
     )

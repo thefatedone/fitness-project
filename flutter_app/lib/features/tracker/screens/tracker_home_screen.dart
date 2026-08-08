@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../shared/widgets/app_dock.dart';
 import '../../../shared/widgets/email_verification_banner.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../chat/screens/chat_screen.dart';
 import '../../profile/screens/profile_screen.dart';
+import '../../settings/screens/settings_screen.dart';
 import '../models/food_log_model.dart';
+import '../models/water_log_model.dart';
+import '../providers/food_recognition_provider.dart';
 import '../providers/tracker_provider.dart';
 import 'add_food_screen.dart';
+import 'edit_food_description_screen.dart';
+import 'photo_beverage_screen.dart';
 import 'photo_food_screen.dart';
 import 'weight_history_screen.dart';
 
@@ -52,6 +58,17 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     'lunch': 'Обед',
     'dinner': 'Ужин',
     'snack': 'Перекус',
+    // Beverage entries — a dedicated bucket since the backend's
+    // beverage-recognition flow writes `meal_type='drinks'` (kept
+    // distinct from `'snack'` so a 3 PM coffee and a 3 PM cookie
+    // don't collapse into the same section). The English key
+    // `'drinks'` is the backend's wire format (see
+    // `backend/app/api/v1/routes/food_recognition.py`'s
+    // `_dual_log_beverage`); translating it as a first-class
+    // member of this map — rather than falling through to the
+    // "capitalise the raw key" default — avoids the user ever
+    // seeing the literal word "Drinks" on screen.
+    'drinks': 'Напитки',
   };
 
   String _mealLabel(String key) {
@@ -98,8 +115,22 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
   // ---- existing actions ----------------------------------------------------
 
   Future<void> _onAddWater() async {
+    // The "+ Добавить воду" button on the water card opens this modal
+    // so the user can pick a custom amount in litres (0.1–10 L) with
+    // optional quick-pick chips. The sheet handles its own state
+    // (loading, validation, conversion) and closes itself on success;
+    // the parent just opens the modal here.
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => const _AddWaterSheet(),
+    );
+  }
+
+  Future<void> _onDeleteWater(String waterId) async {
     final tracker = context.read<TrackerProvider>();
-    final ok = await tracker.addWaterEntry(250);
+    final ok = await tracker.deleteWaterEntry(waterId);
     if (!mounted) return;
     if (!ok && tracker.errorMessage != null) {
       ScaffoldMessenger.of(context)
@@ -205,6 +236,89 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     // visible UI flicker.
   }
 
+  /// Shows the camera DockItem's tap dispatcher: a small modal
+  /// bottom sheet asking what the user is about to photograph
+  /// (food vs beverage). Each option routes to its own screen.
+  ///
+  /// Why a modal sheet rather than adding a sixth Dock icon:
+  /// the Dock is already at its 5-item layout (camera, chat,
+  /// add, profile, settings) and adding a sixth would crowd it
+  /// — at < 360 dp wide the icons would overflow or compress
+  /// into illegible targets. The Dock icon (a single camera)
+  /// plus a chooser sheet keeps the Dock's visual rhythm intact
+  /// while letting the user reach either flow with one tap.
+  ///
+  /// The two options have different downstream shapes — the
+  /// food flow asks for a meal slot (because meals are filed
+  /// under breakfast/lunch/dinner/snack), while the beverage
+  /// flow skips that step (beverages always file under "snack"
+  /// server-side). Routing through one dispatcher here keeps
+  /// that asymmetry out of the Dock's `onTap` callback.
+  Future<void> _showCameraChoice() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Text(
+                  'Что фотографируем?',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.restaurant),
+                title: const Text('Сфотографировать еду'),
+                subtitle: const Text(
+                  'Узнать КБЖУ и добавить запись в дневник',
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _openPhotoFlow();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.local_drink_outlined),
+                title: const Text('Сфотографировать напиток'),
+                subtitle: const Text(
+                  'Авто-добавление воды и калорий в один шаг',
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _openPhotoBeverage();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Pushes [PhotoBeverageScreen] for the beverage flow. No
+  /// meal-picker sheet is involved — beverages always file
+  /// under "snack" server-side, so the user doesn't need to
+  /// answer a meal-slot question. Whatever the return value
+  /// (`true` on successful confirm-and-save, `null` on back),
+  /// no refetch is required: `BeverageProvider.confirmManual`
+  /// already merged the dual-written rows into
+  /// [TrackerProvider] in-place.
+  Future<void> _openPhotoBeverage() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const PhotoBeverageScreen(),
+      ),
+    );
+  }
+
   Future<void> _openWeightHistory() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const WeightHistoryScreen()),
@@ -232,6 +346,45 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     // the existing context.watch on this screen.
   }
 
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
+  }
+
+  Future<void> _openReanalyze(FoodLogModel food) async {
+    // Pushes [EditFoodDescriptionScreen] for an AI-generated row.
+    //
+    // Pre-filling `initialDescription` from the in-memory cache:
+    // `FoodRecognitionProvider.descriptionsByFoodLogId` carries the
+    // most recent description Gemini produced for this row across
+    // the photo-recognition screen → home screen leg of the flow.
+    // When the cache hits (same app session, no kill), the user
+    // continues editing from the text they last saw; when it
+    // misses (app was killed/restarted, row was logged in a
+    // previous session), the field starts empty and the user types
+    // their correction from scratch — a perfectly reasonable UX
+    // fallback that the spec specifically sanctions.
+    //
+    // The screen pops with `true` on success, which we currently
+    // ignore — the underlying [TrackerProvider] is already
+    // updated in place by [FoodRecognitionProvider] via
+    // `updateLocalFoodEntry`, so no further action is needed from
+    // the caller. If we ever want a toast ("Уточнено!"), this is
+    // where it would go.
+    final provider = context.read<FoodRecognitionProvider>();
+    final cachedDescription =
+        provider.descriptionsByFoodLogId[food.id] ?? '';
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => EditFoodDescriptionScreen(
+          foodLog: food,
+          initialDescription: cachedDescription,
+        ),
+      ),
+    );
+  }
+
   IconData _iconForMeal(String key) {
     switch (key) {
       case 'breakfast':
@@ -242,6 +395,17 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
         return Icons.dinner_dining_outlined;
       case 'snack':
         return Icons.cookie_outlined;
+      case 'drinks':
+        // Reuses the same icon as the camera-choice modal's
+        // "Сфотографировать напиток" entry (and
+        // `photo_beverage_screen.dart`'s picker view) so any
+        // beverage-related affordance the user sees on the home
+        // screen renders with the same visual hint. Distinct from
+        // `Icons.water_drop_outlined` (used inside individual
+        // beverage rows' volume lines) — water_drop is "this row
+        // is a beverage", local_drink is "this section is the
+        // drinks bucket".
+        return Icons.local_drink_outlined;
       default:
         return Icons.restaurant_outlined;
     }
@@ -265,49 +429,12 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     final isViewingToday = _isSameDay(tracker.selectedDate, DateTime.now());
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('NutriMind'),
-        actions: [
-          IconButton(
-            tooltip: 'Профиль',
-            icon: const Icon(Icons.person_outline),
-            onPressed: _openProfile,
-          ),
-          IconButton(
-            tooltip: 'Чат с NutriBot',
-            icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: _openChat,
-          ),
-          IconButton(
-            tooltip: 'Выйти',
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthProvider>().logout(),
-          ),
-        ],
-      ),
-      floatingActionButton: isViewingToday
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                FloatingActionButton.small(
-                  heroTag: 'fab-camera',
-                  onPressed: _openPhotoFlow,
-                  tooltip: 'Фото еды',
-                  backgroundColor: theme.colorScheme.secondaryContainer,
-                  foregroundColor: theme.colorScheme.onSecondaryContainer,
-                  child: const Icon(Icons.camera_alt),
-                ),
-                const SizedBox(height: 12),
-                FloatingActionButton(
-                  heroTag: 'fab-add',
-                  onPressed: _openAddFood,
-                  tooltip: 'Добавить еду',
-                  child: const Icon(Icons.add),
-                ),
-              ],
-            )
-          : null,
+      // Minimal AppBar — the title text and the three trailing icon
+      // buttons (settings, profile, chat) have moved into the
+      // bottom-floating Dock below. The AppBar is still here purely
+      // for status-bar color/height consistency and the OS-conventional
+      // top-padding for the date-nav row that sits just under it.
+      appBar: AppBar(),
       body: Stack(
         children: [
           RefreshIndicator(
@@ -321,7 +448,12 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
               ]);
             },
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+              // Bottom padding bumped to clear the floating Dock's
+              // height (~64 px) plus its 16 px margin so the last
+              // food-log tile never hides under the pill. Top stays
+              // 0 — the AppBar already reserves the status-bar gutter
+              // and the date-nav row sits flush against it.
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
               children: [
                 // Date navigation row — anchored at the top so the user
                 // always knows what day they're looking at.
@@ -382,9 +514,10 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                 ),
                 const SizedBox(height: 16),
                 _WaterRow(
-                  totalMl: tracker.totalWaterMl,
+                  waterLogs: tracker.waterLogs,
                   isLoading: tracker.isLoading,
                   onAdd: _onAddWater,
+                  onDelete: (id) => _onDeleteWater(id),
                 ),
                 const SizedBox(height: 24),
                 _FoodLogSection(
@@ -392,6 +525,14 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                   isEmpty: tracker.foodLogs.isEmpty && !showInitialLoader,
                   mealLabel: _mealLabel,
                   onDelete: _onDeleteFood,
+                  // Only AI-generated rows have something to
+                  // correct (a textual description Gemini produced);
+                  // entries entered manually via `AddFoodScreen`
+                  // don't carry an AI description at all. Passing a
+                  // single conditional callback keeps the per-tile
+                  // logic inside `_FoodLogTile` trivial: show the
+                  // edit button iff this callback is non-null.
+                  onReanalyze: _openReanalyze,
                 ),
               ],
             ),
@@ -401,6 +542,71 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
               child: ColoredBox(
                 color: theme.colorScheme.surface.withValues(alpha: 0.6),
                 child: const Center(child: CircularProgressIndicator()),
+              ),
+            ),
+
+          // Bottom-floating Dock. Mirrors the iOS / macOS dock
+          // convention: a frosted-glass pill that hovers above the
+          // scrolling body, holding the five home-screen actions as
+          // icon buttons (camera / chat / add / profile / settings).
+          // The Dock's "only enabled when viewing today" rule is
+          // expressed on the camera and add entries — they're
+          // `onTap: null` on past dates so the dock renders them
+          // visibly-disabled (the DockItem helper dims them and
+          // ignores taps) rather than letting the user log entries
+          // against a date the rest of the UI wouldn't render.
+          // `Add food` is marked `emphasized: true` — the most-frequent
+          // action, anchored as a filled-circle brand button in the
+          // dock center, matching the iOS dock "primary app" treatment
+          // and reinforcing muscle memory from the prior FAB. The
+          // entry-order here is intentional: the emphasized button
+          // sits in the centre (index 2 of 5) so the visual weight
+          // stays symmetric regardless of how many non-emphasized
+          // items surround it.
+          if (showInitialLoader)
+            const SizedBox.shrink()
+          else
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: AppDock(
+                items: [
+                  DockItem(
+                    icon: Icons.camera_alt_outlined,
+                    tooltip: 'Камера',
+                    // The Dock item is intentionally
+                    // parameterless — both food and beverage
+                    // flows share the same camera icon, and the
+                    // choice happens in `_showCameraChoice`'s
+                    // modal sheet. Keeping the chooser *outside*
+                    // the Dock's onTap callback lets the dock
+                    // icon stay "press to take a photo" with no
+                    // commitment to which downstream flow.
+                    onTap: isViewingToday ? _showCameraChoice : null,
+                  ),
+                  DockItem(
+                    icon: Icons.chat_bubble_outline,
+                    tooltip: 'Чат с NutriBot',
+                    onTap: _openChat,
+                  ),
+                  DockItem(
+                    icon: Icons.add,
+                    tooltip: 'Добавить еду',
+                    onTap: isViewingToday ? _openAddFood : null,
+                    emphasized: true,
+                  ),
+                  DockItem(
+                    icon: Icons.person_outline,
+                    tooltip: 'Профиль',
+                    onTap: _openProfile,
+                  ),
+                  DockItem(
+                    icon: Icons.settings_outlined,
+                    tooltip: 'Настройки',
+                    onTap: _openSettings,
+                  ),
+                ],
               ),
             ),
         ],
@@ -726,56 +932,421 @@ class _MacroRow extends StatelessWidget {
       g == g.roundToDouble() ? g.toInt().toString() : g.toStringAsFixed(1);
 }
 
-/// Water tracking row: total consumed + a "+250 мл" button.
-class _WaterRow extends StatelessWidget {
+/// Formats a water amount for display, matching the web app's
+/// `WaterTracker.tsx` exactly:
+///   * `< 1000 ml`  →  `"X ml"`
+///   * `>= 1000 ml`  →  whole litres as `"X L"`, otherwise one decimal
+///                       place `"X.X L"`.
+String _formatWaterAmount(int ml) {
+  if (ml < 1000) return '$ml мл';
+  final litres = ml / 1000;
+  if (litres == litres.roundToDouble()) return '${litres.toInt()} L';
+  return '${litres.toStringAsFixed(1)} L';
+}
+
+/// Returns the time portion of an ISO 8601 datetime string as
+/// `HH:mm`. Manual string slicing — `intl` not in the dependency set.
+String _formatHourMinute(DateTime t) {
+  final hh = t.hour.toString().padLeft(2, '0');
+  final mm = t.minute.toString().padLeft(2, '0');
+  return '$hh:$mm';
+}
+
+/// Water tracking card + entry list. Brings the mobile experience to
+/// parity with the web's `WaterTracker.tsx`:
+///   * header with formatted total / goal
+///   * progress bar (0..1) and "X% дневной цели" caption
+///   * "Добавить воду" button that opens [_AddWaterSheet]
+///   * per-entry list with formatted amount, time, and a delete icon
+class _WaterRow extends StatefulWidget {
   const _WaterRow({
-    required this.totalMl,
+    required this.waterLogs,
     required this.isLoading,
     required this.onAdd,
+    required this.onDelete,
   });
 
-  final int totalMl;
+  final List<WaterLogModel> waterLogs;
   final bool isLoading;
   final VoidCallback onAdd;
+  final Future<void> Function(String waterId) onDelete;
+
+  @override
+  State<_WaterRow> createState() => _WaterRowState();
+}
+
+class _WaterRowState extends State<_WaterRow> {
+  /// Tracks the id of an entry we just deleted so we can show an
+  /// undo-style SnackBar with a single confirm. The undo itself is
+  /// out of scope (would require a "recently deleted" buffer on the
+  /// provider), so the button just dismisses the snackbar.
+  String? _recentlyDeletedId;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // We pull the user's weight from AuthProvider here (not from a
+    // context prop) because the parent screen already does the same
+    // `context.watch<AuthProvider>()` lookup a few lines above and we
+    // want the rebuild chain to share that. The "watch" here is the
+    // cheap part — only the *currentUser* getter is touched.
+    final auth = context.watch<AuthProvider>();
+    final goalMl = TrackerProvider.computeDailyWaterGoalMl(
+      auth.currentUser?.currentWeight,
+    );
+
+    final totalMl = widget.waterLogs.fold<int>(
+      0,
+      (sum, w) => sum + w.amount,
+    );
+    final ratio = goalMl > 0
+        ? (totalMl / goalMl).clamp(0.0, 1.0)
+        : 0.0;
+    final remainingMl = (goalMl - totalMl).clamp(0, goalMl);
+    final pct = goalMl > 0 ? ((totalMl / goalMl) * 100).round() : 0;
+    final goalReached = goalMl > 0 && totalMl >= goalMl;
+
     return Card(
       elevation: 0,
       color: theme.colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Row(
-          children: [
-            Icon(Icons.water_drop_outlined, color: theme.colorScheme.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Вода',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.water_drop_outlined,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Вода',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_formatWaterAmount(totalMl)} / ${_formatWaterAmount(goalMl)}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: widget.isLoading ? null : widget.onAdd,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Добавить'),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: ratio,
+                      minHeight: 6,
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHigh,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        theme.colorScheme.primary,
+                      ),
                     ),
                   ),
-                  Text(
-                    '$totalMl мл',
-                    style: theme.textTheme.titleMedium?.copyWith(
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  goalReached ? 'Цель достигнута!' : '$pct% дневной цели',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: goalReached
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                    fontWeight: goalReached ? FontWeight.w600 : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (remainingMl > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${_formatWaterAmount(remainingMl)} осталось',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            )
+          else
+            const SizedBox(height: 8),
+          if (widget.waterLogs.isNotEmpty)
+            _WaterLogList(
+              waterLogs: widget.waterLogs,
+              onDelete: _handleDelete,
+              recentlyDeletedId: _recentlyDeletedId,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleDelete(String id) async {
+    setState(() {
+      _recentlyDeletedId = id;
+    });
+    await widget.onDelete(id);
+    if (!mounted) return;
+    // Reset the indicator after the snackbar's auto-dismiss window
+    // (~4s) so the same entry doesn't stay in the "just deleted" state
+    // if a rebuild happens.
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() => _recentlyDeletedId = null);
+      }
+    });
+  }
+}
+
+/// Per-entry list of today's water logs. Each row shows the formatted
+/// amount, the time it was logged (HH:mm), and a delete icon. The
+/// delete icon doesn't show a blocking dialog — the parent already
+/// shows an undo-style snackbar via the [WidgetRef] callback.
+class _WaterLogList extends StatelessWidget {
+  const _WaterLogList({
+    required this.waterLogs,
+    required this.onDelete,
+    required this.recentlyDeletedId,
+  });
+
+  final List<WaterLogModel> waterLogs;
+  final Future<void> Function(String waterId) onDelete;
+  final String? recentlyDeletedId;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final w in waterLogs)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+            child: Row(
+              children: [
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 56,
+                  child: Text(
+                    _formatWaterAmount(w.amount),
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                ),
+                Expanded(
+                  child: Text(
+                    _formatHourMinute(w.createdAt),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                if (recentlyDeletedId == w.id)
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: theme.colorScheme.primary,
+                    ),
+                  )
+                else
+                  IconButton(
+                    tooltip: 'Удалить',
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    color: theme.colorScheme.onSurfaceVariant,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => onDelete(w.id),
+                  ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+/// Modal bottom sheet for entering a custom water amount in litres.
+///
+/// Shows a numeric input in litres (range 0.1–10), four quick-pick
+/// chips (0.2 / 0.5 / 1 / 2 L) that pre-fill the input, and a confirm
+/// button that converts to millilitres and calls
+/// [TrackerProvider.addWaterEntry]. Mirrors the visual weight of
+/// `weight_history_screen.dart`'s add-weight dialog.
+class _AddWaterSheet extends StatefulWidget {
+  const _AddWaterSheet();
+
+  @override
+  State<_AddWaterSheet> createState() => _AddWaterSheetState();
+}
+
+class _AddWaterSheetState extends State<_AddWaterSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _litresCtrl = TextEditingController();
+
+  /// The four web-app quick-pick values, in litres. Each row of
+  /// [liter, formatted]. Mirrors the web's "0.2 / 0.5 / 1 / 2 L"
+  /// pre-fill buttons.
+  static const List<double> _quickPicks = <double>[0.2, 0.5, 1.0, 2.0];
+
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _litresCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _isSubmitting = true);
+
+    final raw = _litresCtrl.text.trim().replaceAll(',', '.');
+    final litres = num.tryParse(raw);
+    if (litres == null) return; // validator already caught this
+    final ml = (litres * 1000).round();
+
+    final tracker = context.read<TrackerProvider>();
+    final ok = await tracker.addWaterEntry(ml);
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    if (ok) {
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              tracker.errorMessage ?? 'Не удалось сохранить.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          8,
+          24,
+          24 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Добавить воду',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Введи количество в литрах (0.1–10 л)',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _litresCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Литры',
+                  border: OutlineInputBorder(),
+                  hintText: 'например, 0.5',
+                ),
+                validator: (v) {
+                  final raw = (v ?? '').trim();
+                  if (raw.isEmpty) return 'Введи количество';
+                  final n = num.tryParse(raw.replaceAll(',', '.'));
+                  if (n == null) return 'Введи число';
+                  if (n < 0.1) return 'Минимум 0.1 л';
+                  if (n > 10) return 'Максимум 10 л';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final v in _quickPicks)
+                    ActionChip(
+                      label: Text(_formatWaterAmount((v * 1000).round())),
+                      onPressed: () {
+                        _litresCtrl.text = v.toString();
+                        // Keep the cursor at the end of the new value
+                        // — TextEditingController.text assignment
+                        // leaves it at offset 0 by default.
+                        _litresCtrl.selection = TextSelection.collapsed(
+                          offset: _litresCtrl.text.length,
+                        );
+                      },
+                    ),
                 ],
               ),
-            ),
-            OutlinedButton.icon(
-              onPressed: isLoading ? null : onAdd,
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('250 мл'),
-            ),
-          ],
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: _isSubmitting ? null : _submit,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Сохранить'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -790,12 +1361,18 @@ class _FoodLogSection extends StatelessWidget {
     required this.isEmpty,
     required this.mealLabel,
     required this.onDelete,
+    required this.onReanalyze,
   });
 
   final Map<String, List<FoodLogModel>> grouped;
   final bool isEmpty;
   final String Function(String) mealLabel;
   final void Function(FoodLogModel food) onDelete;
+
+  /// Invoked when the user taps "Уточнить" on an AI-generated row.
+  /// `null` means "no edit affordance" — applied to manually-added
+  /// entries, which have no AI description to correct.
+  final Future<void> Function(FoodLogModel food)? onReanalyze;
 
   @override
   Widget build(BuildContext context) {
@@ -815,8 +1392,16 @@ class _FoodLogSection extends StatelessWidget {
 
     final children = <Widget>[];
     // Preserve a friendly order: known meals first in the canonical order,
-    // then any unknown buckets alphabetically.
-    const knownOrder = ['breakfast', 'lunch', 'dinner', 'snack'];
+    // then any unknown buckets alphabetically. `'drinks'` is placed
+    // at the end of the canonical order (after `'snack'`) because
+    // beverages, like snacks, are typically consumed at any hour
+    // of the day rather than locked to breakfast / lunch /
+    // dinner windows — putting drinks last among the "anytime"
+    // categories reads as: meals first, then anytime items,
+    // drinks at the very end (reflecting that beverages are
+    // semantically a different "track" from even snacks — they
+    // carry dual data via the FoodLog + WaterLog pair).
+    const knownOrder = ['breakfast', 'lunch', 'dinner', 'snack', 'drinks'];
     final known = knownOrder
         .where(grouped.containsKey)
         .map((k) => MapEntry(k, grouped[k]!));
@@ -839,7 +1424,17 @@ class _FoodLogSection extends StatelessWidget {
         ),
       );
       for (final food in entries) {
-        children.add(_FoodLogTile(food: food, onDelete: () => onDelete(food)));
+        // The edit affordance is conditional on `aiGenerated`:
+        // manually-entered rows don't carry an AI description to
+        // refine, so passing `null` here makes the tile render with
+        // only the existing delete icon.
+        final reanalyze =
+            food.aiGenerated ? () => onReanalyze?.call(food) : null;
+        children.add(_FoodLogTile(
+          food: food,
+          onDelete: () => onDelete(food),
+          onReanalyze: reanalyze,
+        ));
       }
     }
 
@@ -860,10 +1455,19 @@ class _FoodLogSection extends StatelessWidget {
 /// Single food-log entry. Subtitle is "Б/У/Ж" (белки/углеводы/жиры) per
 /// the spec — compact single-line format that fits a single-line ListTile.
 class _FoodLogTile extends StatelessWidget {
-  const _FoodLogTile({required this.food, required this.onDelete});
+  const _FoodLogTile({
+    required this.food,
+    required this.onDelete,
+    this.onReanalyze,
+  });
 
   final FoodLogModel food;
   final VoidCallback onDelete;
+
+  /// Optional callback to render the "Уточнить" edit affordance. When
+  /// `null`, the tile shows only the existing delete icon — used for
+  /// manually-entered rows that have no AI description to refine.
+  final VoidCallback? onReanalyze;
 
   String _fmt(double v) =>
       v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
@@ -896,10 +1500,25 @@ class _FoodLogTile extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        trailing: IconButton(
-          tooltip: 'Удалить',
-          icon: const Icon(Icons.delete_outline),
-          onPressed: onDelete,
+        // Trailing holds both action icons when the row is AI-
+        // generated (render side-by-side via `Row(mainAxisSize:
+        // min)` so the ListTile doesn't expand to claim the full
+        // row width) and just the delete icon otherwise.
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onReanalyze != null)
+              IconButton(
+                tooltip: 'Уточнить',
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: onReanalyze,
+              ),
+            IconButton(
+              tooltip: 'Удалить',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: onDelete,
+            ),
+          ],
         ),
       ),
     );

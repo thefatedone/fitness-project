@@ -1,24 +1,126 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'core/api/api_client.dart';
+import 'core/config/api_environment_provider.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/providers/password_reset_provider.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/chat/providers/chat_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
+import 'features/tracker/providers/beverage_provider.dart';
 import 'features/tracker/providers/food_recognition_provider.dart';
 import 'features/tracker/providers/tracker_provider.dart';
 import 'features/tracker/screens/tracker_home_screen.dart';
 
 /// App entry point.
 ///
-/// Builds the [NutriMindApp] root widget. Providers live INSIDE that
-/// widget (see below) so the root is self-contained — that's what makes
-/// `pumpWidget(const NutriMindApp())` a useful thing to do in a smoke
-/// test. `runApp` itself does only this one thing.
+/// Builds the [NutriMindApp] root widget. The [AuthProvider] is created
+/// here in `main()` (rather than inside the MultiProvider's `create`
+/// lambda) so we can capture a reference to it BEFORE the provider
+/// tree is built — we then pass that same instance to
+/// [ChangeNotifierProvider.value] and use it to wire the centralized
+/// 401 hook on [apiClient]. That wiring has to happen before any HTTP
+/// call can fire, so doing it post-build (in a post-frame callback)
+/// would leave a tiny race window where a 401 would be silently dropped.
 void main() {
-  runApp(const NutriMindApp());
+  // Initialize the Flutter binding BEFORE any plugin-touching code
+  // runs. `flutter_secure_storage` (used by `tokenStorage.readToken()`
+  // inside `tryAutoLogin` below) talks to a native MethodChannel,
+  // which throws "Binding has not yet been initialized" if the
+  // binding isn't up yet. `runApp()` would normally do this as its
+  // first step, but we need the binding initialized HERE because
+  // we're about to create an AuthProvider (and call its
+  // `tryAutoLogin`) before `runApp` is invoked. The call is
+  // idempotent — Flutter's runtime skips the second invocation.
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Single instance — used both for the provider tree below AND for
+  // the apiClient 401 hook. The hook has to be set before runApp so a
+  // 401 from any request triggered during the very first frame
+  // (e.g. a stale-token GET /users/me via tryAutoLogin) doesn't fall
+  // through the unhandled branch.
+  final authProvider = AuthProvider()..tryAutoLogin();
+  apiClient.onUnauthorized = authProvider.forceLogout;
+
+  runApp(
+    MultiProvider(
+      providers: [
+        // ThemeProvider must be available BEFORE the MaterialApp's
+        // build runs so it can read the user's current theme
+        // preference via `context.watch<ThemeProvider>()`. We also kick
+        // off `loadSavedMode()` on creation so the persisted choice
+        // is drained from SharedPreferences before the first frame
+        // paints — same pattern as AuthProvider's `..tryAutoLogin()`.
+        ChangeNotifierProvider<ThemeProvider>(
+          create: (_) => ThemeProvider()..loadSavedMode(),
+        ),
+        // Debug-only API-environment switcher. Reads any persisted
+        // override from SharedPreferences on creation
+        // (`loadSaved()`), pushes it into `AppConfig`, and re-points
+        // `apiClient.dio.options.baseUrl` so the very first frame's
+        // (potential) HTTP request lands on the user-picked host.
+        // The Settings screen surfaces this in its debug-only
+        // "API-окружение" card; in release builds (`kDebugMode ==
+        // false`) the UI section is simply absent — the provider
+        // itself stays registered but never has a consumer.
+        ChangeNotifierProvider<ApiEnvironmentProvider>(
+          create: (_) => ApiEnvironmentProvider()..loadSaved(),
+        ),
+        // .value() reuses the same instance we created above so the
+        // 401 hook and the provider tree point at the same AuthProvider.
+        // .create(...) would also work but would create a SECOND
+        // instance — the hook would call forceLogout on one, while
+        // the UI watched the other. That would break the silent-logout
+        // UX (a rebuild from the hook wouldn't trigger AuthGate's
+        // exhaustive switch because the *watched* instance's status
+        // would never change).
+        ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
+        ChangeNotifierProvider<TrackerProvider>(
+          create: (_) => TrackerProvider(),
+        ),
+        ChangeNotifierProvider<FoodRecognitionProvider>(
+          create: (_) => FoodRecognitionProvider(),
+        ),
+        // Beverage photo recognition flow — parallels
+        // `FoodRecognitionProvider`. Used by the
+        // `PhotoBeverageScreen` reachable via the Dock's
+        // camera icon → "Сфотографировать напиток" choice.
+        ChangeNotifierProvider<BeverageProvider>(
+          create: (_) => BeverageProvider(),
+        ),
+        ChangeNotifierProvider<ChatProvider>(
+          create: (_) => ChatProvider(),
+        ),
+        ChangeNotifierProvider<ProfileProvider>(
+          create: (_) => ProfileProvider(),
+        ),
+        // The password-reset flow runs while the user is unauthenticated,
+        // so this provider is created up-front (alongside the others)
+        // and read directly by the three reset screens via
+        // `context.read<PasswordResetProvider>()`. The flow calls
+        // `provider.reset()` on success so a subsequent attempt starts
+        // from a clean state.
+        ChangeNotifierProvider<PasswordResetProvider>(
+          create: (_) => PasswordResetProvider(),
+        ),
+      ],
+      child: const _NutriMindAppShell(),
+    ),
+  );
 }
+
+// Note on the "Сессия истекла" toast:
+// `AuthProvider.sessionExpiredNotice` is set to `true` by the
+// `apiClient` 401 hook. A future integration in [LoginScreen] should
+// read this flag in `initState`, show a SnackBar
+// "Сессия истекла, войди снова.", and call
+// `authProvider.sessionExpiredNotice = false` (and a matching
+// `notifyListeners` via a small helper) to clear it. LoginScreen
+// wasn't part of this three-file task scope, so the data is captured
+// here but the toast UI is a follow-up.
 
 /// Top-level [MaterialApp] wrapper.
 ///
@@ -37,6 +139,26 @@ class NutriMindApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        // ThemeProvider must be available BEFORE NutriMindApp's own
+        // build runs so the MaterialApp below can read the user's
+        // current theme preference via `context.watch<ThemeProvider>()`.
+        // We also kick off `loadSavedMode()` on creation so the
+        // persisted choice is drained from SharedPreferences before
+        // the first frame paints — same pattern as AuthProvider's
+        // `..tryAutoLogin()`.
+        ChangeNotifierProvider<ThemeProvider>(
+          create: (_) => ThemeProvider()..loadSavedMode(),
+        ),
+        // See the matching registration in `main()` for rationale
+        // — this second copy exists so that mounting `NutriMindApp`
+        // directly (e.g. from a widget test) gives the Settings
+        // screen a valid `ApiEnvironmentProvider` to read. The
+        // provider is safe to register in release builds because
+        // the only UI section that uses it is wrapped in
+        // `kDebugMode`.
+        ChangeNotifierProvider<ApiEnvironmentProvider>(
+          create: (_) => ApiEnvironmentProvider()..loadSaved(),
+        ),
         ChangeNotifierProvider<AuthProvider>(
           // `..tryAutoLogin()` runs once on creation. We don't await it
           // here — AuthGate will render a spinner while it resolves.
@@ -47,6 +169,13 @@ class NutriMindApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<FoodRecognitionProvider>(
           create: (_) => FoodRecognitionProvider(),
+        ),
+        // Beverage photo recognition flow — parallels
+        // `FoodRecognitionProvider`. Used by the
+        // `PhotoBeverageScreen` reachable via the Dock's
+        // camera icon → "Сфотографировать напиток" choice.
+        ChangeNotifierProvider<BeverageProvider>(
+          create: (_) => BeverageProvider(),
         ),
         ChangeNotifierProvider<ChatProvider>(
           create: (_) => ChatProvider(),
@@ -64,15 +193,38 @@ class NutriMindApp extends StatelessWidget {
           create: (_) => PasswordResetProvider(),
         ),
       ],
-      child: MaterialApp(
-        title: 'NutriMind',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: Colors.green,
-        ),
-        home: const AuthGate(),
-      ),
+      child: const _NutriMindAppShell(),
+    );
+  }
+}
+
+/// The actual [MaterialApp]. Separated from [NutriMindApp] so the
+/// latter can stand as a thin shell that just sets up the provider
+/// tree, while this widget does the
+/// `context.watch<ThemeProvider>().flutterThemeMode` read needed to
+/// plumb the user's theme preference into `MaterialApp.themeMode`.
+///
+/// The split keeps the provider scope obvious: [NutriMindApp] is
+/// "what the app shell looks like"; [_NutriMindAppShell] is "what
+/// the app renders, given the current theme".
+class _NutriMindAppShell extends StatelessWidget {
+  const _NutriMindAppShell();
+
+  @override
+  Widget build(BuildContext context) {
+    // Single source of truth for the user's theme choice. Watching
+    // here (not in `NutriMindApp`) is intentional: this widget is a
+    // child of the MultiProvider, so the watch resolves cleanly,
+    // and we rebuild whenever the user flips the mode.
+    final themeMode = context.watch<ThemeProvider>().flutterThemeMode;
+
+    return MaterialApp(
+      title: 'NutriMind',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
+      home: const AuthGate(),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../auth/providers/auth_api.dart';
+import '../models/beverage_result.dart';
 import '../models/food_log_model.dart';
 import '../models/water_log_model.dart';
 import '../models/weight_log_model.dart';
@@ -83,6 +84,25 @@ class TrackerProvider extends ChangeNotifier {
   /// been logged yet. The list is already newest-first per the backend.
   double? get latestWeight => weightHistory.isEmpty ? null : weightHistory.first.weight;
 
+  /// Daily water-intake target in millilitres.
+  ///
+  /// Mirrors the web's `Math.round(userWeight * 35)` heuristic — a
+  /// reasonable rough baseline of "drink 35 ml per kg of body weight
+  /// per day" that lines up with common fitness-app defaults.
+  ///
+  /// The user's `currentWeight` lives on [AuthProvider.currentUser],
+  /// not in this provider, so the cleanest path is to pass it in
+  /// from the UI layer (where both providers are available via
+  /// `context.watch`) rather than reaching across the
+  /// tracker → auth dependency direction. The function is
+  /// intentionally a plain static method (not a getter) so the UI
+  /// doesn't need to subscribe to the auth provider just to call it
+  /// — it can call once per build with the value it already read.
+  static int computeDailyWaterGoalMl(double? currentWeightKg) {
+    if (currentWeightKg == null) return 2000;
+    return (currentWeightKg * 35).round();
+  }
+
   // ---- public actions --------------------------------------------------------
 
   /// Loads both food and water logs for [date] in a single round-trip pair
@@ -140,11 +160,40 @@ class TrackerProvider extends ChangeNotifier {
   /// Removes the entry whose id matches [foodId] from [foodLogs] on
   /// success. Silently no-ops if the id is unknown (already deleted in a
   /// parallel tab / stale list).
+  ///
+  /// List-mutation note: the reassignment uses plain `.toList()`
+  /// (defaults to `growable: true`) rather than
+  /// `.toList(growable: false)`. The same is true for every other
+  /// `foodLogs` / `waterLogs` reassignment in this file — see the
+  /// corresponding comment on [updateLocalFoodEntry] for the
+  /// rationale (a regression where these lists became non-growable
+  /// caused "Cannot add to a fixed-length list" crashes downstream
+  /// at `addLocalFoodEntry` time).
   Future<bool> deleteFoodEntry(String foodId) {
     return _runTrackerAction<void>(
       action: () => _trackerApi.deleteFood(foodId),
       onSuccess: (_) {
-        foodLogs = foodLogs.where((f) => f.id != foodId).toList(growable: false);
+        foodLogs = foodLogs.where((f) => f.id != foodId).toList();
+      },
+    );
+  }
+
+  /// Removes the water entry whose id matches [waterId] from [waterLogs]
+  /// on success. Same no-op-if-unknown semantics as
+  /// [deleteFoodEntry]. The entry must come from TODAY's loaded
+  /// `waterLogs`; the backend endpoint doesn't return entries from
+  /// other days in this query, so deleting an id that's not in the
+  /// current list is silently a no-op (matches the existing
+  /// food-deleted pattern).
+  ///
+  /// List-mutation note: same as [deleteFoodEntry] — `.toList()`
+  /// defaults to `growable: true`; never pass `growable: false`
+  /// here.
+  Future<bool> deleteWaterEntry(String waterId) {
+    return _runTrackerAction<void>(
+      action: () => _trackerApi.deleteWater(waterId),
+      onSuccess: (_) {
+        waterLogs = waterLogs.where((w) => w.id != waterId).toList();
       },
     );
   }
@@ -192,6 +241,143 @@ class TrackerProvider extends ChangeNotifier {
   void addLocalFoodEntry(FoodLogModel food) {
     if (foodLogs.any((f) => f.id == food.id)) return;
     foodLogs = [...foodLogs, food];
+    notifyListeners();
+  }
+
+  /// Replaces an existing [FoodLogModel] in [foodLogs] (matched by
+  /// [FoodLogModel.id]) with [updated] and notifies listeners. Used by
+  /// [FoodRecognitionProvider] after a successful text reanalysis — the
+  /// backend has UPDATed the same row in place (no duplicate id), so the
+  /// local cache needs the matching entry replaced, not appended.
+  ///
+  /// Skipped (silently) when no entry with the same id is present in
+  /// [foodLogs]. This is the right behaviour when, for example, the
+  /// user is viewing *yesterday's* food list and re-analyzes an AI row
+  /// from *today* — the day's list shouldn't suddenly grow an
+  /// out-of-place row. The producer (the reanalysis flow) is
+  /// authoritative about the user's intent; if a row genuinely
+  /// belongs in [foodLogs] but is somehow missing, the next
+  /// `loadDailyData(...)` will repopulate from the server.
+  ///
+  /// List-mutation note (REGRESSION GUARD): this method originally
+  /// used `.toList(growable: false)`. That made [foodLogs] a
+  /// fixed-length list, and the *next* call to
+  /// [addLocalFoodEntry] — which DOES grow the list — crashed with
+  /// "Unsupported operation: Cannot add to a fixed-length list".
+  /// Every `foodLogs` / `waterLogs` reassignment in this file now
+  /// uses the default `.toList()` (i.e. `growable: true`).
+  /// Equivalently: treat every list field in this class as if
+  /// passing `growable: false` is forbidden — any future code that
+  /// does `foodLogs.add(...)` would otherwise become a latent
+  /// crash that triggers only after this method runs first.
+  void updateLocalFoodEntry(FoodLogModel updated) {
+    final exists = foodLogs.any((f) => f.id == updated.id);
+    if (!exists) return;
+    foodLogs = foodLogs
+        .map((f) => f.id == updated.id ? updated : f)
+        .toList();
+    notifyListeners();
+  }
+
+  /// Appends a [BeverageRecognitionResult] (auto-logged branch
+  /// only) to BOTH [foodLogs] AND [waterLogs] in a single
+  /// notification cycle.
+  ///
+  /// The backend's beverage endpoints dual-write a `FoodLog` row
+  /// (calories / macros) and a `WaterLog` row (volume) in one
+  /// transaction, so the local cache must reflect both inserts
+  /// together — otherwise the day's water total would lag the
+  /// food entry by one frame and the user would see a brief
+  /// inconsistency.
+  ///
+  /// [aiGenerated] distinguishes the two call sites:
+  ///   * `true` — the numbers came from Gemini's photo analysis
+  ///     (the high-confidence auto-logged branch of
+  ///     `/recognize-beverage`); the resulting row shows the
+  ///     "Уточнить" edit affordance on the home screen.
+  ///   * `false` — the numbers came from the user (the manual
+  ///     confirm path); the resulting row is treated as
+  ///     user-vetted and the "Уточнить" affordance is hidden.
+  ///
+  /// Skipped (silently) when [result.autoLogged] is `false` —
+  /// there's nothing to add on the suggest-only branch. Skipped
+  /// again if the resulting `food_log_id` is already present in
+  /// [foodLogs] (de-dup semantics, identical to
+  /// [addLocalFoodEntry]).
+  void addBeverageEntry(
+    BeverageRecognitionResult result, {
+    required bool aiGenerated,
+  }) {
+    if (!result.autoLogged) return;
+    if (result.nutrition == null) return;
+    if (result.foodLogId == null) return;
+
+    // De-dup on food_log_id (not just on the food entry): a
+    // racey retry that re-invokes the same provider method twice
+    // would otherwise produce two visible food rows AND two
+    // duplicate water rows. Same pattern as addLocalFoodEntry.
+    if (foodLogs.any((f) => f.id == result.foodLogId)) return;
+
+    final nutrition = result.nutrition!;
+    final loggedAt = result.loggedAt ?? DateTime.now();
+
+    final foodLog = FoodLogModel(
+      id: result.foodLogId!,
+      userId: '',
+      date: loggedAt,
+      // Beverages get their own `mealType` bucket — `"drinks"` —
+      // rather than being lumped into `"snack"` alongside cookies,
+      // chips, etc. The previous convention (file-under-"snack")
+      // made the daily summary awkward: a coffee at 3 PM and a
+      // cookie at 3 PM both read as "snack" even though only one
+      // is a beverage. Mirrors the backend's
+      // `meal_type="drinks"` write in
+      // `backend/app/api/v1/routes/food_recognition.py` —
+      // keeping the two values identical means the locally-built
+      // row and the server's eventual `loadDailyData(...)`
+      // response render identically from the first frame (no
+      // one-frame flash where the entry briefly lives under the
+      // wrong section before a refetch corrects it). The
+      // `meal_type` column is free-text on the `food_logs` table
+      // (no DB-level enum constraint), so this rename is a pure
+      // application-code sync — no migration required.
+      mealType: 'drinks',
+      foodName: nutrition.beverageName,
+      calories: nutrition.calories,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fat: nutrition.fat,
+      // Beverages don't carry meaningful dietary fiber; the
+      // server defaults to 0 and we mirror that here.
+      fiber: 0,
+      quantity: nutrition.volumeMl,
+      unit: 'ml',
+      photoUrl: null,
+      aiGenerated: aiGenerated,
+      createdAt: loggedAt,
+    );
+    final waterLog = WaterLogModel(
+      id: result.waterLogId ?? '',
+      userId: '',
+      date: loggedAt,
+      // The backend stores `amount` as an int (the schema is
+      // `Integer`), so the volume gets rounded here too. The UI
+      // also rounds partial-glass volumes down to the nearest
+      // ml, matching the existing water quick-pick chip
+      // behaviour.
+      amount: nutrition.volumeMl.round(),
+      createdAt: loggedAt,
+    );
+
+    // Build both new lists FIRST, then a single
+    // notifyListeners(). Doing two separate notify calls would
+    // cause a brief intermediate state where one list has the
+    // new entry and the other doesn't, which the UI would
+    // render as inconsistent for one frame. The same
+    // REGRESSION GUARD reasoning as [updateLocalFoodEntry]
+    // applies: plain `.toList()` everywhere (no `growable: false`).
+    foodLogs = [...foodLogs, foodLog];
+    waterLogs = [...waterLogs, waterLog];
     notifyListeners();
   }
 

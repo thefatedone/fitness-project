@@ -3,6 +3,13 @@
 /// Resolves the API base URL based on where the app is being run. The same
 /// compiled binary can be reused across development on a real device, on an
 /// Android emulator, and in production by toggling [AppConfig.environment].
+///
+/// Since the `1.0.0+1` build that introduced [ApiEnvironmentProvider],
+/// [AppConfig.apiBaseUrl] is *also* runtime-overridable — see
+/// [setRuntimeOverride]. The compile-time switch below remains the
+/// authoritative fallback used by all callers when no override has been
+/// set, so nothing in the rest of the app needs to know about runtime
+/// overrides to stay correct.
 library;
 
 /// All known runtime environments the app can be built for.
@@ -38,18 +45,61 @@ class AppConfig {
   /// flag) when building for a different target.
   static const Environment environment = Environment.dev;
 
-  /// Base URL of the FastAPI backend, suffixed with the API version prefix.
+  /// Runtime override of [apiBaseUrl], settable at runtime via
+  /// [setRuntimeOverride] for the in-app, debug-only API-environment
+  /// switcher ([ApiEnvironmentProvider]).
   ///
-  /// Switches on [environment]:
-  ///   * [Environment.dev] → loopback, hits the backend on the developer
-  ///     machine directly. Works for iOS Simulator, macOS / Windows / Linux
-  ///     desktop builds.
-  ///   * [Environment.devAndroidEmulator] → `10.0.2.2`, the Android emulator's
-  ///     NAT alias back to the host. Required because the emulator's own
-  ///     loopback is not the host loopback.
-  ///   * [Environment.production] → the deployed Railway URL. Replace the
-  ///     placeholder before shipping.
+  /// `null` (the default) means "use the compile-time [environment]
+  /// switch below" — the original behaviour the rest of the app was
+  /// written against. Non-null means "always return this value
+  /// (with the `/api/v1` auto-append handled by [apiBaseUrl])".
+  static String? _runtimeOverrideUrl;
+
+  /// Sets or clears the runtime API base URL override.
+  ///
+  /// Called by [ApiEnvironmentProvider] when the user picks a
+  /// different environment from the debug-only Settings switcher;
+  /// direct callers outside the provider are unlikely.
+  ///
+  /// Whitespace-only [url] (and any value whose `.trim()` becomes
+  /// empty) is treated as a *clear* — same as passing `null`. This
+  /// lets the UI pass through whatever its "reset to default"
+  /// control produces without an extra null-check at every call
+  /// site, and it means a stray " " from a copy-paste doesn't end up
+  /// stored as the active URL.
+  static void setRuntimeOverride(String? url) {
+    if (url == null) {
+      _runtimeOverrideUrl = null;
+      return;
+    }
+    final trimmed = url.trim();
+    _runtimeOverrideUrl = trimmed.isEmpty ? null : trimmed;
+  }
+
+  /// Base URL of the FastAPI backend, suffixed with the API version
+  /// prefix.
+  ///
+  /// Lookup order:
+  ///   1. Runtime override ([setRuntimeOverride]), if non-null —
+  ///      the in-app, debug-only override. If the override does
+  ///      NOT end with `/api/v1`, this getter appends it —
+  ///      choosing "forgiving" because the most likely misuse is
+  ///      a user typing a bare base like
+  ///      `http://192.168.1.23:8000` for a phone on the local
+  ///      network, where requiring the user to ALSO remember the
+  ///      `/api/v1` suffix would be a footgun. Both forms round-
+  ///      trip cleanly: passing `http://localhost:8000/api/v1`
+  ///      returns `http://localhost:8000/api/v1` (the
+  ///      `endsWith` check passes), and passing
+  ///      `http://localhost:8000` returns
+  ///      `http://localhost:8000/api/v1`.
+  ///   2. The compile-time [environment] switch below — the
+  ///      original "edit-then-rebuild" flow. Unchanged.
   static String get apiBaseUrl {
+    final override = _runtimeOverrideUrl;
+    if (override != null) {
+      return override.endsWith('/api/v1') ? override : '$override/api/v1';
+    }
     switch (environment) {
       case Environment.dev:
         return 'http://localhost:8000/api/v1';

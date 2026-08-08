@@ -11,14 +11,6 @@ import '../storage/token_storage.dart';
 /// on this class rather than constructing their own `Dio`, so HTTP concerns
 /// (auth header injection, timeouts, retry policy, error mapping) stay in
 /// one place.
-///
-/// The auth flow is intentionally minimal at this layer:
-///   * The token is read on **every** outgoing request via the
-///     [InterceptorsWrapper.onRequest] callback below, so a fresh token saved
-///     by the login screen takes effect on the next request without needing
-///     to rebuild the client.
-///   * 401 handling (refresh / force-logout) can be added as a second
-///     interceptor later without touching call sites.
 class ApiClient {
   /// Holds the [TokenStorage] so the auth interceptor can read the current
   /// access token on every request.
@@ -28,6 +20,24 @@ class ApiClient {
   /// constructor body after this instance is fully initialised (the
   /// interceptor closes over `_tokenStorage`).
   late final Dio dio;
+
+  /// Hook fired when ANY request returns `401 Unauthorized` from the
+  /// backend. The hook is set by the app's `main()` after both the
+  /// [ApiClient] and the [AuthProvider] exist, so the 401-handler can
+  /// call `authProvider.forceLogout()` and let [AuthGate] route the
+  /// user to the login screen.
+  ///
+  /// Why a callback hook rather than a direct dependency on
+  /// [AuthProvider]? `core/api/` is a leaf in the dependency graph —
+  /// it can't import `features/auth/` without inverting the graph and
+  /// creating a cycle (the auth providers already depend on
+  /// `core/api/api_client.dart` for the shared `Dio`). The callback
+  /// keeps the dependency direction one-way.
+  ///
+  /// `null` (the default) means "no system-wide handler wired" — the
+  /// 401 will still propagate as an [ApiException] to the call site
+  /// for it to handle, which preserves the existing behaviour.
+  void Function()? onUnauthorized;
 
   /// Builds a new [ApiClient].
   ///
@@ -60,6 +70,31 @@ class ApiClient {
             options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
+        },
+
+        // Centralized 401 handling. A 401 from the backend means the
+        // current token has expired or been revoked. We:
+        //   1. Fire `onUnauthorized` (if wired) so the AuthProvider
+        //      force-logs-out, flips `status` to `unauthenticated`, and
+        //      `AuthGate` re-routes to the login screen.
+        //   2. STILL propagate the error via `handler.next(e)` so the
+        //      original call site receives its normal [ApiException]
+        //      and can display whatever per-screen error message it
+        //      already does. The 401 handler is purely additive —
+        //      it never suppresses the call site's error.
+        //
+        // Why this doesn't loop: `onUnauthorized` ultimately calls
+        // [AuthProvider.forceLogout], which is a purely local state
+        // mutation (no network). The user lands on `LoginScreen`; the
+        // login form is a fresh Form; no API call fires from that
+        // path. So a 401 mid-session fires the hook once, the user
+        // gets routed away, the dangling response from the original
+        // call is consumed by the call site's existing error handler.
+        onError: (e, handler) {
+          if (e.response?.statusCode == 401) {
+            onUnauthorized?.call();
+          }
+          handler.next(e);
         },
       ),
     );

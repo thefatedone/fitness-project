@@ -6,24 +6,24 @@ import '../../../core/api/api_client.dart';
 import '../../auth/providers/auth_api.dart';
 import '../models/food_recognition_result.dart';
 
-/// HTTP client for the AI-powered food-recognition endpoint.
+/// HTTP client for the AI-powered food-recognition endpoints.
 ///
-/// Single responsibility: POST a photo to
-/// `POST /api/v1/food/recognize-and-log?meal_type=…`, send the image as a
-/// single multipart `file` field, decode the response into a
-/// [FoodRecognitionResult], and surface any failure as an [ApiException]
-/// (re-used from the auth layer so callers only deal with one exception
-/// type).
+/// Single responsibility: talk to the two `POST /api/v1/food/*` Gemini-backed
+/// routes — `recognize-and-log` (photo in, new row out) and
+/// `{food_id}/reanalyze` (edited text in, same row updated out) — decode the
+/// identical-shape responses into [FoodRecognitionResult], and surface any
+/// failure as an [ApiException] (re-used from the auth layer so callers only
+/// deal with one exception type).
 ///
-/// The backend writes the resulting `food_logs` row server-side, so a
-/// successful response means the entry is *already persisted* — the UI
+/// The backend writes (or updates) the resulting `food_logs` row server-side,
+/// so a successful response means the entry is *already persisted* — the UI
 /// just needs to refresh the day's list.
 class FoodRecognitionApi {
   /// The shared HTTP client. Reusing [apiClient] means the auth-token
   /// interceptor (and any future cross-cutting config) is in effect.
   final Dio _dio = apiClient.dio;
 
-  /// Gemini-backed food recognition.
+  /// Gemini-backed food recognition — photo → new row.
   ///
   /// [imageFile] is the user-selected photo, uploaded as multipart
   /// `file`. [mealType] is forwarded as a query parameter (NOT in the
@@ -66,6 +66,60 @@ class FoodRecognitionApi {
       if (e.response?.statusCode == 422) {
         throw const ApiException(
           'Не удалось распознать блюдо на фото. Попробуй сделать более чёткое фото.',
+        );
+      }
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// Gemini-backed food recognition — edited text → row UPDATE in place.
+  ///
+  /// Pairs with [recognizeAndLog]: the user has already logged a photo-
+  /// recognised entry, then taps "Уточнить" on the home screen to refine
+  /// the description ("actually it's brown rice, not white, and there
+  /// was less oil"). We POST the user's edited free-text to Gemini with no
+  /// image; the backend gets fresh macro estimates for the same `FoodLog`
+  /// row, runs the same allergen check, and UPDATEs the row in place — no
+  /// duplicate, same `id`, same `meal_type`, same `date`.
+  ///
+  /// The response shape is byte-identical to [recognizeAndLog] (the
+  /// backend intentionally reuses the response contract so the Flutter
+  /// parser — [FoodRecognitionResult.fromJson] — doesn't have to branch
+  /// on which endpoint produced it).
+  ///
+  /// Same 30 s per-call timeout rationale as [recognizeAndLog]: a text-
+  /// only Gemini call is usually faster than a photo, but cold starts
+  /// and quota-throttled retries can easily blow past the global 15 s
+  /// budget. Overriding per-call keeps the shared client's defaults
+  /// intact for the rest of the app.
+  Future<FoodRecognitionResult> reanalyzeDescription({
+    required String foodId,
+    required String description,
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/food/$foodId/reanalyze',
+        data: {'description': description},
+        options: Options(
+          sendTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 30),
+        ),
+      );
+
+      final body = res.data;
+      if (body == null) {
+        throw const ApiException('Сервер вернул пустой ответ.');
+      }
+      return FoodRecognitionResult.fromJson(body);
+    } on DioException catch (e) {
+      // Same friendlier-Russian-hint pattern as [recognizeAndLog],
+      // adapted for the text path: a 422 here usually means Gemini
+      // couldn't extract a usable JSON from the user's text (too vague,
+      // contradictory, or non-food content) — asking the user to
+      // rephrase is the productive next step.
+      if (e.response?.statusCode == 422) {
+        throw const ApiException(
+          'Не удалось проанализировать описание. Попробуй переформулировать.',
         );
       }
       throw ApiException.fromDioError(e);

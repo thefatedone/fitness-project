@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../core/api/api_client.dart';
@@ -34,7 +36,8 @@ class AuthProvider extends ChangeNotifier {
   final AuthApi _authApi;
 
   /// Where the current authentication status sits. UI surfaces branch off
-  /// this; `_runAuthAction` and `tryAutoLogin` are the only writers.
+  /// this; `_runAuthAction`, `tryAutoLogin`, `logout`, and
+  /// `forceLogout` are the only writers.
   AuthStatus _status = AuthStatus.unknown;
 
   /// Cached copy of the authenticated user's profile. `null` until
@@ -48,6 +51,19 @@ class AuthProvider extends ChangeNotifier {
   /// True while a network call is in flight; UI uses this to disable the
   /// "Sign in" button and show a spinner.
   bool _isLoading = false;
+
+  /// Set to `true` by [forceLogout] when the system (rather than the
+  /// user) is what kicked us out — i.e. an expired token triggered
+  /// the centralized 401 handler in [apiClient].
+  ///
+  /// The intent is for the next screen the user lands on (the login
+  /// screen) to read this in `initState` and show a "Сессия истекла,
+  /// войди снова." SnackBar, then clear it. LoginScreen's current
+  /// implementation doesn't yet read this — that's a follow-up
+  /// integration that's out of scope for the current three-file
+  /// task — but the data IS captured here so the LoginScreen hookup
+  /// is a one-line read + clear.
+  bool sessionExpiredNotice = false;
 
   AuthProvider({AuthApi? authApi}) : _authApi = authApi ?? AuthApi();
 
@@ -139,12 +155,47 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Logs the user out: purges the token, drops the cached profile, and
-  /// resets the status. Safe to call repeatedly.
+  /// resets the status. Safe to call repeatedly. This is the path used
+  /// for user-initiated sign-out (e.g. the "Выйти" tile in Settings).
   Future<void> logout() async {
     await tokenStorage.deleteToken();
     _currentUser = null;
     _errorMessage = null;
     _status = AuthStatus.unauthenticated;
+    notifyListeners();
+  }
+
+  /// System-initiated logout. Called by the centralized 401 handler
+  /// in [apiClient] when any in-flight request returns
+  /// `401 Unauthorized` — i.e. the access token has expired or been
+  /// revoked.
+  ///
+  /// Functionally identical to [logout] EXCEPT it also flips
+  /// [sessionExpiredNotice] so the next screen the user lands on
+  /// (typically the login screen) can render a one-time
+  /// "Сессия истекла, войди снова." SnackBar. The two methods are
+  /// deliberately distinct so the UI can later distinguish "user chose
+  /// to sign out" from "the system signed them out" without changing
+  /// the call site that fires them.
+  ///
+  /// This is `void` (not `Future<void>`) because nothing on the
+  /// logout path awaits anything — clearing the token is a single
+  /// `tokenStorage.deleteToken()` call that the caller can fire-and-
+  /// forget (the [ApiClient.onUnauthorized] hook signature is itself
+  /// `void Function()`).
+  void forceLogout() {
+    // No `await` on `tokenStorage.deleteToken()` because this method
+    // is intentionally sync — the 401 hook is called on a hot path
+    // (inside Dio's error interceptor) and we don't want the API call
+    // to wait on disk storage cleanup before propagating its
+    // original error back to the call site. The next [tryAutoLogin]
+    // or [login] will simply find no token, which is the correct
+    // post-condition.
+    unawaited(tokenStorage.deleteToken());
+    _currentUser = null;
+    _errorMessage = null;
+    _status = AuthStatus.unauthenticated;
+    sessionExpiredNotice = true;
     notifyListeners();
   }
 
@@ -155,6 +206,18 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
     }
+  }
+
+  /// Clears [sessionExpiredNotice] after the one-shot SnackBar has
+  /// been shown. Idempotent: calling it when the flag is already
+  /// `false` is a no-op. Intentionally does NOT call
+  /// [notifyListeners] — nothing watches [sessionExpiredNotice]
+  /// reactively; it's a one-shot read-and-clear pattern that the
+  /// login screen consumes in [initState] before any rebuild of the
+  /// provider tree happens. Keeps the clear a pure data-update with
+  /// zero UI thrash.
+  void clearSessionExpiredNotice() {
+    sessionExpiredNotice = false;
   }
 
   /// Replaces the cached [currentUser] with [user] and notifies.
