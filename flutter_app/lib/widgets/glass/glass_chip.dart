@@ -136,7 +136,6 @@ class GlassChip extends StatelessWidget {
           );
     return GlassSurface(
       surfaceClass: GlassSurfaceClass.chip,
-      enableSpecular: false,
       emphasized: selected,
       padding: EdgeInsets.only(
         left: 12,

@@ -29,7 +29,7 @@ class GlassSurface extends StatelessWidget {
     this.surfaceClass = GlassSurfaceClass.card,
     this.borderRadius,
     this.tintOpacityOverride,
-    this.enableSpecular = true,
+    this.enableSpecular = false,
     this.emphasized = false,
     this.padding = EdgeInsets.zero,
     this.showShadow = true,
@@ -270,15 +270,26 @@ class _GlassPainter extends CustomPainter {
       // doesn't taper at the sides — that gives a more
       // "horizontal sheen" feel, which matches the way iOS
       // renders the top edge of glass.
+      //
+      // CRITICAL: `RadialGradient.radius` is a FRACTION of the
+      // shortest side of the paint rect, NOT an absolute pixel
+      // value. The rect below is `streakHeight` tall, so an
+      // absolute radius of `streakHeight * 1.4` would resolve to
+      // 1.4 × (rect's shortest side, also `streakHeight`) =
+      // `1.4 * streakHeight * streakHeight` in equivalent pixels
+      // — dozens of times the rect itself, which is why the
+      // gradient never fell off inside the streak and `drawRect`
+      // hard-cut it at the bottom (the visible "lighter top,
+      // darker bottom with a seam" band). The correct value is
+      // a plain fraction: 1.4 means the radial falloff reaches
+      // zero at 1.4 × the rect's shortest side, comfortably
+      // past the rect's bottom edge so the alpha is already at
+      // zero by the time `drawRect` cuts off — no seam.
       final specularPaint = Paint()
         ..blendMode = BlendMode.plus
         ..shader = RadialGradient(
           center: Alignment(0, -0.6),
-          // Radius extends to the bottom of the streak + a bit
-          // beyond so the falloff reaches zero by
-          // `streakHeight * 1.0`, not at the bottom of the
-          // streak.
-          radius: streakHeight * 1.4,
+          radius: 1.4,
           colors: [
             Colors.white.withValues(alpha: GlassTokens.specularAlpha),
             Colors.white.withValues(alpha: 0),

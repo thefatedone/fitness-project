@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -81,9 +83,24 @@ class _GlowShapes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _GlowPainter(),
-      child: const SizedBox.expand(),
+    // Pre-soften the glow shapes via a one-time static blur. The
+    // shapes are radial gradients, so without this filter they
+    // have a (soft) hard edge where the gradient alpha hits
+    // zero. A `BackdropFilter` on a `GlassCard` would normally
+    // smooth that edge by sampling the blurred result — but in
+    // areas where NO glass card sits on top of the glow
+    // (e.g. the gap between the date-nav row and the first card
+    // on the tracker home screen) the raw gradient reads as a
+    // slightly hard-edged colored blob. The blur is fixed (sigma
+    // 40) and static — it doesn't react to scroll position or
+    // user interaction — so the GPU composites it once and we pay
+    // no per-frame cost.
+    return ImageFiltered(
+      imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+      child: CustomPaint(
+        painter: _GlowPainter(),
+        child: const SizedBox.expand(),
+      ),
     );
   }
 }
