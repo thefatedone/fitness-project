@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
+import '../../../widgets/glass/glass_button.dart';
+import '../../../widgets/glass/glass_card.dart';
+
 import '../providers/password_reset_provider.dart';
 import 'enter_reset_code_screen.dart';
 
@@ -63,11 +67,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       // (the backend never returns 4xx for this route — it's generic
       // by design). The provider's `errorMessage` carries the
       // human-readable copy; surface it in a SnackBar.
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(reset.errorMessage ?? 'Что-то пошло не так.'),
+            content: Text(reset.errorMessage ?? l10n.commonErrorShort),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -80,9 +85,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     // watch() so the submit button reflects the in-flight state and
     // shows a spinner without us having to setState() in the action.
     final reset = context.watch<PasswordResetProvider>();
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Восстановление пароля')),
+      appBar: AppBar(title: Text(l10n.authForgotTitle)),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -92,59 +98,65 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Введи email, привязанный к аккаунту — мы отправим '
-                      'код для сброса пароля.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+              child: GlassCard(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                borderRadius: BorderRadius.circular(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.authForgotInstructions,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    TextFormField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _onSubmit(),
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.alternate_email),
-                        border: OutlineInputBorder(),
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        controller: _emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _onSubmit(),
+                        decoration: InputDecoration(
+                          labelText: l10n.authEmailLabel,
+                          prefixIcon: const Icon(Icons.alternate_email),
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (v) {
+                          final trimmed = (v ?? '').trim();
+                          if (trimmed.isEmpty) return l10n.authEmailRequired;
+                          if (!_emailRegex.hasMatch(trimmed)) {
+                            return l10n.authEmailInvalid;
+                          }
+                          return null;
+                        },
                       ),
-                      validator: (v) {
-                        final trimmed = (v ?? '').trim();
-                        if (trimmed.isEmpty) return 'Введи email';
-                        if (!_emailRegex.hasMatch(trimmed)) {
-                          return 'Похоже, email указан неверно';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: reset.isLoading ? null : _onSubmit,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
+                      const SizedBox(height: 24),
+                      GlassButton(
+                        label: reset.isLoading ? '' : l10n.authForgotSendCode,
+                        onPressed: reset.isLoading ? null : _onSubmit,
+                        expand: true,
+                        variant: GlassButtonVariant.primary,
                       ),
-                      child: reset.isLoading
-                          ? const SizedBox(
+                      if (reset.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Center(
+                            child: SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.2,
-                                color: Colors.white,
                               ),
-                            )
-                          : const Text('Отправить код'),
-                    ),
-                  ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

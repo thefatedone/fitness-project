@@ -2,7 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/api_environment_card.dart';
+import '../../../widgets/glass/glass_button.dart';
+import '../../../widgets/glass/glass_card.dart';
 import '../providers/auth_provider.dart';
 import 'forgot_password_screen.dart';
 import 'onboarding_wizard_screen.dart';
@@ -51,8 +54,8 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            const SnackBar(
-              content: Text('Сессия истекла, войди снова.'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).authSessionExpired),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -113,6 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // spinner without any imperative setState in this widget.
     final auth = context.watch<AuthProvider>();
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -121,15 +125,18 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
+              child: GlassCard(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                borderRadius: BorderRadius.circular(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Brand mark + greeting.
                     Text(
-                      'NutriMind',
+                      l10n.authLoginTitle,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w700,
@@ -139,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'С возвращением',
+                      l10n.authLoginSubtitle,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -152,14 +159,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.alternate_email),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.authEmailLabel,
+                        prefixIcon: const Icon(Icons.alternate_email),
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
-                          return 'Введи email';
+                          return l10n.authEmailRequired;
                         }
                         return null;
                       },
@@ -170,14 +177,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscureText: true,
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _onSubmit(),
-                      decoration: const InputDecoration(
-                        labelText: 'Пароль',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.authPasswordLabel,
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) {
-                          return 'Введи пароль';
+                          return l10n.authPasswordRequired;
                         }
                         return null;
                       },
@@ -211,27 +218,34 @@ class _LoginScreenState extends State<LoginScreen> {
                           tapTargetSize:
                               MaterialTapTargetSize.shrinkWrap,
                         ),
-                        child: const Text('Забыл пароль?'),
+                        child: Text(l10n.authForgotPassword),
                       ),
                     ),
 
                     const SizedBox(height: 16),
-                    FilledButton(
+                    // Primary CTA — GlassButton so the "Войти" pill
+                    // picks up the same Liquid Glass treatment as
+                    // the rest of the app's CTAs (spring press,
+                    // brand-tinted emphasized glass).
+                    GlassButton(
+                      label: auth.isLoading ? '' : l10n.authLoginButton,
                       onPressed: auth.isLoading ? null : _onSubmit,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      child: auth.isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Войти'),
+                      expand: true,
+                      variant: GlassButtonVariant.primary,
                     ),
+                    if (auth.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                            ),
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 12),
 
                     TextButton(
@@ -249,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       const OnboardingWizardScreen(),
                                 ),
                               ),
-                      child: const Text('Нет аккаунта? Зарегистрироваться'),
+                      child: Text(l10n.authNoAccountRegister),
                     ),
 
                     // --------------------------------------------------------
@@ -287,7 +301,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextButton.icon(
                         onPressed: _openApiEnvironment,
                         icon: const Icon(Icons.settings_ethernet, size: 18),
-                        label: const Text('Настройка сервера (debug)'),
+                        label: Text(l10n.authServerDebugLink),
                         style: TextButton.styleFrom(
                           foregroundColor:
                               theme.colorScheme.onSurfaceVariant,
@@ -299,6 +313,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ],
+                ),
                 ),
               ),
             ),

@@ -36,7 +36,7 @@ class ProfileApi {
       );
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       return UserModel.fromJson(body);
     } on DioException catch (e) {
@@ -62,19 +62,20 @@ class ProfileApi {
       );
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       final url = body['url'];
       if (url is! String || url.isEmpty) {
-        throw const ApiException('Сервер не вернул ссылку на фото.');
+        throw const ApiException('Server did not return a photo URL.');
       }
       return url;
     } on DioException catch (e) {
       // Size / format constraint: mask the raw backend English text
-      // with a Russian hint that's actionable on a phone.
+      // with a localized hint that's actionable on a phone.
       if (e.response?.statusCode == 400) {
         throw const ApiException(
-          'Не удалось загрузить фото. Проверь размер файла (макс. 5 МБ).',
+          'Could not upload photo. Check the file size (max. 5 MB).',
+          messageKey: 'userFacingErrorUploadPhoto',
         );
       }
       throw ApiException.fromDioError(e);

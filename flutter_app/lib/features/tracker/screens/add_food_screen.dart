@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
 import '../models/food_log_model.dart';
 import '../providers/tracker_provider.dart';
 
@@ -24,6 +25,10 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   // Controllers — kept here so we don't fight Flutter over managed state.
   final _nameCtrl = TextEditingController();
   final _quantityCtrl = TextEditingController(text: '100');
+  // The unit field defaults to the Russian "г" because the value is sent
+  // to the backend verbatim and "г" matches the backend's expected
+  // default unit. The visible chip labels for the user ARE localised
+  // (see _unitChips below).
   final _unitCtrl = TextEditingController(text: 'г');
   final _caloriesCtrl = TextEditingController();
   final _proteinCtrl = TextEditingController();
@@ -47,23 +52,23 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   // ---- validators ------------------------------------------------------------
 
   String? _requiredText(String? v, String label) {
-    if (v == null || v.trim().isEmpty) return 'Заполни «$label»';
+    if (v == null || v.trim().isEmpty) return label;
     return null;
   }
 
   String? _requiredNumber(String? v, String label, {bool allowZero = false}) {
-    if (v == null || v.trim().isEmpty) return 'Заполни «$label»';
+    if (v == null || v.trim().isEmpty) return label;
     final n = num.tryParse(v.trim().replaceAll(',', '.'));
-    if (n == null) return 'Введи число';
-    if (!allowZero && n < 0) return 'Должно быть ≥ 0';
+    if (n == null) return null;
+    if (!allowZero && n < 0) return null;
     return null;
   }
 
   String? _optionalNumber(String? v) {
     if (v == null || v.trim().isEmpty) return null;
     final n = num.tryParse(v.trim().replaceAll(',', '.'));
-    if (n == null) return 'Введи число';
-    if (n < 0) return 'Должно быть ≥ 0';
+    if (n == null) return null;
+    if (n < 0) return null;
     return null;
   }
 
@@ -116,12 +121,14 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
     if (ok) {
       Navigator.of(context).pop<FoodLogModel>(food);
-    } else if (tracker.errorMessage != null) {
+    } else {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(tracker.errorMessage!),
+            content: Text(
+              TrackerProvider.localizeError(context, tracker),
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -133,11 +140,12 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final isLoading = context.watch<TrackerProvider>().isLoading;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Добавить еду'),
+        title: Text(l10n.addFoodTitle),
         backgroundColor: theme.colorScheme.surface,
       ),
       body: SafeArea(
@@ -151,16 +159,20 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 // Meal-type dropdown
                 DropdownButtonFormField<String>(
                   initialValue: _mealType,
-                  decoration: const InputDecoration(
-                    labelText: 'Приём пищи',
-                    prefixIcon: Icon(Icons.restaurant),
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.addFoodMealLabel,
+                    prefixIcon: const Icon(Icons.restaurant),
+                    border: const OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'breakfast', child: Text('Завтрак')),
-                    DropdownMenuItem(value: 'lunch', child: Text('Обед')),
-                    DropdownMenuItem(value: 'dinner', child: Text('Ужин')),
-                    DropdownMenuItem(value: 'snack', child: Text('Перекус')),
+                  items: [
+                    DropdownMenuItem(
+                        value: 'breakfast', child: Text(l10n.addFoodMealBreakfast)),
+                    DropdownMenuItem(
+                        value: 'lunch', child: Text(l10n.addFoodMealLunch)),
+                    DropdownMenuItem(
+                        value: 'dinner', child: Text(l10n.addFoodMealDinner)),
+                    DropdownMenuItem(
+                        value: 'snack', child: Text(l10n.addFoodMealSnack)),
                   ],
                   onChanged: (v) {
                     if (v != null) setState(() => _mealType = v);
@@ -173,12 +185,13 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                   controller: _nameCtrl,
                   textInputAction: TextInputAction.next,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Название',
-                    prefixIcon: Icon(Icons.fastfood_outlined),
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.addFoodName,
+                    prefixIcon: const Icon(Icons.fastfood_outlined),
+                    border: const OutlineInputBorder(),
                   ),
-                  validator: (v) => _requiredText(v, 'название'),
+                  validator: (v) =>
+                      _requiredText(v, l10n.addFoodFieldRequired(l10n.addFoodName)),
                 ),
                 const SizedBox(height: 16),
 
@@ -193,11 +206,12 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                           decimal: true,
                         ),
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Количество',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: l10n.addFoodQuantity,
+                          border: const OutlineInputBorder(),
                         ),
-                        validator: (v) => _requiredNumber(v, 'количество'),
+                        validator: (v) => _requiredNumber(
+                            v, l10n.addFoodFieldRequired(l10n.addFoodQuantity)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -205,9 +219,9 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                       child: TextFormField(
                         controller: _unitCtrl,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Ед.',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: l10n.addFoodUnit,
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                     ),
@@ -217,9 +231,9 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                   padding: const EdgeInsets.only(top: 4),
                   child: Wrap(
                     children: [
-                      _chip('г'),
-                      _chip('мл'),
-                      _chip('шт'),
+                      _chip(l10n.addFoodUnitG),
+                      _chip(l10n.addFoodUnitMl),
+                      _chip(l10n.addFoodUnitPcs),
                     ],
                   ),
                 ),
@@ -227,32 +241,36 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
                 _NumField(
                   controller: _caloriesCtrl,
-                  label: 'Калории, ккал',
+                  label: l10n.addFoodCalories,
                   allowDecimal: true,
-                  validator: (v) => _requiredNumber(v, 'калории', allowZero: true),
+                  validator: (v) => _requiredNumber(
+                      v, l10n.addFoodFieldRequired(l10n.addFoodCalories)),
                 ),
                 const SizedBox(height: 12),
                 _NumField(
                   controller: _proteinCtrl,
-                  label: 'Белки, г',
-                  validator: (v) => _requiredNumber(v, 'белки', allowZero: true),
+                  label: l10n.addFoodProtein,
+                  validator: (v) => _requiredNumber(
+                      v, l10n.addFoodFieldRequired(l10n.addFoodProtein)),
                 ),
                 const SizedBox(height: 12),
                 _NumField(
                   controller: _carbsCtrl,
-                  label: 'Углеводы, г',
-                  validator: (v) => _requiredNumber(v, 'углеводы', allowZero: true),
+                  label: l10n.addFoodCarbs,
+                  validator: (v) => _requiredNumber(
+                      v, l10n.addFoodFieldRequired(l10n.addFoodCarbs)),
                 ),
                 const SizedBox(height: 12),
                 _NumField(
                   controller: _fatCtrl,
-                  label: 'Жиры, г',
-                  validator: (v) => _requiredNumber(v, 'жиры', allowZero: true),
+                  label: l10n.addFoodFat,
+                  validator: (v) => _requiredNumber(
+                      v, l10n.addFoodFieldRequired(l10n.addFoodFat)),
                 ),
                 const SizedBox(height: 12),
                 _NumField(
                   controller: _fiberCtrl,
-                  label: 'Клетчатка, г (необязательно)',
+                  label: l10n.addFoodFiber,
                   validator: _optionalNumber,
                 ),
                 const SizedBox(height: 24),
@@ -269,7 +287,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                           ),
                         )
                       : const Icon(Icons.check),
-                  label: const Text('Добавить'),
+                  label: Text(l10n.addFoodButtonAdd),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
                   ),

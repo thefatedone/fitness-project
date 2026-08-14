@@ -1,5 +1,7 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
+import '../../../l10n/gen/app_localizations_lookup.dart';
 import '../../auth/providers/auth_api.dart';
 import '../models/beverage_result.dart';
 import '../models/food_log_model.dart';
@@ -39,12 +41,36 @@ class TrackerProvider extends ChangeNotifier {
 
   /// Last user-facing error message, or `null` if the most recent action
   /// succeeded. Cleared at the start of every action.
+  ///
+  /// Carries an English fallback; the matching [errorMessageKey]
+  /// (when non-null) lets the UI render the active locale's copy
+  /// via `AppLocalizations.of(context)!.lookup(...)`. See
+  /// [ApiException.messageKey] for the matching HTTP-side pattern.
   String? errorMessage;
+  String? errorMessageKey;
 
   /// The shared HTTP client for tracker endpoints.
   final TrackerApi _trackerApi = TrackerApi();
 
   TrackerProvider() : selectedDate = _midnightOf(DateTime.now());
+
+  // ---- error localization --------------------------------------------------
+
+  /// Resolve the current `errorMessage` / `errorMessageKey` pair to the
+  /// active locale. Shared by every SnackBar / message-render site so
+  /// the fallback chain stays in one place:
+  ///   1. Look up the canonical ARB key (set by the network layer).
+  ///   2. Fall back to the legacy English `errorMessage` carryover.
+  ///   3. Fall back to a generic "something went wrong".
+  static String localizeError(BuildContext context, TrackerProvider tracker) {
+    final l10n = AppLocalizations.of(context);
+    final key = tracker.errorMessageKey;
+    if (key != null) {
+      final fromL10n = l10n.lookup(key);
+      if (fromL10n != null) return fromL10n;
+    }
+    return tracker.errorMessage ?? l10n.commonError;
+  }
 
   // ---- computed views (no stored state) ------------------------------------
 
@@ -113,6 +139,7 @@ class TrackerProvider extends ChangeNotifier {
     selectedDate = _midnightOf(date);
     isLoading = true;
     errorMessage = null;
+    errorMessageKey = null;
     notifyListeners();
 
     try {
@@ -128,6 +155,7 @@ class TrackerProvider extends ChangeNotifier {
       waterLogs = water;
     } on ApiException catch (e) {
       errorMessage = e.message;
+      errorMessageKey = e.messageKey;
     } finally {
       isLoading = false;
       notifyListeners();
@@ -141,6 +169,7 @@ class TrackerProvider extends ChangeNotifier {
       weightHistory = await _trackerApi.getWeightHistory();
     } on ApiException catch (e) {
       errorMessage = e.message;
+      errorMessageKey = e.messageKey;
     } finally {
       notifyListeners();
     }
@@ -386,6 +415,7 @@ class TrackerProvider extends ChangeNotifier {
   void clearError() {
     if (errorMessage != null) {
       errorMessage = null;
+    errorMessageKey = null;
       notifyListeners();
     }
   }
@@ -410,6 +440,7 @@ class TrackerProvider extends ChangeNotifier {
   }) async {
     isLoading = true;
     errorMessage = null;
+    errorMessageKey = null;
     notifyListeners();
 
     try {
@@ -418,12 +449,16 @@ class TrackerProvider extends ChangeNotifier {
       return true;
     } on ApiException catch (e) {
       errorMessage = e.message;
+      errorMessageKey = e.messageKey;
       return false;
     } catch (_) {
       // Defensive: any non-ApiException that escapes the tracker API
-      // shouldn't crash the UI.
-      errorMessage =
-          'Что-то пошло не так. Проверь соединение и попробуй снова.';
+      // shouldn't crash the UI. The UI layer resolves `errorMessageKey`
+      // via `AppLocalizations.of(context).commonError` for the active
+      // locale and falls back to a placeholder if no resolver is in
+      // place (see `_localizedTrackerError` in tracker_home_screen.dart).
+      errorMessage = null;
+      errorMessageKey = 'commonError';
       return false;
     } finally {
       isLoading = false;

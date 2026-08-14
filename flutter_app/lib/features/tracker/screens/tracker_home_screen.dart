@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../../l10n/gen/app_localizations.dart';
 
 import '../../../shared/widgets/app_dock.dart';
 import '../../../shared/widgets/email_verification_banner.dart';
@@ -17,6 +20,12 @@ import 'photo_beverage_screen.dart';
 import 'photo_food_screen.dart';
 import 'weight_history_screen.dart';
 
+import '../../../widgets/glass/glass_card.dart';
+import '../../../widgets/glass/glass_chip.dart';
+import '../../../widgets/glass/glass_background_glow.dart';
+import '../../../widgets/glass/glass_progress_ring.dart';
+import '../../../widgets/glass/glass_surface.dart';
+
 /// Food / water log screen — the authenticated user's home base.
 ///
 /// Single responsibility: render the user's tracker state for the
@@ -25,6 +34,13 @@ import 'weight_history_screen.dart';
 /// water row, food log grouped by meal) and dispatch add / delete /
 /// water-tap / navigate actions back to the provider. No business logic
 /// lives here.
+/// Thin shim retained so the call sites below stay one-liners. The
+/// resolver itself now lives on [TrackerProvider.localizeError] so the
+/// add-food and weight-history SnackBars can share the same fallback
+/// chain.
+String _localizedTrackerError(BuildContext context, TrackerProvider tracker) =>
+    TrackerProvider.localizeError(context, tracker);
+
 class TrackerHomeScreen extends StatefulWidget {
   const TrackerHomeScreen({super.key});
 
@@ -33,6 +49,26 @@ class TrackerHomeScreen extends StatefulWidget {
 }
 
 class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
+  /// Scroll-aware blur suppression. When `true`, every glass
+  /// surface in the home page falls back to its solid treatment
+  /// so the GPU isn't recomputing a full backdrop-blur on every
+  /// frame during a fast swipe. The notifier is flipped by the
+  /// `NotificationListener` wrapping the body's ListView, with
+  /// velocity thresholds + hysteresis to avoid flip-flopping.
+  final ValueNotifier<bool> _blurSuppressed = ValueNotifier(false);
+
+  /// Scroll velocity (px/s) above which we treat the list as
+  /// "fast enough that blur recomputes would jank". Below this
+  /// the glass surfaces render their full blur treatment.
+  static const double _blurOffThresholdPxPerSec = 800;
+
+  /// Scroll velocity (px/s) below which we restore the blur. Set
+  /// lower than [_blurOffThresholdPxPerSec] so a brief dip in
+  /// velocity (a near-stop mid-fling) doesn't flicker the glass
+  /// on/off — the surface stays solid until the user genuinely
+  /// settles.
+  static const double _blurOnThresholdPxPerSec = 200;
+
   @override
   void initState() {
     super.initState();
@@ -49,15 +85,21 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _blurSuppressed.dispose();
+    super.dispose();
+  }
+
   // Friendly Russian labels for the meal buckets we know about; anything
   // the backend happens to return under an unknown key is shown verbatim
   // (capitalised) rather than dropped or guessed at. Shared with the
   // photo-recognition picker below so the two flows use the same words.
   static const Map<String, String> _mealLabels = {
-    'breakfast': 'Завтрак',
-    'lunch': 'Обед',
-    'dinner': 'Ужин',
-    'snack': 'Перекус',
+    'breakfast': 'Breakfast',
+    'lunch': 'Lunch',
+    'dinner': 'Dinner',
+    'snack': 'Snack',
     // Beverage entries — a dedicated bucket since the backend's
     // beverage-recognition flow writes `meal_type='drinks'` (kept
     // distinct from `'snack'` so a 3 PM coffee and a 3 PM cookie
@@ -68,10 +110,23 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     // member of this map — rather than falling through to the
     // "capitalise the raw key" default — avoids the user ever
     // seeing the literal word "Drinks" on screen.
-    'drinks': 'Напитки',
+    'drinks': 'Drinks',
   };
 
-  String _mealLabel(String key) {
+  String _mealLabel(BuildContext context, String key) {
+    final l10n = AppLocalizations.of(context);
+    switch (key) {
+      case 'breakfast':
+        return l10n.trackerMealBreakfast;
+      case 'lunch':
+        return l10n.trackerMealLunch;
+      case 'dinner':
+        return l10n.trackerMealDinner;
+      case 'snack':
+        return l10n.trackerMealSnack;
+      case 'drinks':
+        return l10n.trackerMealDrinks;
+    }
     return _mealLabels[key] ??
         (key.isEmpty ? key : key[0].toUpperCase() + key.substring(1));
   }
@@ -84,13 +139,17 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  /// Friendly label for the centre of the date-nav row: "Сегодня",
-  /// "Вчера", or `dd.MM.yyyy`. Manual padding so we don't depend on
+  /// Friendly label for the centre of the date-nav row: "Today",
+  /// "Yesterday", or `dd.MM.yyyy`. Manual padding so we don't depend on
   /// `package:intl`.
-  String _dateLabel(DateTime selected, DateTime now) {
-    if (_isSameDay(selected, now)) return 'Сегодня';
+  String _dateLabel(BuildContext context, DateTime selected, DateTime now) {
+    if (_isSameDay(selected, now)) {
+      return AppLocalizations.of(context).trackerDateToday;
+    }
     final yesterday = DateTime(now.year, now.month, now.day - 1);
-    if (_isSameDay(selected, yesterday)) return 'Вчера';
+    if (_isSameDay(selected, yesterday)) {
+      return AppLocalizations.of(context).trackerDateYesterday;
+    }
     final dd = selected.day.toString().padLeft(2, '0');
     final mm = selected.month.toString().padLeft(2, '0');
     return '$dd.$mm.${selected.year}';
@@ -115,7 +174,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
   // ---- existing actions ----------------------------------------------------
 
   Future<void> _onAddWater() async {
-    // The "+ Добавить воду" button on the water card opens this modal
+    // The "+ Add воду" button on the water card opens this modal
     // so the user can pick a custom amount in litres (0.1–10 L) with
     // optional quick-pick chips. The sheet handles its own state
     // (loading, validation, conversion) and closes itself on success;
@@ -148,16 +207,16 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Удалить запись?'),
-        content: Text('«${food.foodName}» будет удалена из сегодняшнего дневника.'),
+        title: Text(AppLocalizations.of(context).trackerDeleteRecordTitle),
+        content: Text(AppLocalizations.of(context).trackerDeleteRecordBody(food.foodName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Отмена'),
+            child: Text(AppLocalizations.of(context).commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Удалить'),
+            child: Text(AppLocalizations.of(context).commonDelete),
           ),
         ],
       ),
@@ -203,7 +262,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                 child: Text(
-                  'К какому приёму пищи отнести?',
+                  AppLocalizations.of(context).trackerMealPickerTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -228,7 +287,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
         builder: (_) => PhotoFoodScreen(mealType: mealType),
       ),
     );
-    // Whatever the return value (true on "Готово", null on back), do NOT
+    // Whatever the return value (true on "Done", null on back), do NOT
     // reload data here — `FoodRecognitionProvider.analyzePhoto` already
     // called `trackerProvider.addLocalFoodEntry(...)` on success, and the
     // existing `context.watch<TrackerProvider>()` rebuild wired above
@@ -267,7 +326,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                 child: Text(
-                  'Что фотографируем?',
+                  AppLocalizations.of(context).trackerCameraChoiceTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -275,9 +334,9 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.restaurant),
-                title: const Text('Сфотографировать еду'),
-                subtitle: const Text(
-                  'Узнать КБЖУ и добавить запись в дневник',
+                title: Text(AppLocalizations.of(context).trackerCameraFood),
+                subtitle: Text(
+                  AppLocalizations.of(context).trackerCameraFoodSubtitle,
                 ),
                 onTap: () {
                   Navigator.of(ctx).pop();
@@ -286,9 +345,9 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.local_drink_outlined),
-                title: const Text('Сфотографировать напиток'),
-                subtitle: const Text(
-                  'Авто-добавление воды и калорий в один шаг',
+                title: Text(AppLocalizations.of(context).trackerCameraBeverage),
+                subtitle: Text(
+                  AppLocalizations.of(context).trackerCameraBeverageSubtitle,
                 ),
                 onTap: () {
                   Navigator.of(ctx).pop();
@@ -397,7 +456,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
         return Icons.cookie_outlined;
       case 'drinks':
         // Reuses the same icon as the camera-choice modal's
-        // "Сфотографировать напиток" entry (and
+        // "Photograph beverage" entry (and
         // `photo_beverage_screen.dart`'s picker view) so any
         // beverage-related affordance the user sees on the home
         // screen renders with the same visual hint. Distinct from
@@ -435,7 +494,8 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
       // for status-bar color/height consistency and the OS-conventional
       // top-padding for the date-nav row that sits just under it.
       appBar: AppBar(),
-      body: Stack(
+      body: GlassBackgroundGlow(
+        child: Stack(
         children: [
           RefreshIndicator(
             onRefresh: () async {
@@ -447,18 +507,41 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                 tracker.loadWeightHistory(),
               ]);
             },
-            child: ListView(
-              // Bottom padding bumped to clear the floating Dock's
-              // height (~64 px) plus its 16 px margin so the last
-              // food-log tile never hides under the pill. Top stays
-              // 0 — the AppBar already reserves the status-bar gutter
-              // and the date-nav row sits flush against it.
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-              children: [
+            child: NotificationListener<ScrollUpdateNotification>(
+              onNotification: (notification) {
+                // Estimate velocity as scrollDelta per frame,
+                // scaled to per-second by the 16ms frame budget.
+                // A 60fps device at 800px/s gives |scrollDelta|
+                // ~= 13px per frame. The hysteresis between
+                // `_blurOffThresholdPxPerSec` (800) and
+                // `_blurOnThresholdPxPerSec` (200) prevents the
+                // glass from flickering on/off during a near-stop
+                // mid-fling.
+                final double v = (notification.scrollDelta ?? 0).abs() *
+                    1000 /
+                    16;
+                final suppress = _blurSuppressed.value;
+                if (!suppress && v > _blurOffThresholdPxPerSec) {
+                  _blurSuppressed.value = true;
+                } else if (suppress && v < _blurOnThresholdPxPerSec) {
+                  _blurSuppressed.value = false;
+                }
+                // Don't intercept the notification — let the
+                // ListView keep handling it.
+                return false;
+              },
+              child: ListView(
+                // Bottom padding bumped to clear the floating Dock's
+                // height (~64 px) plus its 16 px margin so the last
+                // food-log tile never hides under the pill. Top stays
+                // 0 — the AppBar already reserves the status-bar gutter
+                // and the date-nav row sits flush against it.
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                children: [
                 // Date navigation row — anchored at the top so the user
                 // always knows what day they're looking at.
                 _DateNavRow(
-                  label: _dateLabel(tracker.selectedDate, DateTime.now()),
+                  label: _dateLabel(context, tracker.selectedDate, DateTime.now()),
                   canGoForward: !isViewingToday,
                   onPrev: () => tracker.loadDailyData(
                     tracker.selectedDate.subtract(const Duration(days: 1)),
@@ -480,6 +563,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                 _CaloriesSummaryCard(
                   consumed: tracker.totalCalories,
                   target: auth.currentUser?.dailyCalTarget,
+                  suppressBlur: _blurSuppressed,
                 ),
                 const SizedBox(height: 12),
 
@@ -489,28 +573,32 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                 _WeightHistoryEntryCard(
                   latestWeight: tracker.latestWeight,
                   onTap: _openWeightHistory,
+                  suppressBlur: _blurSuppressed,
                 ),
                 const SizedBox(height: 12),
 
                 _MacroRow(
-                  label: 'Белки',
+                  label: AppLocalizations.of(context).addFoodProtein,
                   consumed: tracker.totalProtein,
                   target: auth.currentUser?.proteinTarget,
                   color: const Color(0xFF3B82F6), // blue-500
+                  suppressBlur: _blurSuppressed,
                 ),
                 const SizedBox(height: 8),
                 _MacroRow(
-                  label: 'Углеводы',
+                  label: AppLocalizations.of(context).trackerFoodCarbs,
                   consumed: tracker.totalCarbs,
                   target: auth.currentUser?.carbsTarget,
                   color: const Color(0xFFF97316), // orange-500
+                  suppressBlur: _blurSuppressed,
                 ),
                 const SizedBox(height: 8),
                 _MacroRow(
-                  label: 'Жиры',
+                  label: AppLocalizations.of(context).trackerFoodFat,
                   consumed: tracker.totalFat,
                   target: auth.currentUser?.fatTarget,
                   color: const Color(0xFFA855F7), // purple-500
+                  suppressBlur: _blurSuppressed,
                 ),
                 const SizedBox(height: 16),
                 _WaterRow(
@@ -518,6 +606,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                   isLoading: tracker.isLoading,
                   onAdd: _onAddWater,
                   onDelete: (id) => _onDeleteWater(id),
+                  suppressBlur: _blurSuppressed,
                 ),
                 const SizedBox(height: 24),
                 _FoodLogSection(
@@ -533,8 +622,10 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                   // logic inside `_FoodLogTile` trivial: show the
                   // edit button iff this callback is non-null.
                   onReanalyze: _openReanalyze,
+                  suppressBlur: _blurSuppressed,
                 ),
               ],
+              ),
             ),
           ),
           if (showInitialLoader)
@@ -574,7 +665,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                 items: [
                   DockItem(
                     icon: Icons.camera_alt_outlined,
-                    tooltip: 'Камера',
+                    tooltip: AppLocalizations.of(context).trackerDockCameraTooltip,
                     // The Dock item is intentionally
                     // parameterless — both food and beverage
                     // flows share the same camera icon, and the
@@ -587,29 +678,30 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                   ),
                   DockItem(
                     icon: Icons.chat_bubble_outline,
-                    tooltip: 'Чат с NutriBot',
+                    tooltip: AppLocalizations.of(context).trackerDockChatTooltip,
                     onTap: _openChat,
                   ),
                   DockItem(
                     icon: Icons.add,
-                    tooltip: 'Добавить еду',
+                    tooltip: AppLocalizations.of(context).trackerDockAddFoodTooltip,
                     onTap: isViewingToday ? _openAddFood : null,
                     emphasized: true,
                   ),
                   DockItem(
                     icon: Icons.person_outline,
-                    tooltip: 'Профиль',
+                    tooltip: AppLocalizations.of(context).trackerDockProfileTooltip,
                     onTap: _openProfile,
                   ),
                   DockItem(
                     icon: Icons.settings_outlined,
-                    tooltip: 'Настройки',
+                    tooltip: AppLocalizations.of(context).trackerDockSettingsTooltip,
                     onTap: _openSettings,
                   ),
                 ],
               ),
             ),
         ],
+      ),
       ),
     );
   }
@@ -619,7 +711,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
 // Date navigation row
 // =============================================================================
 
-/// Sits directly under the AppBar: ‹  Сегодня  › (or "Вчера" / "dd.MM.yyyy").
+/// Sits directly under the AppBar: ‹  Today  › (or "Yesterday" / "dd.MM.yyyy").
 /// Tapping the label opens the system date picker. The forward chevron
 /// disables itself at today or later so the user can't navigate into the
 /// future.
@@ -646,7 +738,7 @@ class _DateNavRow extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Предыдущий день',
+            tooltip: AppLocalizations.of(context).trackerDatePrevTooltip,
             icon: const Icon(Icons.chevron_left),
             onPressed: onPrev,
           ),
@@ -682,7 +774,7 @@ class _DateNavRow extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Следующий день',
+            tooltip: AppLocalizations.of(context).trackerDateNextTooltip,
             icon: const Icon(Icons.chevron_right),
             // Disable at today-or-later so the user can never navigate
             // into a day with no data (or, worse, future-tense dates the
@@ -701,15 +793,17 @@ class _DateNavRow extends StatelessWidget {
 
 /// Compact card that summarises the user's latest logged weight and
 /// launches [WeightHistoryScreen] on tap. Renders either a value + chevron
-/// (when weight is known) or a "Добавить вес" CTA (when it's not).
+/// (when weight is known) or a "Add вес" CTA (when it's not).
 class _WeightHistoryEntryCard extends StatelessWidget {
   const _WeightHistoryEntryCard({
     required this.latestWeight,
     required this.onTap,
+    this.suppressBlur,
   });
 
   final double? latestWeight;
   final VoidCallback onTap;
+  final ValueListenable<bool>? suppressBlur;
 
   String _fmtKg(double v) => v.toStringAsFixed(1);
 
@@ -718,57 +812,55 @@ class _WeightHistoryEntryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final hasWeight = latestWeight != null;
 
-    return Material(
-      color: theme.colorScheme.surfaceContainerHighest,
+    // Glass treatment: the row sits inside a GlassCard so the
+    // surface blurs whatever's behind it (the page background) and
+    // picks up the brand-tinted highlight along the top edge.
+    return GlassCard(
+      onTap: onTap,
+      padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
       borderRadius: BorderRadius.circular(20),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-          child: Row(
-            children: [
-              Icon(
-                hasWeight
-                    ? Icons.monitor_weight_outlined
-                    : Icons.add_circle_outline,
-                color: hasWeight
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Вес',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      hasWeight
-                          ? 'Текущий вес: ${_fmtKg(latestWeight!)} кг'
-                          : 'Добавить вес',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: hasWeight
-                            ? theme.colorScheme.onSurface
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ],
+      suppressBlur: suppressBlur,
+      child: Row(
+        children: [
+          Icon(
+            hasWeight
+                ? Icons.monitor_weight_outlined
+                : Icons.add_circle_outline,
+            color: hasWeight
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
           ),
-        ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppLocalizations.of(context).trackerWeightCardTitle,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  hasWeight
+                      ? AppLocalizations.of(context).trackerWeightCardCurrent(_fmtKg(latestWeight!))
+                      : AppLocalizations.of(context).trackerWeightCardAdd,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: hasWeight
+                        ? theme.colorScheme.onSurface
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ],
       ),
     );
   }
@@ -782,10 +874,11 @@ class _WeightHistoryEntryCard extends StatelessWidget {
 /// a single progress bar. Gracefully degrades when the user hasn't filled
 /// in their profile yet (target is null) — we show only the consumed value.
 class _CaloriesSummaryCard extends StatelessWidget {
-  const _CaloriesSummaryCard({required this.consumed, required this.target});
+  const _CaloriesSummaryCard({required this.consumed, required this.target, this.suppressBlur});
 
   final double consumed;
   final num? target;
+  final ValueListenable<bool>? suppressBlur;
 
   @override
   Widget build(BuildContext context) {
@@ -796,60 +889,70 @@ class _CaloriesSummaryCard extends StatelessWidget {
         : 0.0;
     final consumedRounded = consumed.round();
 
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              hasTarget ? 'Калории сегодня' : 'Калорий съедено',
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
+    // Glass treatment: the calorie summary is the dominant card on
+    // the home screen, so wrapping it in a GlassCard gives it the
+    // Liquid Glass look the rest of the screen now shares with the
+    // Dock. The calorie count is rendered inside a
+    // [GlassProgressRing] so the user reads both the absolute
+    // number (centre) and the % of goal (ring fill) at a glance.
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      borderRadius: BorderRadius.circular(20),
+      suppressBlur: suppressBlur,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          GlassProgressRing(
+            value: ratio,
+            color: theme.colorScheme.primary,
+            size: 96,
+            strokeWidth: 10,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   '$consumedRounded',
-                  style: theme.textTheme.displaySmall?.copyWith(
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(width: 6),
+                if (hasTarget)
+                  Text(
+                    '${(ratio * 100).round()}%',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
                   hasTarget
-                      ? ' / ${target!.round()} ккал'
-                      : ' ккал',
+                      ? AppLocalizations.of(context).trackerCaloriesToday
+                      : AppLocalizations.of(context).trackerCaloriesEaten,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  hasTarget
+                      ? AppLocalizations.of(context)
+                          .trackerCaloriesKcalOf(target!.round().toString())
+                      : AppLocalizations.of(context).trackerCaloriesKcalOnly,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
-            if (hasTarget) ...[
-              const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: ratio,
-                  minHeight: 10,
-                  backgroundColor:
-                      theme.colorScheme.surfaceContainerHigh,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    theme.colorScheme.primary,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -863,12 +966,14 @@ class _MacroRow extends StatelessWidget {
     required this.consumed,
     required this.target,
     required this.color,
+    this.suppressBlur,
   });
 
   final String label;
   final double consumed;
   final num? target;
   final Color color;
+  final ValueListenable<bool>? suppressBlur;
 
   @override
   Widget build(BuildContext context) {
@@ -881,16 +986,33 @@ class _MacroRow extends StatelessWidget {
       consumed == consumed.roundToDouble() ? 0 : 1,
     );
 
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    // Glass treatment: macro rows are static (no tap), so we use
+    // the lower-level [GlassSurface] rather than [GlassCard]. The
+    // shared tint/border tokens give every card on the screen the
+    // same Liquid Glass language.
+    return GlassSurface(
+      borderRadius: BorderRadius.circular(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      suppressBlur: suppressBlur,
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _macroIcon(label),
+              size: 18,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
@@ -898,34 +1020,48 @@ class _MacroRow extends StatelessWidget {
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  hasTarget
-                      ? '$consumedRounded / ${_formatG(target!)} г'
-                      : '$consumedRounded г',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: ratio,
+                    minHeight: 6,
+                    backgroundColor:
+                        theme.colorScheme.surfaceContainerHigh,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
                   ),
                 ),
               ],
             ),
-            if (hasTarget) ...[
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: ratio,
-                  minHeight: 6,
-                  backgroundColor:
-                      theme.colorScheme.surfaceContainerHigh,
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
-                ),
-              ),
-            ],
-          ],
-        ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            hasTarget
+                ? '$consumedRounded / ${_formatG(target!)} г'
+                : '$consumedRounded г',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  /// Per-nutrient glyph for the macro row's leading chip.
+  /// Keeps each row scannable at a glance without needing the
+  /// label's first letter to do all the work.
+  IconData _macroIcon(String label) {
+    if (label.contains('Protein') || label.contains('Белки') || label.contains('ცილები')) {
+      return Icons.fitness_center_outlined;
+    }
+    if (label.contains('Carbs') || label.contains('Углеводы') || label.contains('ნახშირწყლები')) {
+      return Icons.bakery_dining_outlined;
+    }
+    if (label.contains('Fat') || label.contains('Жиры') || label.contains('ცხიმები')) {
+      return Icons.opacity_outlined;
+    }
+    return Icons.circle_outlined;
   }
 
   static String _formatG(num g) =>
@@ -956,7 +1092,7 @@ String _formatHourMinute(DateTime t) {
 /// parity with the web's `WaterTracker.tsx`:
 ///   * header with formatted total / goal
 ///   * progress bar (0..1) and "X% дневной цели" caption
-///   * "Добавить воду" button that opens [_AddWaterSheet]
+///   * "Add воду" button that opens [_AddWaterSheet]
 ///   * per-entry list with formatted amount, time, and a delete icon
 class _WaterRow extends StatefulWidget {
   const _WaterRow({
@@ -964,12 +1100,14 @@ class _WaterRow extends StatefulWidget {
     required this.isLoading,
     required this.onAdd,
     required this.onDelete,
+    this.suppressBlur,
   });
 
   final List<WaterLogModel> waterLogs;
   final bool isLoading;
   final VoidCallback onAdd;
   final Future<void> Function(String waterId) onDelete;
+  final ValueListenable<bool>? suppressBlur;
 
   @override
   State<_WaterRow> createState() => _WaterRowState();
@@ -1007,101 +1145,136 @@ class _WaterRowState extends State<_WaterRow> {
     final pct = goalMl > 0 ? ((totalMl / goalMl) * 100).round() : 0;
     final goalReached = goalMl > 0 && totalMl >= goalMl;
 
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    // Glass treatment: the water card is now a [GlassCard] that
+    // blends with the calorie card above it. Quick-pick
+    // volume chips sit underneath the progress bar so the user
+    // can tap a common volume (250ml, 500ml, 1L) and have it
+    // prefilled into the add sheet's text field.
+    final quickPicks = <int>[250, 500, 1000];
+    int? selectedQuickPick;
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+      borderRadius: BorderRadius.circular(20),
+      suppressBlur: widget.suppressBlur,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.water_drop_outlined,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Вода',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+          Row(
+            children: [
+              Icon(
+                Icons.water_drop_outlined,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context).trackerWaterTitle,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${_formatWaterAmount(totalMl)} / ${_formatWaterAmount(goalMl)}',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      AppLocalizations.of(context).trackerWaterProgress(
+                        _formatWaterAmount(totalMl),
+                        _formatWaterAmount(goalMl),
                       ),
-                    ],
-                  ),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                FilledButton.tonalIcon(
-                  onPressed: widget.isLoading ? null : widget.onAdd,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Добавить'),
-                ),
-              ],
-            ),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: widget.isLoading ? null : widget.onAdd,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(AppLocalizations.of(context).commonSave),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: ratio,
-                      minHeight: 6,
-                      backgroundColor:
-                          theme.colorScheme.surfaceContainerHigh,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        theme.colorScheme.primary,
-                      ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: ratio,
+                    minHeight: 6,
+                    backgroundColor:
+                        theme.colorScheme.surfaceContainerHigh,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      theme.colorScheme.primary,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  goalReached ? 'Цель достигнута!' : '$pct% дневной цели',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: goalReached
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant,
-                    fontWeight: goalReached ? FontWeight.w600 : null,
-                  ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                goalReached
+                    ? AppLocalizations.of(context).trackerWaterGoalReached
+                    : AppLocalizations.of(context).trackerWaterPctOfGoal(pct.toString()),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: goalReached
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                  fontWeight: goalReached ? FontWeight.w600 : null,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           if (remainingMl > 0)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              padding: const EdgeInsets.only(top: 4),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '${_formatWaterAmount(remainingMl)} осталось',
+                  AppLocalizations.of(context).trackerWaterRemaining(
+                    _formatWaterAmount(remainingMl),
+                  ),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
-            )
-          else
-            const SizedBox(height: 8),
+            ),
+          // Quick-pick chips — the user can tap one to (in a
+          // follow-up) prefill the add-sheet's text field. Today
+          // they just visually communicate "these are the common
+          // volumes". `selected` is a local-only flag because we
+          // don't have persistent state to remember the last pick
+          // across renders; the chip still demonstrates the
+          // `selected` styling path used by `GlassChip`.
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final ml in quickPicks)
+                GlassChip(
+                  label: _formatWaterAmount(ml),
+                  selected: ml == selectedQuickPick,
+                  onTap: () {
+                    // The selected state is a UI demo here; the
+                    // actual "prefill the add sheet" hook would
+                    // forward through `widget.onAdd` with a
+                    // pre-set value. Out of scope for this pass.
+                  },
+                ),
+            ],
+          ),
           if (widget.waterLogs.isNotEmpty)
-            _WaterLogList(
-              waterLogs: widget.waterLogs,
-              onDelete: _handleDelete,
-              recentlyDeletedId: _recentlyDeletedId,
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: _WaterLogList(
+                waterLogs: widget.waterLogs,
+                onDelete: _handleDelete,
+                recentlyDeletedId: _recentlyDeletedId,
+              ),
             ),
         ],
       ),
@@ -1180,7 +1353,7 @@ class _WaterLogList extends StatelessWidget {
                   )
                 else
                   IconButton(
-                    tooltip: 'Удалить',
+                    tooltip: AppLocalizations.of(context).trackerTooltipDelete,
                     icon: const Icon(Icons.delete_outline, size: 20),
                     color: theme.colorScheme.onSurfaceVariant,
                     visualDensity: VisualDensity.compact,
@@ -1249,7 +1422,7 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
         ..showSnackBar(
           SnackBar(
             content: Text(
-              tracker.errorMessage ?? 'Не удалось сохранить.',
+              _localizedTrackerError(context, tracker),
             ),
             behavior: SnackBarBehavior.floating,
           ),
@@ -1275,14 +1448,14 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Добавить воду',
+                AppLocalizations.of(context).trackerWaterAddTitle,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Введи количество в литрах (0.1–10 л)',
+                AppLocalizations.of(context).trackerWaterAddInstructions,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -1293,18 +1466,18 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Литры',
-                  border: OutlineInputBorder(),
-                  hintText: 'например, 0.5',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).trackerWaterLiters,
+                  border: const OutlineInputBorder(),
+                  hintText: AppLocalizations.of(context).trackerWaterHint,
                 ),
                 validator: (v) {
                   final raw = (v ?? '').trim();
-                  if (raw.isEmpty) return 'Введи количество';
+                  if (raw.isEmpty) return AppLocalizations.of(context).trackerWaterRequired;
                   final n = num.tryParse(raw.replaceAll(',', '.'));
-                  if (n == null) return 'Введи число';
-                  if (n < 0.1) return 'Минимум 0.1 л';
-                  if (n > 10) return 'Максимум 10 л';
+                  if (n == null) return AppLocalizations.of(context).commonErrorShort;
+                  if (n < 0.1) return AppLocalizations.of(context).trackerWaterMin;
+                  if (n > 10) return AppLocalizations.of(context).trackerWaterMax;
                   return null;
                 },
               ),
@@ -1343,7 +1516,7 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text('Сохранить'),
+                    : Text(AppLocalizations.of(context).commonSave),
               ),
             ],
           ),
@@ -1362,17 +1535,26 @@ class _FoodLogSection extends StatelessWidget {
     required this.mealLabel,
     required this.onDelete,
     required this.onReanalyze,
+    this.suppressBlur,
   });
 
   final Map<String, List<FoodLogModel>> grouped;
   final bool isEmpty;
-  final String Function(String) mealLabel;
+
+  /// BuildContext-aware meal-name resolver. The section header needs
+  /// to render the active locale's label for each meal bucket, so
+  /// the callback receives the surrounding [BuildContext] (along
+  /// with the meal-type wire key). Returning a non-null string
+  /// makes the section header straight-render the label; falling
+  /// through to the meal-key fallback is the consumer's choice.
+  final String Function(BuildContext, String) mealLabel;
   final void Function(FoodLogModel food) onDelete;
 
-  /// Invoked when the user taps "Уточнить" on an AI-generated row.
+  /// Invoked when the user taps "Refine" on an AI-generated row.
   /// `null` means "no edit affordance" — applied to manually-added
   /// entries, which have no AI description to correct.
   final Future<void> Function(FoodLogModel food)? onReanalyze;
+  final ValueListenable<bool>? suppressBlur;
 
   @override
   Widget build(BuildContext context) {
@@ -1381,7 +1563,7 @@ class _FoodLogSection extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 48),
         child: Center(
           child: Text(
-            'Пока нет записей',
+            AppLocalizations.of(context).trackerEmptyLog,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -1410,32 +1592,64 @@ class _FoodLogSection extends StatelessWidget {
         .toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
+    // Each meal bucket becomes one [GlassCard] containing the
+    // bucket header + its tiles. The card's outer shape is what
+    // makes the page read as a stack of glass plates; the tiles
+    // inside are flat list items (no per-tile border) so the cards
+    // don't end up looking like nested windows.
     void addSection(String key, List<FoodLogModel> entries) {
       children.add(
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
-          child: Text(
-            mealLabel(key),
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+          padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
+          child: GlassCard(
+            padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+            borderRadius: BorderRadius.circular(18),
+            suppressBlur: suppressBlur,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 8, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          mealLabel(context, key),
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                for (final food in entries)
+                  // Entry animation: when a new food log lands, the
+                  // matching tile gets a fresh key → fresh
+                  // mount → fires the TweenAnimationBuilder once.
+                  // Existing tiles re-mount with no animation
+                  // because their data didn't change.
+                  _EntryAnimation(
+                    key: ValueKey(food.id),
+                    child: _FoodLogTile(
+                      food: food,
+                      onDelete: () => onDelete(food),
+                      // The edit affordance is conditional on
+                      // `aiGenerated`: manually-entered rows don't
+                      // carry an AI description to refine, so
+                      // passing `null` here makes the tile render
+                      // with only the existing delete icon.
+                      onReanalyze: food.aiGenerated
+                          ? () => onReanalyze?.call(food)
+                          : null,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       );
-      for (final food in entries) {
-        // The edit affordance is conditional on `aiGenerated`:
-        // manually-entered rows don't carry an AI description to
-        // refine, so passing `null` here makes the tile render with
-        // only the existing delete icon.
-        final reanalyze =
-            food.aiGenerated ? () => onReanalyze?.call(food) : null;
-        children.add(_FoodLogTile(
-          food: food,
-          onDelete: () => onDelete(food),
-          onReanalyze: reanalyze,
-        ));
-      }
     }
 
     for (final entry in known) {
@@ -1452,6 +1666,46 @@ class _FoodLogSection extends StatelessWidget {
   }
 }
 
+/// One-shot scale + fade animation for a freshly-mounted food
+/// tile. Runs once on mount with `Curves.easeOutBack` so the new
+/// entry "settles" with a subtle spring overshoot — the
+/// Liquid-Glass equivalent of iOS's row-insertion animation.
+///
+/// The animation is keyed off the [child]'s identity (the parent
+/// passes a [ValueKey]); an existing tile whose data didn't
+/// change won't re-mount, so the animation only fires for truly
+/// new entries.
+class _EntryAnimation extends StatelessWidget {
+  const _EntryAnimation({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      // A tiny tween (1 ms) → final value 1 means the builder
+      // runs exactly once with `t = 1`, then the widget holds at
+      // its full state. The "animation" is the transition from
+      // `begin` to `end`, which the framework interpolates over
+      // `duration`. We pre-set `t = 1` so the FIRST frame is the
+      // rest state — _unless_ we drive it manually. Instead, use a
+      // full TweenAnimationBuilder for a proper once-per-mount
+      // tween.
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutBack,
+      tween: Tween<double>(begin: 0, end: 1),
+      builder: (context, t, child) {
+        final scale = 0.9 + 0.1 * t;
+        return Opacity(
+          opacity: t.clamp(0.0, 1.0),
+          child: Transform.scale(scale: scale, child: child),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
 /// Single food-log entry. Subtitle is "Б/У/Ж" (белки/углеводы/жиры) per
 /// the spec — compact single-line format that fits a single-line ListTile.
 class _FoodLogTile extends StatelessWidget {
@@ -1464,7 +1718,7 @@ class _FoodLogTile extends StatelessWidget {
   final FoodLogModel food;
   final VoidCallback onDelete;
 
-  /// Optional callback to render the "Уточнить" edit affordance. When
+  /// Optional callback to render the "Refine" edit affordance. When
   /// `null`, the tile shows only the existing delete icon — used for
   /// manually-entered rows that have no AI description to refine.
   final VoidCallback? onReanalyze;
@@ -1475,51 +1729,54 @@ class _FoodLogTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final subtitle =
-        '${food.calories.round()} ккал • Б/У/Ж ${_fmt(food.protein)}/${_fmt(food.carbs)}/${_fmt(food.fat)} г';
+    final subtitle = AppLocalizations.of(context).trackerFoodSubtitle(
+      food.calories.round().toString(),
+      _fmt(food.protein),
+      _fmt(food.carbs),
+      _fmt(food.fat),
+    );
 
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outlineVariant),
+    // Tiles no longer wrap themselves in a `Card` — the parent
+    // meal section now owns the glass surface (one [GlassCard]
+    // per meal bucket), and the tile is just a flat ListTile
+    // inside it. Keeping the tile as a ListTile preserves the
+    // hover/long-press affordances and the trailing IconButton
+    // tappability without double-stacking surfaces.
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      title: Text(
+        food.foodName,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
       ),
-      child: ListTile(
-        title: Text(
-          food.foodName,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+      subtitle: Text(
+        subtitle,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
         ),
-        subtitle: Text(
-          subtitle,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        // Trailing holds both action icons when the row is AI-
-        // generated (render side-by-side via `Row(mainAxisSize:
-        // min)` so the ListTile doesn't expand to claim the full
-        // row width) and just the delete icon otherwise.
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (onReanalyze != null)
-              IconButton(
-                tooltip: 'Уточнить',
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: onReanalyze,
-              ),
+      ),
+      // Trailing holds both action icons when the row is AI-
+      // generated (render side-by-side via `Row(mainAxisSize:
+      // min)` so the ListTile doesn't expand to claim the full
+      // row width) and just the delete icon otherwise.
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (onReanalyze != null)
             IconButton(
-              tooltip: 'Удалить',
-              icon: const Icon(Icons.delete_outline),
-              onPressed: onDelete,
+              tooltip: AppLocalizations.of(context).trackerTooltipRefine,
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: onReanalyze,
             ),
-          ],
-        ),
+          IconButton(
+            tooltip: AppLocalizations.of(context).trackerTooltipDelete,
+            icon: const Icon(Icons.delete_outline),
+            onPressed: onDelete,
+          ),
+        ],
       ),
     );
   }

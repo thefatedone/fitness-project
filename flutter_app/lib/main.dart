@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 
 import 'core/api/api_client.dart';
 import 'core/config/api_environment_provider.dart';
+import 'core/locale/locale_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
+import 'l10n/gen/app_localizations.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/providers/password_reset_provider.dart';
 import 'features/auth/screens/login_screen.dart';
@@ -14,6 +16,7 @@ import 'features/tracker/providers/beverage_provider.dart';
 import 'features/tracker/providers/food_recognition_provider.dart';
 import 'features/tracker/providers/tracker_provider.dart';
 import 'features/tracker/screens/tracker_home_screen.dart';
+import 'utils/accessibility_utils.dart';
 
 /// App entry point.
 ///
@@ -45,9 +48,16 @@ void main() {
   final authProvider = AuthProvider()..tryAutoLogin();
   apiClient.onUnauthorized = authProvider.forceLogout;
 
+  // Kick off the platform-channel round-trip for Reduce Transparency
+  // before the first frame so the very first `ReduceTransparencyScope`
+  // build can read a settled value rather than the in-flight default.
+  ReduceTransparencyNotifier.instance.ensureAttached();
+
   runApp(
-    MultiProvider(
-      providers: [
+    ReduceTransparencyScope(
+      notifier: ReduceTransparencyNotifier.instance,
+      child: MultiProvider(
+        providers: [
         // ThemeProvider must be available BEFORE the MaterialApp's
         // build runs so it can read the user's current theme
         // preference via `context.watch<ThemeProvider>()`. We also kick
@@ -56,6 +66,15 @@ void main() {
         // paints — same pattern as AuthProvider's `..tryAutoLogin()`.
         ChangeNotifierProvider<ThemeProvider>(
           create: (_) => ThemeProvider()..loadSavedMode(),
+        ),
+        // Locale provider — mirrors [ThemeProvider]'s shape
+        // (in-memory default + `loadSavedLocale` called on
+        // creation so the persisted choice is drained from
+        // SharedPreferences before the first frame paints).
+        // Registered BEFORE [ThemeProvider]'s siblings only so
+        // the comment ordering reads top-to-bottom.
+        ChangeNotifierProvider<LocaleProvider>(
+          create: (_) => LocaleProvider()..loadSavedLocale(),
         ),
         // Debug-only API-environment switcher. Reads any persisted
         // override from SharedPreferences on creation
@@ -108,6 +127,7 @@ void main() {
         ),
       ],
       child: const _NutriMindAppShell(),
+      ),
     ),
   );
 }
@@ -137,17 +157,25 @@ class NutriMindApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        // ThemeProvider must be available BEFORE NutriMindApp's own
-        // build runs so the MaterialApp below can read the user's
-        // current theme preference via `context.watch<ThemeProvider>()`.
-        // We also kick off `loadSavedMode()` on creation so the
-        // persisted choice is drained from SharedPreferences before
-        // the first frame paints — same pattern as AuthProvider's
-        // `..tryAutoLogin()`.
-        ChangeNotifierProvider<ThemeProvider>(
-          create: (_) => ThemeProvider()..loadSavedMode(),
+    return ReduceTransparencyScope(
+      notifier: ReduceTransparencyNotifier.instance,
+      child: MultiProvider(
+        providers: [
+          // ThemeProvider must be available BEFORE NutriMindApp's own
+          // build runs so the MaterialApp below can read the user's
+          // current theme preference via `context.watch<ThemeProvider>()`.
+          // We also kick off `loadSavedMode()` on creation so the
+          // persisted choice is drained from SharedPreferences before
+          // the first frame paints — same pattern as AuthProvider's
+          // `..tryAutoLogin()`.
+          ChangeNotifierProvider<ThemeProvider>(
+            create: (_) => ThemeProvider()..loadSavedMode(),
+          ),
+        // See the matching registration in `main()` for
+        // rationale — second copy so widget tests that mount
+        // `NutriMindApp` directly see the provider too.
+        ChangeNotifierProvider<LocaleProvider>(
+          create: (_) => LocaleProvider()..loadSavedLocale(),
         ),
         // See the matching registration in `main()` for rationale
         // — this second copy exists so that mounting `NutriMindApp`
@@ -193,7 +221,8 @@ class NutriMindApp extends StatelessWidget {
           create: (_) => PasswordResetProvider(),
         ),
       ],
-      child: const _NutriMindAppShell(),
+        child: const _NutriMindAppShell(),
+      ),
     );
   }
 }
@@ -217,13 +246,57 @@ class _NutriMindAppShell extends StatelessWidget {
     // child of the MultiProvider, so the watch resolves cleanly,
     // and we rebuild whenever the user flips the mode.
     final themeMode = context.watch<ThemeProvider>().flutterThemeMode;
+    // Mirror the theme watch for locale — a change here rebuilds
+    // MaterialApp with a new `locale`, which propagates to every
+    // descendant (DatePicker labels, AlertDialog buttons, scroll
+    // physics tooltips, the language section label itself, etc.)
+    // without any explicit per-screen wiring. The Settings screen
+    // is the single user-facing entry point that mutates this.
+    final flutterLocale = context.watch<LocaleProvider>().flutterLocale;
 
     return MaterialApp(
+      // `title` is a `String` consumed by the OS task switcher (Android
+      // Recent / iOS app switcher) — not displayed inside the app's
+      // widget tree. The ARB defines `appName: "NutriMind"` for all three
+      // locales (en, ru, ka); the brand is locale-invariant, so the
+      // const literal matches the ARB value. Resolving this through
+      // `AppLocalizations.of(context)` here would throw because
+      // `_NutriMindAppShell.build` runs BEFORE the `MaterialApp` builds
+      // (the `Localizations` widget that provides `AppLocalizations` is
+      // created BY the `MaterialApp`), so the lookup returns null and
+      // the `!` asserts. The two-step Builder pattern below handles all
+      // in-app `AppLocalizations.of(context)` lookups safely.
       title: 'NutriMind',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
+      locale: flutterLocale,
+      // `AppLocalizations.localizationsDelegates` bundles the
+      // generated ARB-driven `AppLocalizations.delegate` together
+      // with `GlobalMaterialLocalizations.delegates` (which itself
+      // includes the matching `GlobalCupertinoLocalizations.delegate`
+      // for each supported locale — see the comment on the prior
+      // `.delegates`-form rationale further down). The generated
+      // class is what powers the per-screen `AppLocalizations.of(context)`
+      // lookups that replace the previously-hardcoded Russian strings.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      // The three locales the app supports today. Adding a new
+      // language is a two-line change: extend [AppLocale], add a
+      // case to [LocaleProvider.flutterLocale], append the
+      // matching `Locale(...)` here. Anything else (the Settings
+      // screen's `SegmentedButton`, the native-name labels) picks
+      // up the new entry automatically because it iterates over
+      // [AppLocale.values].
+      //
+      // Derived from `AppLocale.values` so the two lists can't
+      // drift; the per-locale `AppLocale` enum's name is the
+      // canonical language code.
+      supportedLocales: const [
+        Locale('en'),
+        Locale('ka'),
+        Locale('ru'),
+      ],
       home: const AuthGate(),
     );
   }

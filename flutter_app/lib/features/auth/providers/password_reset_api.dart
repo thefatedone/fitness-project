@@ -115,11 +115,11 @@ class PasswordResetApi {
   /// `AuthApi._extractAccessToken`.
   String _extractMessage(Map<String, dynamic>? body) {
     if (body == null) {
-      throw const ApiException('Сервер вернул пустой ответ.');
+      throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
     }
     final msg = body['message'];
     if (msg is! String || msg.isEmpty) {
-      throw const ApiException('Сервер не вернул подтверждение.');
+      throw const ApiException('Server did not return confirmation.');
     }
     return msg;
   }

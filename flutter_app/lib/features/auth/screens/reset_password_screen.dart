@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
+import '../../../widgets/glass/glass_button.dart';
+import '../../../widgets/glass/glass_card.dart';
+
 import '../../auth/providers/auth_api.dart';
 import '../providers/password_reset_provider.dart';
 
@@ -46,13 +50,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       // onboarding_wizard_screen.dart and delete_account_screen.dart
       // — this screen is deep in a pushed stack above LoginScreen
       // and the user lands on LoginScreen after the pop.
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Пароль изменён. Теперь можешь войти.',
-            ),
+          SnackBar(
+            content: Text(l10n.authResetSuccess),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -64,19 +67,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     } else {
       // Failure paths here:
       //  * the code expired between step 2 and step 3 → the
-      //    backend's 400 surfaces the generic "Неверный или истёкший
-      //    код." message; the user can back-button to step 2 and
-      //    re-trigger the resend from there.
+      //    backend's 400 surfaces the generic "invalid or
+      //    expired code" message; the user can back-button to
+      //    step 2 and re-trigger the resend from there.
       //  * the password was weak in some way the client validator
       //    missed → the backend's strength copy is in the message.
       // Either way, show the message verbatim and stay on this
       // screen so the user can retry without losing their typed
       // values.
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(reset.errorMessage ?? 'Что-то пошло не так.'),
+            content: Text(reset.errorMessage ?? l10n.commonErrorShort),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -87,9 +91,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final reset = context.watch<PasswordResetProvider>();
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Новый пароль')),
+      appBar: AppBar(title: Text(l10n.authResetTitle)),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -99,76 +104,82 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Введи новый пароль для ${reset.email}',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+              child: GlassCard(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                borderRadius: BorderRadius.circular(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.authResetInstructions(reset.email),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    TextFormField(
-                      controller: _newCtrl,
-                      obscureText: true,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Новый пароль',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(),
-                        helperText:
-                            'Мин. 8 символов, с заглавной буквы, есть цифра',
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        controller: _newCtrl,
+                        obscureText: true,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: l10n.authResetNewPassword,
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          border: const OutlineInputBorder(),
+                          helperText: l10n.authPasswordHelper,
+                        ),
+                        // Same shared helper as registration /
+                        // change-password — single source of truth for
+                        // the rules on both client and server.
+                        validator: (v) => validatePassword(v ?? ''),
                       ),
-                      // Same shared helper as registration /
-                      // change-password — single source of truth for
-                      // the rules on both client and server.
-                      validator: (v) => validatePassword(v ?? ''),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _confirmCtrl,
-                      obscureText: true,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _onSubmit(),
-                      decoration: const InputDecoration(
-                        labelText: 'Подтверди пароль',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _confirmCtrl,
+                        obscureText: true,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _onSubmit(),
+                        decoration: InputDecoration(
+                          labelText: l10n.authResetConfirmPassword,
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (v) {
+                          final trimmed = v ?? '';
+                          if (trimmed.isEmpty) {
+                            return l10n.authResetConfirmRequired;
+                          }
+                          if (trimmed != _newCtrl.text) {
+                            return l10n.authResetMismatch;
+                          }
+                          return null;
+                        },
                       ),
-                      validator: (v) {
-                        final trimmed = v ?? '';
-                        if (trimmed.isEmpty) {
-                          return 'Подтверди пароль';
-                        }
-                        if (trimmed != _newCtrl.text) {
-                          return 'Пароли не совпадают';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: reset.isLoading ? null : _onSubmit,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
+                      const SizedBox(height: 24),
+                      GlassButton(
+                        label: reset.isLoading ? '' : l10n.authResetSave,
+                        onPressed: reset.isLoading ? null : _onSubmit,
+                        expand: true,
+                        variant: GlassButtonVariant.primary,
                       ),
-                      child: reset.isLoading
-                          ? const SizedBox(
+                      if (reset.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Center(
+                            child: SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.2,
-                                color: Colors.white,
                               ),
-                            )
-                          : const Text('Сохранить новый пароль'),
-                    ),
+                            ),
+                          ),
+                        ),
                   ],
+                ),
                 ),
               ),
             ),

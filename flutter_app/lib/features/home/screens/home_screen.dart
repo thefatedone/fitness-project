@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
+
 import '../../auth/providers/auth_provider.dart';
 
 /// Authenticated landing screen.
@@ -21,10 +23,10 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('NutriMind'),
+        title: Text(AppLocalizations.of(context).appName),
         actions: [
           IconButton(
-            tooltip: 'Выйти',
+            tooltip: AppLocalizations.of(context).homeLogout,
             icon: const Icon(Icons.logout),
             onPressed: () => context.read<AuthProvider>().logout(),
           ),
@@ -35,8 +37,9 @@ class HomeScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
             name == null
-                ? 'Загрузка...'
-                : 'Привет, $name! 👋\n\nЗдесь будет трекер питания.',
+                ? AppLocalizations.of(context).homeLoading
+                : '${AppLocalizations.of(context).homeGreeting(name)} 👋\n\n'
+                    '${AppLocalizations.of(context).homeTrackerPreview}',
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,

@@ -43,11 +43,11 @@ class PasswordApi {
         // Defensive — the backend's PUT always returns a JSON object
         // with a `message` field. Treat an empty body the same way
         // the rest of the app does: surface a friendly fallback.
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       final msg = body['message'];
       if (msg is! String || msg.isEmpty) {
-        throw const ApiException('Сервер не вернул подтверждение.');
+        throw const ApiException('Server did not return confirmation.');
       }
       return msg;
     } on DioException catch (e) {

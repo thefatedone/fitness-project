@@ -5,10 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
+
 import '../models/beverage_result.dart';
 import '../../auth/providers/auth_api.dart';
 import '../providers/beverage_api.dart';
 import '../providers/beverage_provider.dart';
+
+import '../../../widgets/glass/glass_card.dart';
+import '../../../widgets/glass/glass_scale_pulse_badge.dart';
 import '../providers/tracker_provider.dart';
 
 /// Screen for logging a beverage from a photo via Gemini, with
@@ -100,8 +105,8 @@ class _PhotoBeverageScreenState extends State<PhotoBeverageScreen> {
 
   void _showPickerError(ImageSource source) {
     final hint = source == ImageSource.camera
-        ? 'Не удалось открыть камеру. Попробуй выбрать фото из галереи.'
-        : 'Не удалось открыть галерею.';
+        ? AppLocalizations.of(context).profileCameraError
+        : AppLocalizations.of(context).profileGalleryError;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -151,9 +156,11 @@ class _PhotoBeverageScreenState extends State<PhotoBeverageScreen> {
       }
     } else if (beverage.isAnalyzing && _pickedFile != null) {
       body = _AnalyzingView(image: _pickedFile!);
-    } else if (beverage.errorMessage != null && !beverage.isAnalyzing) {
+    } else if (!beverage.isAnalyzing &&
+        (beverage.errorMessage != null ||
+            beverage.errorMessageKey != null)) {
       body = _ErrorView(
-        message: beverage.errorMessage!,
+        message: BeverageProvider.localizeError(context, beverage),
         onRetry: _retry,
       );
     } else {
@@ -166,7 +173,7 @@ class _PhotoBeverageScreenState extends State<PhotoBeverageScreen> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Фото напитка'),
+        title: Text(AppLocalizations.of(context).photoBeverageTitle),
         backgroundColor: theme.colorScheme.surface,
       ),
       body: SafeArea(child: body),
@@ -202,7 +209,7 @@ class _PickerView extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Сфотографируй напиток или выбери снимок из галереи',
+            AppLocalizations.of(context).photoBeverageInstructions,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -214,7 +221,7 @@ class _PickerView extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: onCamera,
               icon: const Icon(Icons.camera_alt),
-              label: const Text('Сделать фото'),
+              label: Text(AppLocalizations.of(context).photoFoodTakePhoto),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
               ),
@@ -226,7 +233,7 @@ class _PickerView extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: onGallery,
               icon: const Icon(Icons.photo_library),
-              label: const Text('Выбрать из галереи'),
+              label: Text(AppLocalizations.of(context).photoFoodPickGallery),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
               ),
@@ -265,7 +272,7 @@ class _AnalyzingView extends StatelessWidget {
                 const CircularProgressIndicator(color: Colors.white),
                 const SizedBox(height: 16),
                 Text(
-                  'Анализируем фото...',
+                  AppLocalizations.of(context).photoBeverageAnalyzing,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -282,7 +289,7 @@ class _AnalyzingView extends StatelessWidget {
 
 /// Auto-logged branch: server already dual-wrote the
 /// FoodLog + WaterLog pair. Show the committed values + a
-/// "Готово" button. Mirrors the food result view's structure
+/// "Done" button. Mirrors the food result view's structure
 /// but with five macro chips (calories / Б / У / Ж / Сахар)
 /// instead of four — sugar is beverage-specific.
 class _AutoLoggedView extends StatelessWidget {
@@ -291,11 +298,17 @@ class _AutoLoggedView extends StatelessWidget {
   final BeverageRecognitionResult result;
   final VoidCallback onDone;
 
-  static const Map<String, ({String label, Color color})> _confidenceStyle = {
-    'high': (label: 'Высокая точность', color: Color(0xFF22C55E)), // green
-    'medium': (label: 'Средняя точность', color: Color(0xFFEAB308)), // amber
-    'low': (label: 'Низкая точность', color: Color(0xFFEF4444)), // red
-  };
+    // NOTE: these confidence badge labels are localized — they come from
+  // `AppLocalizations.of(context).photoBeverageConfidence*` so the
+  // whole card respects the active locale.
+  Map<String, ({String label, Color color})> _confidenceStyle(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return {
+      'high': (label: l10n.photoBeverageConfidenceHigh, color: const Color(0xFF22C55E)),
+      'medium': (label: l10n.photoBeverageConfidenceMedium, color: const Color(0xFFEAB308)),
+      'low': (label: l10n.photoBeverageConfidenceLow, color: const Color(0xFFEF4444)),
+    };
+  }
 
   String _fmt(double v) =>
       v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
@@ -332,8 +345,9 @@ class _AutoLoggedView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final nutrition = result.nutrition!;
-    final confidence = _confidenceStyle[result.confidence ?? 'high'] ??
-        _confidenceStyle['high']!;
+    final confidenceStyle = _confidenceStyle(context);
+    final confidence = confidenceStyle[result.confidence ?? 'high'] ??
+        confidenceStyle['high']!;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -364,7 +378,7 @@ class _AutoLoggedView extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '⚠️ Возможен конфликт с аллергией',
+                            AppLocalizations.of(context).photoFoodAllergyWarningTitle,
                             style: theme.textTheme.titleSmall?.copyWith(
                               color: const Color(0xFFB45309),
                               fontWeight: FontWeight.w700,
@@ -399,91 +413,97 @@ class _AutoLoggedView extends StatelessWidget {
             ),
           if (result.hasAllergyWarning) const SizedBox(height: 16),
 
-          // Main result card.
-          Card(
-            elevation: 0,
-            color: theme.colorScheme.surfaceContainerHighest,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          nutrition.beverageName.isEmpty
-                              ? 'Без названия'
-                              : nutrition.beverageName,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+          // Main result card — wrapped in a [GlassCard] so the
+          // auto-logged beverage result blends with the rest of
+          // the Liquid Glass language. The border colour follows
+          // confidence: a bright accent for high confidence (a
+          // "trust" cue), neutral for low confidence.
+          GlassCard(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            borderRadius: BorderRadius.circular(20),
+            borderColorOverride: result.confidence == 'high'
+                ? theme.colorScheme.primary
+                : null,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        nutrition.beverageName.isEmpty
+                            ? AppLocalizations.of(context).photoFoodNoName
+                            : nutrition.beverageName,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      _ConfidenceChip(
-                        label: confidence.label,
-                        color: confidence.color,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Volume line — beverages always carry a volume
-                  // display so the user knows how much of what
-                  // was logged.
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.water_drop_outlined,
-                        size: 18,
+                    ),
+                    const SizedBox(width: 12),
+                    _ConfidenceChip(
+                      label: confidence.label,
+                      color: confidence.color,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Volume line — beverages always carry a volume
+                // display so the user knows how much of what
+                // was logged.
+                Row(
+                  children: [
+                    Icon(
+                      Icons.water_drop_outlined,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      AppLocalizations.of(context).photoBeverageMl(nutrition.volumeMl.round().toString()),
+                      style: theme.textTheme.titleMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${nutrition.volumeMl.round()} мл',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                    ),
+                  ],
                   ),
                   const SizedBox(height: 16),
 
-                  // Compact macro row — five chips instead of
-                  // the food flow's four: Сахар is
+                  // Compact macro row — five chips instead of the food
+                  // flow's four: Сахар (Sugar) is
                   // beverage-specific. The order matches the
                   // user's mental model of "calories first, then
-                  // macros, then sugar last".
-                  Row(
-                    children: [
-                      _macroChip(context, 'ккал',
-                          nutrition.calories.round().toString()),
-                      _macroChip(context, 'Б',
-                          '${_fmt(nutrition.protein)} г'),
-                      _macroChip(context, 'У',
-                          '${_fmt(nutrition.carbs)} г'),
-                      _macroChip(context, 'Ж',
-                          '${_fmt(nutrition.fat)} г'),
-                      _macroChip(context, 'Сахар',
-                          '${_fmt(nutrition.sugarG)} г'),
-                    ],
-                  ),
+                  // macros, then sugar last". Labels and unit
+                  // suffixes come from `AppLocalizations.of(ctx)`
+                  // so they switch with the active locale.
+                  Builder(builder: (ctx) {
+                    final l10n = AppLocalizations.of(ctx);
+                    return Row(
+                      children: [
+                        _macroChip(ctx, l10n.unitKcalShort,
+                            nutrition.calories.round().toString()),
+                        _macroChip(ctx, l10n.macroProteinShort,
+                            '${_fmt(nutrition.protein)} ${l10n.unitGramsShort}'),
+                        _macroChip(ctx, l10n.macroCarbsShort,
+                            '${_fmt(nutrition.carbs)} ${l10n.unitGramsShort}'),
+                        _macroChip(ctx, l10n.macroFatShort,
+                            '${_fmt(nutrition.fat)} ${l10n.unitGramsShort}'),
+                        _macroChip(ctx, l10n.macroSugarShort,
+                            '${_fmt(nutrition.sugarG)} ${l10n.unitGramsShort}'),
+                      ],
+                    );
+                  }),
                 ],
               ),
             ),
-          ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: onDone,
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
             ),
-            child: const Text('Готово'),
+            child: Text(AppLocalizations.of(context).commonDone),
           ),
         ],
       ),
@@ -520,7 +540,7 @@ class _ConfidenceChip extends StatelessWidget {
 /// Suggest-only branch: server returned medium/low confidence.
 /// Show a manual-confirmation form PRE-FILLED with the AI's
 /// suggested values. The user can edit any field, then tap
-/// "Подтвердить и сохранить" to fire `confirmManual` and pop the
+/// "Confirm and save" to fire `confirmManual` and pop the
 /// screen on success (with a brief SnackBar).
 ///
 /// Numeric validators use the comma/dot-tolerant pattern from
@@ -684,10 +704,10 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
 
   static String? _validatePositiveMl(String? v) {
     final raw = (v ?? '').trim();
-    if (raw.isEmpty) return 'Введи объём';
+    if (raw.isEmpty) return 'Please enter the volume';
     final n = _parseNumber(raw);
-    if (n == null) return 'Введи число';
-    if (n <= 0) return 'Объём должен быть больше 0';
+    if (n == null) return 'Please enter a number';
+    if (n <= 0) return 'Volume must be greater than 0';
     return null;
   }
 
@@ -695,8 +715,8 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
     final raw = (v ?? '').trim();
     if (raw.isEmpty) return null; // empty defaults to 0 on submit
     final n = _parseNumber(raw);
-    if (n == null) return 'Введи число';
-    if (n < 0) return 'Не может быть отрицательным';
+    if (n == null) return 'Please enter a number';
+    if (n < 0) return 'Must be ≥ 0';
     return null;
   }
 
@@ -724,23 +744,71 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
     final fat = _parseNumber(_fatCtrl.text) ?? 0;
     final sugarG = _parseNumber(_sugarCtrl.text) ?? 0;
 
-    // Anti-mismatch check: if the user has edited the beverage
-    // name meaningfully relative to the AI's original
-    // suggestion, re-ask Gemini whether the image plausibly
-    // shows the claimed name. If the model says it's
-    // implausible, show a dialog so the user can correct or
-    // override. ApiException (any failure on the verification
-    // call) is treated as inconclusive — the verification call
-    // is best-effort, and a network blip should not block the
-    // user's save.
     final originalName = widget.suggestion.beverageName;
-    if (_namesDifferMeaningfully(claimedName, originalName)) {
+    final namesDiffer =
+        _namesDifferMeaningfully(claimedName, originalName);
+
+    // Visibility for silent failures (Step A in the bug-fix
+    // spec): log every branch decision so a future failed
+    // verification is reconstructable from `flutter run` /
+    // `flutter logs` output rather than a black-box "the user
+    // complained it didn't warn them".
+    debugPrint(
+      '[verify-check] '
+      'namesDifferMeaningfully=$namesDiffer '
+      'claimed="$claimedName" '
+      'original="$originalName"',
+    );
+
+    // Tracks whether the AI verification call was attempted
+    // but FAILED (network error / unexpected exception), as
+    // opposed to either not being attempted at all (names
+    // matched, or the fast-path caught it) OR succeeding. When
+    // true and the save also succeeded, the post-save SnackBar
+    // surfaces the "verification didn't run" message instead of
+    // a clean success message — the user gets visibility that
+    // something wasn't checked, without us hard-blocking the
+    // save.
+    var verificationFailedSilently = false;
+
+    // ─── Fast-path: deterministic client-side check ───
+    //
+    // Runs BEFORE the network call for exactly the failure
+    // mode reported in production: the AI correctly identified
+    // a non-clear-liquid (e.g. Coca-Cola), the user retyped
+    // the name to "Water", and the AI verification would
+    // (probabilistically) confirm plausible=true because the
+    // fuzzy match. This is a 100%-reliable, zero-latency,
+    // zero-cost check: if the user's typed claim is in the
+    // small clear-liquid keyword list AND the AI's first-pass
+    // suggestion is NOT, the photo cannot show water by
+    // definition (the AI has already committed to a
+    // non-clear-liquid identification) — show the dialog
+    // immediately using the AI's suggestion as the
+    // `detected_instead` hint, no network round-trip required.
+    //
+    // The network-based `verifyBeverageName` call below remains
+    // as the fallback for less obvious renamings (e.g.
+    // "Coca-Cola" → "Diet Coke" — neither in the clear-liquid
+    // list, but the AI should still flag the claim).
+    final fastPathMismatch = _isClearLiquidClaim(claimedName) &&
+        !_isClearLiquidClaim(originalName);
+    if (fastPathMismatch) {
+      debugPrint(
+        '[verify-check] fast-path triggered: clear liquid claimed '
+        '("$claimedName") over non-clear-liquid photo (AI first '
+        'guess was "$originalName"); skipping network verification.',
+      );
+    }
+
+    if (!fastPathMismatch && namesDiffer) {
       try {
         final api = BeverageApi();
         final result = await api.verifyBeverageName(
           imageFile: widget.imageFile,
           claimedName: claimedName,
         );
+        debugPrint('[verify-result] raw=$result');
         final plausible = result['plausible'] == true;
         final detectedInstead = result['detected_instead'] as String?;
         if (!plausible) {
@@ -757,11 +825,41 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
             return;
           }
         }
-      } on ApiException {
-        // Inconclusive — fall through and let the save proceed.
-      } catch (_) {
-        // Any other error — also inconclusive.
+      } on ApiException catch (e, st) {
+        debugPrint(
+          '[verify-error] ApiException on verifyBeverageName: '
+          '$e\n$st',
+        );
+        verificationFailedSilently = true;
+      } catch (e, st) {
+        // Non-ApiException escape: defensive catch-all so a
+        // bug elsewhere (e.g. a serialisation glitch) doesn't
+        // crash the submit flow. Same "inconclusive" semantics.
+        debugPrint(
+          '[verify-error] unexpected error on verifyBeverageName: '
+          '$e\n$st',
+        );
+        verificationFailedSilently = true;
       }
+    } else if (fastPathMismatch) {
+      // Fast-path hit: skip the network round-trip entirely
+      // and surface the dialog immediately with the AI's
+      // first-pass suggestion as the `detected_instead` hint.
+      if (!mounted) return;
+      final shouldProceed = await _showMismatchDialog(
+        claimedName: claimedName,
+        detectedInstead: originalName,
+      );
+      if (!shouldProceed) {
+        // User chose to edit — bail out cleanly.
+        if (mounted) setState(() => _submitting = false);
+        return;
+      }
+    } else if (!namesDiffer) {
+      // Containment check matched — the user's edit is
+      // semantically equivalent to the AI's suggestion, so no
+      // verification round-trip is warranted. Pure no-op path.
+      debugPrint('[verify-check] skipped: names are semantically equivalent.');
     }
 
     final result = await provider.confirmManual(
@@ -779,23 +877,45 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
     setState(() => _submitting = false);
 
     if (result) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Напиток сохранён'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      if (verificationFailedSilently) {
+        // Verification didn't run AND the save succeeded —
+        // surface that fact so the user has SOME visibility
+        // that the photo-vs-claim check was skipped. The
+        // message uses the exact wording from the bug-fix
+        // spec ("Не удалось проверить соответствие фото —
+        // сохранено без проверки.") so the user knows the
+        // save went through but the consistency check didn't.
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context).photoBeverageVerifyFailed,
+              ),
+              // Longer than the default 4 s so the two-line
+              // message is comfortably readable.
+              duration: Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+      } else {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).photoBeverageSaved),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+      }
       widget.onSubmitted();
     } else {
-      // On failure, the provider's `errorMessage` is set. Push
-      // it as a SnackBar AND keep the form populated so the user
-      // can retry — the screen itself doesn't switch to the
-      // `_ErrorView` here because we're mid-confirm rather than
-      // mid-initial-analysis.
-      final msg = provider.errorMessage ??
-          'Не удалось сохранить напиток. Попробуй снова.';
+      // On failure, the provider's `errorMessageKey`/`errorMessage`
+      // is set. Push the localized copy as a SnackBar AND keep the
+      // form populated so the user can retry — the screen itself
+      // doesn't switch to the `_ErrorView` here because we're
+      // mid-confirm rather than mid-initial-analysis.
+      final msg = BeverageProvider.localizeError(context, provider);
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -814,7 +934,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
   /// delay: the math is `baseValue * (newVolume / baseVolume)`,
   /// where `baseValue` and `baseVolume` were captured from the
   /// server-returned suggestion on first render. The badge
-  /// visibility is toggled on so the visual cue ("Пересчитано")
+  /// visibility is toggled on so the visual cue ("Recalculated")
   /// pulses for ~400ms before fading back out.
   ///
   /// Skipped (silently) when the parsed volume is empty, ≤ 0,
@@ -849,6 +969,40 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
 
   // ---- name-difference check + verify-on-save ------------------------------
 
+  /// Hardcoded set of "clear liquid" beverage names used by the
+  /// `_isClearLiquidClaim` heuristic below. Matches the
+  /// deterministic water rule on the backend
+  /// (`verify_beverage_name`'s prompt) — they're the two
+  /// layers of the same defence-in-depth, and the lists should
+  /// stay in sync when adding new languages.
+  ///
+  /// Only **exact** (lowercased, trimmed) matches count. Fuzzy /
+  /// substring matches would over-trigger on branded drinks
+  /// like "Coca-Cola Vanilla Water" or "Vitamin Water" — the
+  /// heuristic needs to be tight enough that only true
+  /// "is this water?" claims fire.
+  static const Set<String> _clearLiquidKeywords = {
+    'вода',
+    'water',
+    'газированная вода',
+    'sparkling water',
+    'минеральная вода',
+  };
+
+  /// Returns `true` when [name] exactly matches (lowercased,
+  /// trimmed) one of [_clearLiquidKeywords].
+  ///
+  /// Exact-match semantics are deliberate: see the doc comment
+  /// on the set above. Substring matches would be too
+  /// permissive (any drink with "water" in the name would
+  /// trigger the fast-path, including "coconut water" which
+  /// is a legitimate non-clear-liquid beverage).
+  bool _isClearLiquidClaim(String name) {
+    final normalized = name.toLowerCase().trim();
+    if (normalized.isEmpty) return false;
+    return _clearLiquidKeywords.contains(normalized);
+  }
+
   /// Whitespace-normalised, case-insensitive containment check.
   /// Two names are considered "the same" if either contains the
   /// other after normalisation — that swallows the common case
@@ -867,8 +1021,8 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
   /// Shows the "this looks like X, not Y" mismatch dialog and
   /// returns whether the user chose to proceed anyway.
   ///
-  /// `true` → user tapped "Всё равно сохранить" (proceed).
-  /// `false` → user tapped "Исправить" (return to the form) or
+  /// `true` → user tapped "Save anyway" (proceed).
+  /// `false` → user tapped "Fix" (return to the form) or
   /// dismissed the dialog some other way.
   Future<bool> _showMismatchDialog({
     required String claimedName,
@@ -879,19 +1033,27 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
       builder: (ctx) {
         final theme = Theme.of(ctx);
         return AlertDialog(
-          title: const Text('Внимание'),
+          title: Text(AppLocalizations.of(context).photoBeverageMismatchFix),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Судя по фото, это не похоже на «$claimedName».',
+                "This doesn't look like «$claimedName».",
                 style: theme.textTheme.bodyMedium,
               ),
+              // Capture into a local so the analyzer narrows the
+              // type to non-null inside the collection-if without
+              // needing a `?? ''` fallback (the previous version
+              // triggered `dead_null_aware_expression` because
+              // the analyzer was promoting `detectedInstead`
+              // through the `if (detectedInstead != null)` guard
+              // already).
               if (detectedInstead != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Больше похоже на: $detectedInstead',
+                  AppLocalizations.of(context)
+                      .photoBeverageMismatchLooksLike(detectedInstead),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -902,11 +1064,11 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Исправить'),
+              child: Text(AppLocalizations.of(context).photoBeverageMismatchFix),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Всё равно сохранить'),
+              child: Text(AppLocalizations.of(context).photoBeverageMismatchProceed),
             ),
           ],
         );
@@ -920,10 +1082,18 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
   String _fmt(double v) =>
       v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
 
-  static const Map<String, ({String label, Color color})> _confidenceStyle = {
-    'medium': (label: 'Средняя точность', color: Color(0xFFEAB308)), // amber
-    'low': (label: 'Низкая точность', color: Color(0xFFEF4444)), // red
-  };
+  // NOTE: these confidence badge labels are localized — they come from
+  // `AppLocalizations.of(context).photoBeverageConfidence*` so the
+  // form inherits the same locale-driven labels as the photo and
+  // edit-food result views.
+  Map<String, ({String label, Color color})> _confidenceStyle(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return {
+      'high': (label: l10n.photoBeverageConfidenceHigh, color: const Color(0xFF22C55E)),
+      'medium': (label: l10n.photoBeverageConfidenceMedium, color: const Color(0xFFEAB308)),
+      'low': (label: l10n.photoBeverageConfidenceLow, color: const Color(0xFFEF4444)),
+    };
+  }
 
   // ---- build ---------------------------------------------------------------
 
@@ -940,8 +1110,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
     final theme = Theme.of(context);
     final suggestion = widget.suggestion;
     final confidenceLevel = suggestion.confidence ?? 'low';
+    final confidenceStyle = _confidenceStyle(context);
     final confidence =
-        _confidenceStyle[confidenceLevel] ?? _confidenceStyle['low']!;
+        confidenceStyle[confidenceLevel] ?? confidenceStyle['low']!;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -967,7 +1138,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Не уверен(а) в определении — проверь и подтверди данные.',
+                      AppLocalizations.of(context).photoBeverageUnsure,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -991,7 +1162,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                 Expanded(
                   child: Text(
                     (suggestion.description ?? '').isEmpty
-                        ? '— описание отсутствует'
+                        ? AppLocalizations.of(context).photoBeverageDescriptionMissing
                         : suggestion.description!,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -1005,14 +1176,14 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
             // Beverage name field.
             TextFormField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Название напитка',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).photoBeverageNameLabel,
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
               validator: (v) {
                 final raw = (v ?? '').trim();
-                if (raw.isEmpty) return 'Введи название';
+                if (raw.isEmpty) return AppLocalizations.of(context).photoBeverageNameRequired;
                 return null;
               },
             ),
@@ -1024,8 +1195,8 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: const InputDecoration(
-                labelText: 'Объём, мл',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).photoBeverageVolumeLabel,
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
@@ -1040,7 +1211,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                 decimal: true,
               ),
               decoration: InputDecoration(
-                labelText: 'Калории, ккал',
+                labelText: AppLocalizations.of(context).photoBeverageCaloriesLabel,
                 border: const OutlineInputBorder(),
                 isDense: true,
                 suffixIcon: _RecalcBadge(
@@ -1063,7 +1234,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
               // borders for a flatter, settings-list look.
               data: theme.copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
-                title: const Text('Подробнее (белки, жиры, углеводы, сахар)'),
+                title: Text(AppLocalizations.of(context).photoBeverageMoreDetails),
                 tilePadding: const EdgeInsets.symmetric(horizontal: 4),
                 childrenPadding: const EdgeInsets.only(bottom: 8),
                 children: [
@@ -1073,7 +1244,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: 'Белки, г',
+                      labelText: AppLocalizations.of(context).photoBeverageProteinLabel,
                       border: const OutlineInputBorder(),
                       isDense: true,
                       suffixIcon: _RecalcBadge(
@@ -1090,7 +1261,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: 'Углеводы, г',
+                      labelText: AppLocalizations.of(context).photoBeverageCarbsLabel,
                       border: const OutlineInputBorder(),
                       isDense: true,
                       suffixIcon: _RecalcBadge(
@@ -1107,7 +1278,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: 'Жиры, г',
+                      labelText: AppLocalizations.of(context).photoBeverageFatLabel,
                       border: const OutlineInputBorder(),
                       isDense: true,
                       suffixIcon: _RecalcBadge(
@@ -1124,7 +1295,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: 'Сахар, г',
+                      labelText: AppLocalizations.of(context).photoBeverageSugarLabel,
                       border: const OutlineInputBorder(),
                       isDense: true,
                       suffixIcon: _RecalcBadge(
@@ -1151,7 +1322,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                       ),
                     )
                   : const Icon(Icons.check),
-              label: const Text('Подтвердить и сохранить'),
+              label: Text(AppLocalizations.of(context).photoBeverageConfirm),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
               ),
@@ -1198,7 +1369,7 @@ class _ErrorView extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Попробовать снова'),
+              label: Text(AppLocalizations.of(context).commonTryAgain),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
               ),
@@ -1210,7 +1381,7 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-/// Small "✨ Пересчитано" badge that appears briefly next to a
+/// Small "✨ Recalculated" badge that appears briefly next to a
 /// macro field after a volume-driven recompute. Uses a
 /// `TweenAnimationBuilder<double>` to drive the opacity pulse —
 /// the builder's `key` is keyed on `token` so each recompute
@@ -1249,20 +1420,15 @@ class _RecalcBadge extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           builder: (context, opacity, _) => Opacity(
             opacity: opacity,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.auto_awesome,
-                  size: 14,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 4),
-                const Text(
-                  'Пересчитано',
-                  style: TextStyle(fontSize: 11),
-                ),
-              ],
+            // Wrap the existing icon+label row in a
+            // [GlassScalePulseBadge] keyed on `token` so each new
+            // volume-driven recompute fires the badge's pulse.
+            // The Opacity above still owns the fade-in window;
+            // the badge's scale animation rides on top of that.
+            child: GlassScalePulseBadge(
+              key: ValueKey('recalc-$token'),
+              label: AppLocalizations.of(context).editFoodRecalcBadge,
+              color: theme.colorScheme.primary,
             ),
           ),
         ),

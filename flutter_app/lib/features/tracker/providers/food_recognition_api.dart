@@ -56,16 +56,19 @@ class FoodRecognitionApi {
 
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       return FoodRecognitionResult.fromJson(body);
     } on DioException catch (e) {
       // The backend's raw 422 detail is English and not very helpful to
       // a user staring at a photo of their lunch; surface a friendlier
-      // Russian hint for *this specific endpoint* only.
+      // localized hint for *this specific endpoint* only. The English
+      // string doubles as a last-ditch fallback for callers that don't
+      // resolve `messageKey` through `AppLocalizations`.
       if (e.response?.statusCode == 422) {
         throw const ApiException(
-          'Не удалось распознать блюдо на фото. Попробуй сделать более чёткое фото.',
+          'Could not recognize the dish in the photo. Try a clearer photo.',
+          messageKey: 'userFacingErrorFoodPhotoRecognize',
         );
       }
       throw ApiException.fromDioError(e);
@@ -108,7 +111,7 @@ class FoodRecognitionApi {
 
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       return FoodRecognitionResult.fromJson(body);
     } on DioException catch (e) {
@@ -119,7 +122,8 @@ class FoodRecognitionApi {
       // rephrase is the productive next step.
       if (e.response?.statusCode == 422) {
         throw const ApiException(
-          'Не удалось проанализировать описание. Попробуй переформулировать.',
+          'Could not analyze the description. Try rephrasing.',
+          messageKey: 'userFacingErrorFoodReanalyze',
         );
       }
       throw ApiException.fromDioError(e);

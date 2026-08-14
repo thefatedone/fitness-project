@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
+import '../../../widgets/glass/glass_card.dart';
+import '../../../widgets/glass/glass_surface.dart';
 import '../models/chat_message_model.dart';
 import '../providers/chat_provider.dart';
 
@@ -64,16 +67,16 @@ class _ChatScreenState extends State<ChatScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Удалить всю историю переписки?'),
-        content: const Text('Это действие необратимо.'),
+        title: Text(AppLocalizations.of(context).chatClearHistoryTitle),
+        content: Text(AppLocalizations.of(context).chatClearHistoryBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Отмена'),
+            child: Text(AppLocalizations.of(context).commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Удалить'),
+            child: Text(AppLocalizations.of(context).chatClearHistoryConfirm),
           ),
         ],
       ),
@@ -170,22 +173,22 @@ class _ChatScreenState extends State<ChatScreen> {
       // doesn't push the messages behind the IME.
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('NutriBot'),
+        title: Text(AppLocalizations.of(context).chatTitle),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
-            tooltip: 'Меню',
+            tooltip: AppLocalizations.of(context).chatMenuTooltip,
             onSelected: (value) {
               if (value == 'clear') _confirmClearHistory();
             },
-            itemBuilder: (ctx) => const [
+            itemBuilder: (ctx) => [
               PopupMenuItem<String>(
                 value: 'clear',
                 child: Row(
                   children: [
                     Icon(Icons.delete_sweep_outlined, size: 20),
                     SizedBox(width: 12),
-                    Text('Очистить историю'),
+                    Text(AppLocalizations.of(context).chatMenuClearHistory),
                   ],
                 ),
               ),
@@ -280,7 +283,7 @@ class _EmptyChatHint extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Спроси меня о питании, целях по калориям или продуктах!',
+              AppLocalizations.of(context).chatEmptyState,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -328,20 +331,23 @@ class _MessageBubble extends StatelessWidget {
     final theme = Theme.of(context);
     final isUser = message.isUser;
 
-    final Color background;
     final Color foreground;
     final EdgeInsets padding;
     final BorderRadius radius;
     final Alignment align;
 
     if (isUser) {
-      background = theme.colorScheme.primaryContainer;
+      // User bubbles stay a SOLID accent-coloured fill — NOT glass.
+      // The contrast against the assistant's glass surface is the
+      // single biggest "me vs. bot" visual cue the user reads at
+      // a glance. Painting the user bubble in glass would flatten
+      // the two and make the chat feel like one continuous stream
+      // of undifferentiated text.
       foreground = theme.colorScheme.onPrimaryContainer;
       padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 10);
       radius = _userRadius;
       align = Alignment.centerRight;
     } else {
-      background = theme.colorScheme.surfaceContainerHighest;
       foreground = theme.colorScheme.onSurface;
       padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 10);
       radius = _assistantRadius;
@@ -387,17 +393,38 @@ class _MessageBubble extends StatelessWidget {
       );
     }
 
-    final bubble = Container(
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width * 0.78,
-      ),
-      padding: padding,
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: radius,
-      ),
-      child: content,
-    );
+    // The bubble itself — GlassCard for the assistant (smaller
+    // radius than the default 24 so chat bubbles read as inline
+    // tags rather than full cards), solid Container for the user.
+    final Widget bubble = isUser
+        ? Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.78,
+            ),
+            padding: padding,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: radius,
+            ),
+            child: content,
+          )
+        : GlassCard(
+            padding: padding,
+            borderRadius: radius,
+            // The chat bubble carries a lot of text — the default
+            // 0.08 dark tint is too transparent and the bubble's
+            // content fights the page background for legibility.
+            // `emphasized: true` bumps the tint opacity by 1.5x so
+            // the bubble reads as a coherent surface even with
+            // long-form assistant answers behind it.
+            emphasized: true,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.78,
+              ),
+              child: content,
+            ),
+          );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -515,56 +542,60 @@ class _InputBar extends StatelessWidget {
       padding: EdgeInsets.only(bottom: viewInsets.bottom),
       child: SafeArea(
         top: false,
-        child: Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            border: Border(
-              top: BorderSide(color: theme.colorScheme.outlineVariant),
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  minLines: 1,
-                  maxLines: 4,
-                  enabled: !isSending,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => onSend(),
-                  decoration: InputDecoration(
-                    hintText: 'Спроси о питании...',
-                    filled: true,
-                    fillColor: theme.colorScheme.surfaceContainerHigh,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+          // GlassSurface wraps the entire input row — text field
+          // and send button are embedded INSIDE the glass so the
+          // bar reads as a single frosted panel that floats above
+          // the keyboard. The top border is part of the glass
+          // surface's gradient stroke; we don't need a separate
+          // Container.
+          child: GlassSurface(
+            borderRadius: BorderRadius.circular(28),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    minLines: 1,
+                    maxLines: 4,
+                    enabled: !isSending,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => onSend(),
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context).chatInputHint,
+                      filled: true,
+                      fillColor: theme.colorScheme.surfaceContainerHigh,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                onPressed: isSending ? null : onSend,
-                tooltip: 'Отправить',
-                icon: isSending
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.send),
-              ),
-            ],
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: isSending ? null : onSend,
+                  tooltip: AppLocalizations.of(context).chatSendTooltip,
+                  icon: isSending
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.send),
+                ),
+              ],
+            ),
           ),
         ),
       ),

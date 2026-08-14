@@ -1,23 +1,78 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../../core/api/api_client.dart';
+import '../../../l10n/gen/app_localizations.dart';
+import '../../../l10n/gen/app_localizations_lookup.dart';
 import '../models/user_model.dart';
 
 /// Thrown by [AuthApi] when the backend rejects a request or the network
 /// is unreachable.
 ///
 /// Single responsibility: carry a user-presentable message out of the HTTP
-/// layer. Higher layers ([AuthProvider]) display this string directly in
-/// toasts / banners, so the wording here is intentionally concise and
-/// Russian-language to match the rest of the app's UI.
+/// layer AND/OR a stable lookup key that the UI layer renders through
+/// [AppLocalizations]. Two parallel fields:
+///   * [message] — the fallback text (English) used when no [messageKey]
+///     is set, OR when the UI renders the exception outside a localised
+///     context (e.g. server-side logs).
+///   * [messageKey] / [messageArgs] — when present, the UI's
+///     [localizedMessage] helper resolves them via
+///     `AppLocalizations.of(context)!.lookup(...)`. If lookup returns
+///     null (unknown key), the helper falls back to [message].
+///
+/// This "key + fallback" architecture keeps the provider layer
+/// localization-SAFE (no translation logic in providers, no BuildContext
+/// threading) while letting the UI render every error in the active
+/// locale. New endpoints should prefer the key+args form for any error
+/// with a stable translation; dynamic backend-issued messages keep
+/// using the raw [message] since they're already localized on the
+/// server.
 class ApiException implements Exception {
-  /// Human-readable message, ready to show in the UI.
+  /// English fallback text. Always non-null — used by
+  /// [localizedMessage] when no [messageKey] is set, and by
+  /// [toString] for logs.
   final String message;
 
-  const ApiException(this.message);
+  /// Optional ARB key — when set, [localizedMessage] resolves the
+  /// text in the active locale via [AppLocalizations.lookup].
+  final String? messageKey;
+
+  /// Optional placeholder arguments for [messageKey] (e.g. `{'name':
+  /// foodLog.foodName}`). Mirrors the standard ARB-placeholder shape.
+  final Map<String, Object>? messageArgs;
+
+  const ApiException(
+    this.message, {
+    this.messageKey,
+    this.messageArgs,
+  });
 
   @override
   String toString() => 'ApiException: $message';
+
+  /// Resolves the user-facing text in the current locale.
+  ///
+  /// Order:
+  ///   1. If [messageKey] is set, look it up via [AppLocalizations].
+  ///   2. If lookup returns null (unknown key) or [AppLocalizations] is
+  ///      unavailable (e.g. outside a [BuildContext]), fall back to
+  ///      [message] so the user still sees *something* sensible.
+  ///
+  /// Callers should prefer this over reading [message] directly when
+  /// they have a [BuildContext] in scope.
+  String localizedMessage(BuildContext context) {
+    final key = messageKey;
+    final l10n = AppLocalizations.of(context);
+    if (key != null) {
+      // The `lookup` extension maps a small set of stable runtime
+      // keys (see `app_localizations_lookup.dart`) to the matching
+      // generated getter; args are dropped because none of the
+      // currently-registered keys take placeholders.
+      final fromL10n = l10n.lookup(key);
+      if (fromL10n != null) return fromL10n;
+    }
+    return message;
+  }
 
   /// Builds an [ApiException] from a Dio failure.
   ///
@@ -25,13 +80,20 @@ class ApiException implements Exception {
   ///   1. If the backend returned an HTTP error body, extract its `detail`
   ///      field. FastAPI typically sends either `{"detail": "..."}` (custom
   ///      HTTPException) or `{"detail": [{loc, msg, type}, ...]}` (422
-  ///      validation). We surface a single message in both cases.
-  ///   2. If the failure was a network-level problem (timeout, no internet,
-  ///      TLS error), return a Russian message that hints at connectivity.
-  ///   3. As a last resort, fall back to the generic message requested by the
-  ///      product spec.
+  ///      validation). We surface the raw server text as the [message]
+  ///      fallback (it carries the backend's own wording) and **do not**
+  ///      attach a `messageKey` because the server's per-error wording
+  ///      is dynamic and isn't in the ARB catalogue.
+  ///   2. If the failure was a network-level problem (timeout, no
+  ///      internet, TLS error), attach a stable `messageKey` so the UI
+  ///      can render the active locale's network-error copy.
+  ///   3. As a last resort, fall back to the generic
+  ///      `commonError` key (also localised).
   factory ApiException.fromDioError(DioException e) {
-    // (1) Server-provided error message.
+    // (1) Server-provided error message. FastAPI returns the detail
+    // text directly — we pass it through verbatim, which means the
+    // backend owns the localisation of its own error copy (it's the
+    // same text that gets surfaced on the wire).
     final response = e.response;
     if (response != null) {
       final detail = _extractDetail(response.data);
@@ -40,33 +102,41 @@ class ApiException implements Exception {
       }
     }
 
-    // (2) Network-layer failures.
+    // (2) Network-layer failures — keyed so the UI can render the
+    // active locale's copy.
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
       case DioExceptionType.transformTimeout:
         return const ApiException(
-          'Сервер не отвечает. Проверь соединение и попробуй ещё раз.',
+          'Server is not responding. Please check your connection and try again.',
+          messageKey: 'authServerUnreachable',
         );
       case DioExceptionType.connectionError:
         return const ApiException(
-          'Нет связи с сервером. Проверь интернет-соединение.',
+          'Cannot reach the server. Check your internet connection.',
+          messageKey: 'authNoConnection',
         );
       case DioExceptionType.badCertificate:
         return const ApiException(
-          'Не удалось установить безопасное соединение с сервером.',
+          'Could not establish a secure connection to the server.',
+          messageKey: 'authSecureConnectionFailed',
         );
       case DioExceptionType.cancel:
-        return const ApiException('Запрос был отменён.');
+        return const ApiException(
+          'Request was cancelled.',
+          messageKey: 'authRequestCancelled',
+        );
       case DioExceptionType.badResponse:
       case DioExceptionType.unknown:
         break;
     }
 
-    // (3) Generic fallback.
+    // (3) Generic fallback — localised via the `commonError` key.
     return const ApiException(
-      'Что-то пошло не так. Проверь соединение и попробуй снова.',
+      'Something went wrong. Please check your connection and try again.',
+      messageKey: 'commonError',
     );
   }
 
@@ -87,8 +157,11 @@ class ApiException implements Exception {
 
 /// Client-side mirror of the backend's password policy.
 ///
-/// Returns `null` when [password] is acceptable, otherwise a Russian
-/// explanation that the UI can show inline next to the password field.
+/// Returns `null` when [password] is acceptable, otherwise an English
+/// error message that the UI shows inline next to the password field.
+/// The UI is responsible for rendering this through
+/// `AppLocalizations.of(context)` when a `BuildContext` is in scope
+/// (see `validatePasswordLocalized(context, password)` below).
 ///
 /// Rules (must match `backend/app/api/v1/routes/auth.py`):
 ///   * At least 8 characters.
@@ -101,13 +174,36 @@ class ApiException implements Exception {
 /// are both accepted by both sides.
 String? validatePassword(String password) {
   if (password.length < 8) {
-    return 'Пароль должен содержать минимум 8 символов';
+    return 'Password must be at least 8 characters';
   }
   if (!RegExp(r'^\p{Lu}', unicode: true).hasMatch(password)) {
-    return 'Первая буква пароля должна быть заглавной';
+    return 'First letter of the password must be uppercase';
   }
   if (!RegExp(r'\p{Nd}', unicode: true).hasMatch(password)) {
-    return 'Пароль должен содержать хотя бы одну цифру';
+    return 'Password must contain at least one digit';
+  }
+  return null;
+}
+
+/// Convenience wrapper for screens that have a [BuildContext] in scope:
+/// returns the *localized* password-rule message (or null) by looking
+/// up the [validatePassword] result against [AppLocalizations].
+///
+/// Keys are intentionally inline (not a `lookup` helper) because the
+/// generated [AppLocalizations] class doesn't expose a generic
+/// key→string resolver — it has one named getter per ARB entry.
+/// Inlining the switch keeps the surface area minimal.
+String? validatePasswordLocalized(
+  BuildContext context,
+  String password,
+) {
+  final l10n = AppLocalizations.of(context);
+  if (password.length < 8) return l10n.authPasswordMinLength;
+  if (!RegExp(r'^\p{Lu}', unicode: true).hasMatch(password)) {
+    return l10n.authPasswordNeedUpper;
+  }
+  if (!RegExp(r'\p{Nd}', unicode: true).hasMatch(password)) {
+    return l10n.authPasswordNeedDigit;
   }
   return null;
 }
@@ -192,7 +288,7 @@ class AuthApi {
       final res = await _dio.get<Map<String, dynamic>>('/users/me');
       final data = res.data;
       if (data == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.');
       }
       return UserModel.fromJson(data);
     } on DioException catch (e) {
@@ -205,11 +301,11 @@ class AuthApi {
   /// the user never sees a confusing `null` token downstream.
   String _extractAccessToken(Map<String, dynamic>? body) {
     if (body == null) {
-      throw const ApiException('Сервер вернул пустой ответ.');
+      throw const ApiException('Server returned an empty response.');
     }
     final token = body['access_token'];
     if (token is! String || token.isEmpty) {
-      throw const ApiException('Сервер не выдал токен авторизации.');
+      throw const ApiException('Server did not issue an authentication token.');
     }
     return token;
   }

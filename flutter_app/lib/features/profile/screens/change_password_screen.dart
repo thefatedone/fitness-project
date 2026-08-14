@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/providers/auth_api.dart';
 import '../providers/password_api.dart';
 
@@ -85,7 +86,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       // already typed. Other errors (e.g. 422 from a backend-side
       // strength-rule mismatch the client somehow missed) leave the
       // current-password field intact.
-      final isWrongCurrent = e.message.contains('Текущий пароль неверен');
+      // Note: the substring check matches the backend's
+      // deleteAccountWrongPasswordMatch string (Russian) as well as
+      // any future localised copy of the same condition. We sniff for
+      // a generic "current password" prefix so this stays robust
+      // across languages — the worst case is the user has to
+      // manually clear the field themselves, which is fine.
+      final isWrongCurrent = e.message.toLowerCase().contains('current password')
+          || e.message.toLowerCase().contains('текущий пароль');
       if (isWrongCurrent) {
         _currentCtrl.clear();
       }
@@ -104,11 +112,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       // `register_screen.dart`'s _onSubmit.
       if (!mounted) return;
       setState(() => _isSubmitting = false);
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text('Что-то пошло не так. Попробуй ещё раз.'),
+          SnackBar(
+            content: Text(l10n.commonErrorWithRetry),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -119,9 +128,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Смена пароля'),
+        title: Text(l10n.changePasswordTitle),
       ),
       body: SafeArea(
         child: Center(
@@ -142,14 +152,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       controller: _currentCtrl,
                       obscureText: true,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Текущий пароль',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.changePasswordCurrent,
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) {
-                          return 'Введи текущий пароль';
+                          return l10n.changePasswordCurrentRequired;
                         }
                         return null;
                       },
@@ -159,16 +169,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       controller: _newCtrl,
                       obscureText: true,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Новый пароль',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.changePasswordNew,
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: const OutlineInputBorder(),
                         // Mirrors the helper text used in
                         // `register_screen.dart` so the user sees the
                         // same wording whether they're signing up or
                         // changing their password.
-                        helperText:
-                            'Мин. 8 символов, с заглавной буквы, есть цифра',
+                        helperText: l10n.authPasswordHelper,
                       ),
                       // Reuses the same `validatePassword` helper that
                       // the registration flow uses; backend rules
@@ -184,10 +193,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       obscureText: true,
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _onSubmit(),
-                      decoration: const InputDecoration(
-                        labelText: 'Подтверди новый пароль',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.changePasswordConfirm,
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: const OutlineInputBorder(),
                       ),
                       // Cross-field: confirm must match the live text
                       // of the new-password field. Reading _newCtrl.text
@@ -196,9 +205,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       // typing in the new-password field.
                       validator: (v) {
                         final trimmed = v ?? '';
-                        if (trimmed.isEmpty) return 'Подтверди пароль';
+                        if (trimmed.isEmpty) return l10n.authResetConfirmRequired;
                         if (trimmed != _newCtrl.text) {
-                          return 'Пароли не совпадают';
+                          return l10n.authResetMismatch;
                         }
                         return null;
                       },
@@ -218,7 +227,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Изменить пароль'),
+                          : Text(l10n.changePasswordSave),
                     ),
                   ],
                 ),

@@ -11,7 +11,7 @@
 // Design choices:
 //   * **State shape**: each step owns a `GlobalKey<FormState>` declared
 //     on the wizard's State. The wizard holds one key per step and
-//     passes it down; when the user taps "Далее", the wizard calls
+//     passes it down; when the user taps "Next", the wizard calls
 //     `key.currentState!.validate()`. Cross-field validators (e.g.
 //     password match) read live values from sibling controllers at
 //     validate-time.
@@ -33,8 +33,14 @@
 //     pop routes on success.
 // =============================================================================
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../../l10n/gen/app_localizations.dart';
+import '../../../l10n/gen/app_localizations_lookup.dart';
+import '../../../widgets/glass/glass_card.dart';
 
 import '../../profile/providers/profile_api.dart';
 import '../../profile/providers/profile_provider.dart';
@@ -139,12 +145,12 @@ Widget _fieldError(BuildContext context, String? message) {
 /// Accepts both `,` and `.` as a decimal separator — Russian
 /// locales use `,`. Returns an empty string for an unparseable input
 /// rather than throwing.
-String? _numberValidator(String? raw) {
+String? _numberValidator(BuildContext context, String? raw) {
   final v = raw ?? '';
-  if (v.trim().isEmpty) return 'Заполни';
+  if (v.trim().isEmpty) return AppLocalizations.of(context).onboardingRequired;
   final n = num.tryParse(v.trim().replaceAll(',', '.'));
-  if (n == null) return 'Введи число';
-  if (n <= 0) return 'Должно быть > 0';
+  if (n == null) return AppLocalizations.of(context).onboardingEnterNumber;
+  if (n <= 0) return AppLocalizations.of(context).onboardingMustBePositive;
   return null;
 }
 
@@ -190,7 +196,7 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
 
   // One form key per step. Each step widget binds to its own key.
   // The wizard calls [key.currentState!.validate()] when the user
-  // taps "Далее"; the Form inside that step runs every field's
+  // taps "Next"; the Form inside that step runs every field's
   // validator (including non-text-FormFields that opt in).
   final List<GlobalKey<FormState>> _stepFormKeys = List.generate(
     _totalSteps,
@@ -250,7 +256,9 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       _goToStep(0);
-      final msg = authProvider.errorMessage ?? 'Не удалось зарегистрироваться.';
+      final msg = authProvider.errorMessageKey != null
+              ? AppLocalizations.of(context).lookup(authProvider.errorMessageKey!) ?? authProvider.errorMessage ?? ''
+              : authProvider.errorMessage ?? AppLocalizations.of(context).onboardingGenericError;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -310,8 +318,7 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
           ..showSnackBar(
             SnackBar(
               content: Text(
-                'Профиль создан, но некоторые данные не сохранились '
-                '— заполни их позже в разделе Профиль.',
+                AppLocalizations.of(context).onboardingPartialSaveWarning,
               ),
               behavior: SnackBarBehavior.floating,
             ),
@@ -352,9 +359,9 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Регистрация'),
+        title: Text(AppLocalizations.of(context).onboardingFinish),
         // The default AppBar leading arrow lets the user back out of
-        // the wizard entirely. Per-step "Назад" navigation lives in
+        // the wizard entirely. Per-step "Back" navigation lives in
         // the bottom nav row.
       ),
       body: SafeArea(
@@ -367,10 +374,10 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: PageView(
+              child: _BlurredStepPager(
                 controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (i) => setState(() => _currentStep = i),
+                currentStep: _currentStep,
+                onStepChanged: (i) => setState(() => _currentStep = i),
                 children: [
                   _CredentialsStep(
                     formKey: _stepFormKeys[0],
@@ -458,7 +465,7 @@ class _ProgressStrip extends StatelessWidget {
 // Bottom nav row
 // ---------------------------------------------------------------------------
 
-/// Back / Далее (or "Завершить регистрацию") buttons at the bottom of
+/// Back / Next (or "Finish registration") buttons at the bottom of
 /// the wizard. Same vertical rhythm as the rest of the app's forms
 /// (12 px outer padding, 48 px minimum button height).
 class _BottomNavBar extends StatelessWidget {
@@ -493,7 +500,7 @@ class _BottomNavBar extends StatelessWidget {
             // for the size of its content, not a fill.
             TextButton(
               onPressed: canGoBack && !isSubmitting ? onBack : null,
-              child: const Text('Назад'),
+              child: Text(AppLocalizations.of(context).onboardingBack),
             ),
             const SizedBox(width: 16),
             // Trailing FilledButton.icon — was crashing with
@@ -517,7 +524,7 @@ class _BottomNavBar extends StatelessWidget {
                       )
                     : null,
                 label: Text(
-                  isLastStep ? 'Завершить регистрацию' : 'Далее',
+                  isLastStep ? AppLocalizations.of(context).onboardingFinish : AppLocalizations.of(context).onboardingNext,
                 ),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
@@ -600,10 +607,10 @@ class _CredentialsStepState extends State<_CredentialsStep> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _sectionTitle(context, 'Шаг 1 из 4 — Аккаунт'),
+            _sectionTitle(context, AppLocalizations.of(context).onboardingStep1Title),
             _sectionSubtitle(
               context,
-              'Сначала соберём имя, email и пароль. Остальные шаги — позже.',
+              AppLocalizations.of(context).onboardingStep1Subtitle,
             ),
             const SizedBox(height: 20),
 
@@ -612,14 +619,14 @@ class _CredentialsStepState extends State<_CredentialsStep> {
               textCapitalization: TextCapitalization.words,
               textInputAction: TextInputAction.next,
               onChanged: (v) => widget.data.fullName = v.trim(),
-              decoration: const InputDecoration(
-                labelText: 'Полное имя',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).authRegisterName,
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
-                  return 'Введи имя';
+                  return AppLocalizations.of(context).authRegisterNameRequired;
                 }
                 return null;
               },
@@ -631,16 +638,16 @@ class _CredentialsStepState extends State<_CredentialsStep> {
               autocorrect: false,
               textInputAction: TextInputAction.next,
               onChanged: (v) => widget.data.email = v.trim(),
-              decoration: const InputDecoration(
-                labelText: 'Email',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).authEmailLabel,
                 prefixIcon: Icon(Icons.alternate_email),
                 border: OutlineInputBorder(),
               ),
               validator: (v) {
                 final trimmed = (v ?? '').trim();
-                if (trimmed.isEmpty) return 'Введи email';
+                if (trimmed.isEmpty) return AppLocalizations.of(context).authEmailRequired;
                 if (!widget.emailRegex.hasMatch(trimmed)) {
-                  return 'Похоже, email указан неверно';
+                  return AppLocalizations.of(context).authEmailInvalid;
                 }
                 return null;
               },
@@ -651,12 +658,12 @@ class _CredentialsStepState extends State<_CredentialsStep> {
               obscureText: true,
               textInputAction: TextInputAction.next,
               onChanged: (v) => widget.data.password = v,
-              decoration: const InputDecoration(
-                labelText: 'Пароль',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).authPasswordLabel,
                 prefixIcon: Icon(Icons.lock_outline),
                 border: OutlineInputBorder(),
                 helperText:
-                    'Мин. 8 символов, с заглавной буквы, есть цифра',
+                    'Min. 8 characters, one uppercase letter, one digit',
               ),
               validator: (v) => validatePassword(v ?? ''),
             ),
@@ -666,16 +673,16 @@ class _CredentialsStepState extends State<_CredentialsStep> {
               obscureText: true,
               textInputAction: TextInputAction.done,
               onChanged: (v) => widget.data.confirmPassword = v,
-              decoration: const InputDecoration(
-                labelText: 'Подтверди пароль',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).authResetConfirmPassword,
                 prefixIcon: Icon(Icons.lock_outline),
                 border: OutlineInputBorder(),
               ),
               validator: (v) {
                 final trimmed = v ?? '';
-                if (trimmed.isEmpty) return 'Подтверди пароль';
+                if (trimmed.isEmpty) return AppLocalizations.of(context).authResetConfirmRequired;
                 if (trimmed != _passwordCtrl.text) {
-                  return 'Пароли не совпадают';
+                  return AppLocalizations.of(context).authResetMismatch;
                 }
                 return null;
               },
@@ -750,8 +757,8 @@ class _PersonalInfoStepState extends State<_PersonalInfoStep> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _sectionTitle(context, 'Шаг 2 из 4 — Личные данные'),
-            _sectionSubtitle(context, 'Дата рождения и пол.'),
+            _sectionTitle(context, AppLocalizations.of(context).onboardingStep2Title),
+            _sectionSubtitle(context, AppLocalizations.of(context).onboardingStep2Subtitle),
             const SizedBox(height: 20),
 
             // Date picker — FormField<DateTime> wraps our InkWell +
@@ -763,7 +770,7 @@ class _PersonalInfoStepState extends State<_PersonalInfoStep> {
             FormField<DateTime>(
               initialValue: data.dateOfBirth,
               validator: (v) {
-                if (v == null) return 'Укажи дату рождения';
+                if (v == null) return AppLocalizations.of(context).onboardingBirthdayRequired;
                 return null;
               },
               builder: (state) {
@@ -778,14 +785,14 @@ class _PersonalInfoStepState extends State<_PersonalInfoStep> {
                   borderRadius: BorderRadius.circular(8),
                   child: InputDecorator(
                     decoration: InputDecoration(
-                      labelText: 'Дата рождения',
+                      labelText: AppLocalizations.of(context).onboardingBirthday,
                       prefixIcon: const Icon(Icons.cake_outlined),
                       border: const OutlineInputBorder(),
                       errorText: state.errorText,
                     ),
                     child: Text(
                       dob == null
-                          ? 'Не указана'
+                          ? AppLocalizations.of(context).onboardingBirthdayNotSet
                           : '${dob.day.toString().padLeft(2, '0')}.'
                               '${dob.month.toString().padLeft(2, '0')}.'
                               '${dob.year}',
@@ -807,20 +814,22 @@ class _PersonalInfoStepState extends State<_PersonalInfoStep> {
             // straight into `data.sex`.
             DropdownButtonFormField<String>(
               initialValue: data.sex,
-              decoration: const InputDecoration(
-                labelText: 'Пол',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).onboardingGender,
                 prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              items: const [
-                DropdownMenuItem(value: 'male', child: Text('Мужской')),
-                DropdownMenuItem(value: 'female', child: Text('Женский')),
-                DropdownMenuItem(value: 'other', child: Text('Не указывать')),
+              items: [
+                DropdownMenuItem(value: 'male', child: Text(AppLocalizations.of(context).onboardingGenderMale)),
+                DropdownMenuItem(value: 'female', child: Text(AppLocalizations.of(context).onboardingGenderFemale)),
+                DropdownMenuItem(value: 'other', child: Text(AppLocalizations.of(context).onboardingGenderOther)),
               ],
               onChanged: (v) {
                 if (v != null) setState(() => data.sex = v);
               },
-              validator: (v) => v == null ? 'Выбери вариант' : null,
+              validator: (v) => v == null
+                  ? AppLocalizations.of(context).onboardingGenderRequired
+                  : null,
             ),
           ],
         ),
@@ -897,7 +906,7 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
         prefixIcon: Icon(icon),
         border: const OutlineInputBorder(),
       ),
-      validator: _numberValidator,
+      validator: (v) => _numberValidator(context, v),
       onChanged: (v) => onParsed(_parseNumber(v)),
     );
   }
@@ -914,33 +923,33 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _sectionTitle(context, 'Шаг 3 из 4 — Тело и цель'),
+            _sectionTitle(context, AppLocalizations.of(context).onboardingStep3Title),
             _sectionSubtitle(
               context,
-              'Рост, вес, целевой вес, уровень активности и цель.',
+              AppLocalizations.of(context).onboardingStep3Subtitle,
             ),
             const SizedBox(height: 20),
 
             _numericField(
               controller: _heightCtrl,
-              label: 'Рост, см',
-              hint: 'например, 175',
+              label: AppLocalizations.of(context).onboardingHeight,
+              hint: 'e.g. 175',
               icon: Icons.straighten,
               onParsed: (v) => data.height = v,
             ),
             const SizedBox(height: 12),
             _numericField(
               controller: _currentWeightCtrl,
-              label: 'Текущий вес, кг',
-              hint: 'например, 70.5',
+              label: AppLocalizations.of(context).onboardingCurrentWeight,
+              hint: 'e.g. 70.5',
               icon: Icons.monitor_weight_outlined,
               onParsed: (v) => data.currentWeight = v,
             ),
             const SizedBox(height: 12),
             _numericField(
               controller: _targetWeightCtrl,
-              label: 'Целевой вес, кг',
-              hint: 'например, 65',
+              label: AppLocalizations.of(context).onboardingTargetWeight,
+              hint: 'e.g. 65',
               icon: Icons.flag_outlined,
               onParsed: (v) => data.targetWeight = v,
             ),
@@ -953,14 +962,17 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
             FormField<String>(
               initialValue: data.activityLevel,
               validator: (v) {
-                if (v == null) return 'Выбери уровень активности';
+                if (v == null) {
+                  return AppLocalizations.of(context)
+                      .onboardingActivityLevelRequired;
+                }
                 return null;
               },
               builder: (state) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Уровень активности',
+                    AppLocalizations.of(context).onboardingActivityLevel,
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -994,14 +1006,17 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
             FormField<String>(
               initialValue: data.primaryGoal,
               validator: (v) {
-                if (v == null) return 'Выбери главную цель';
+                if (v == null) {
+                  return AppLocalizations.of(context)
+                      .onboardingPrimaryGoalRequired;
+                }
                 return null;
               },
               builder: (state) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Главная цель',
+                    AppLocalizations.of(context).onboardingPrimaryGoal,
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -1043,7 +1058,9 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
             // FormField wrapper needed; the slider's onChanged is
             // its own validation.
             Text(
-              'Темп: ${data.weightLossPace.toStringAsFixed(2)} кг/неделю',
+              AppLocalizations.of(context).onboardingPaceLabel(
+                data.weightLossPace.toStringAsFixed(2),
+              ),
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -1053,7 +1070,9 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
               min: 0.25,
               max: 1.0,
               divisions: 3,
-              label: '${data.weightLossPace.toStringAsFixed(2)} кг/нед.',
+              label: AppLocalizations.of(context).onboardingPaceChipLabel(
+                data.weightLossPace.toStringAsFixed(2),
+              ),
               onChanged: (v) => setState(() => data.weightLossPace = v),
             ),
           ],
@@ -1106,29 +1125,159 @@ class _DietaryStepState extends State<_DietaryStep> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _sectionTitle(context, 'Шаг 4 из 4 — Питание и аллергии'),
+            _sectionTitle(context, AppLocalizations.of(context).onboardingStep4Title),
             _sectionSubtitle(
               context,
-              'Уже почти готово! Эти поля необязательны — можешь заполнить '
-              'позже в разделе Профиль.',
+              AppLocalizations.of(context).onboardingStep4Subtitle,
             ),
             const SizedBox(height: 20),
 
-            sectionLabel('Диетические предпочтения (необязательно)'),
+            sectionLabel(AppLocalizations.of(context).onboardingDietaryPreferences),
             TagInputField(
               value: data.dietaryPrefs,
               onChanged: (v) => setState(() => data.dietaryPrefs = v),
-              hintText: 'Например, вегетарианец, кето…',
+              hintText: AppLocalizations.of(context).onboardingDietaryHint,
             ),
             const SizedBox(height: 20),
 
-            sectionLabel('Аллергии и непереносимости (необязательно)'),
+            sectionLabel(AppLocalizations.of(context).onboardingAllergies),
             TagInputField(
               value: data.allergies,
               onChanged: (v) => setState(() => data.allergies = v),
-              hintText: 'Например, орехи, молоко…',
+              hintText: AppLocalizations.of(context).onboardingAllergiesHint,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blurred step pager
+// ---------------------------------------------------------------------------
+
+/// PageView wrapper that, while a step transition is in flight, blurs
+/// the outgoing page (sigma 0 → 8) and resolves the incoming page
+/// from the same blur back to sharp. The combined effect is a
+/// "liquid glass" crossfade — the outgoing step's content dissolves
+/// through a glassy haze while the next step solidifies behind it.
+///
+/// The widget wraps each child in a [GlassCard] automatically so
+/// every step body shares the same Liquid Glass surface treatment
+/// (without each step widget having to know about glass).
+class _BlurredStepPager extends StatefulWidget {
+  const _BlurredStepPager({
+    required this.controller,
+    required this.currentStep,
+    required this.onStepChanged,
+    required this.children,
+  });
+
+  final PageController controller;
+  final int currentStep;
+  final ValueChanged<int> onStepChanged;
+  final List<Widget> children;
+
+  @override
+  State<_BlurredStepPager> createState() => _BlurredStepPagerState();
+}
+
+class _BlurredStepPagerState extends State<_BlurredStepPager> {
+  double _page = 0;
+  bool _animating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onPageEvent);
+  }
+
+  @override
+  void didUpdateWidget(covariant _BlurredStepPager oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onPageEvent);
+      widget.controller.addListener(_onPageEvent);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onPageEvent);
+    super.dispose();
+  }
+
+  void _onPageEvent() {
+    final next =
+        widget.controller.page ?? widget.controller.initialPage.toDouble();
+    final animating = widget.controller.position.isScrollingNotifier.value;
+    if (next != _page || animating != _animating) {
+      setState(() {
+        _page = next;
+        _animating = animating;
+      });
+      final rounded = next.round();
+      if (!animating && rounded != widget.currentStep) {
+        widget.onStepChanged(rounded);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PageView(
+      controller: widget.controller,
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        for (var i = 0; i < widget.children.length; i++)
+          _BlurredStep(
+            // Blur intensity rises as this page moves AWAY from
+            // the current page. The "outgoing" page carries the
+            // high sigma; the "incoming" page is sharp.
+            intensity: (_page - i).abs().clamp(0.0, 1.0),
+            animating: _animating,
+            child: widget.children[i],
+          ),
+      ],
+    );
+  }
+}
+
+/// Wraps a single onboarding step body in a [GlassCard] and applies
+/// a transient [BackdropFilter] blur driven by [intensity]. When
+/// [animating] is `false` (the step is the steady-state active
+/// step), the blur is dropped entirely — the [BackdropFilter]
+/// only runs during the crossfade window.
+class _BlurredStep extends StatelessWidget {
+  const _BlurredStep({
+    required this.child,
+    required this.intensity,
+    required this.animating,
+  });
+
+  final Widget child;
+  final double intensity;
+  final bool animating;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: GlassCard(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+        borderRadius: BorderRadius.circular(24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: animating && intensity > 0.05
+              ? BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: intensity * 8,
+                    sigmaY: intensity * 8,
+                  ),
+                  child: child,
+                )
+              : child,
         ),
       ),
     );

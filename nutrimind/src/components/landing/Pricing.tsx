@@ -2,7 +2,10 @@
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { useTranslations } from "@/hooks/useTranslations";
-import { useTheme } from "@/context/ThemeContext";
+import Section from "@/components/ui/Section";
+import SectionHeading from "@/components/ui/SectionHeading";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 
 const plans = [
   {
@@ -37,93 +40,45 @@ const plans = [
 
 export default function Pricing() {
   const { t } = useTranslations("pricing");
-  const { theme } = useTheme();
 
   return (
-    <section
-      id="pricing"
-      className="w-full py-24 md:py-32 relative"
-      style={{ backgroundColor: theme === 'light' ? '#f0fdf4' : 'var(--background)' }}
-    >
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2
-            className="text-4xl md:text-5xl font-black tracking-tight mb-4"
-            style={{ color: theme === 'light' ? '#111827' : 'var(--foreground)' }}
-          >
-            {t("title")}
-          </h2>
-          <p
-            className="max-w-2xl mx-auto"
-            style={{ color: theme === 'light' ? '#6b7280' : 'var(--foreground-muted)' }}
-          >
-            {t("subtitle")}
-          </p>
-        </div>
+    <Section id="pricing" background="tint" containerClassName="max-w-5xl">
+      <SectionHeading title={t("title")} subtitle={t("subtitle")} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan, index) => (
-            <motion.div
-              key={plan.nameKey}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: index * 0.1, ease: [0.32, 0.72, 0, 1] }}
-              className="relative p-6 rounded-2xl"
-              style={
-                plan.highlighted
-                  ? {
-                      backgroundColor: '#22c55e',
-                      borderWidth: '2px',
-                      borderStyle: 'solid',
-                      borderColor: theme === 'dark' ? '#22c55e' : '#16a34a',
-                      boxShadow: '0 0 60px -10px rgba(34,197,94,0.4)',
-                    }
-                  : {
-                      backgroundColor: theme === 'light' ? '#ffffff' : 'var(--card)',
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                      borderColor: theme === 'light' ? '#e5e7eb' : 'var(--border)',
-                      boxShadow: theme === 'light' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
-                    }
-              }
-            >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {plans.map((plan, index) => (
+          <motion.div
+            key={plan.nameKey}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: index * 0.1, ease: [0.32, 0.72, 0, 1] }}
+          >
+            <Card variant={plan.highlighted ? "highlighted" : "default"} className="relative p-6 h-full">
               {plan.badgeKey && (
                 <div
                   className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold"
                   style={{
-                    backgroundColor: plan.highlighted ? '#ffffff' : '#22c55e',
-                    color: plan.highlighted ? '#16a34a' : '#000',
+                    backgroundColor: plan.highlighted ? "#ffffff" : "#22c55e",
+                    color: plan.highlighted ? "#16a34a" : "#000",
                   }}
                 >
                   {t(plan.badgeKey)}
                 </div>
               )}
 
-              <div
-                className="font-bold text-lg mb-1"
-                style={{ color: plan.highlighted ? '#ffffff' : (theme === 'light' ? '#111827' : 'var(--foreground)') }}
-              >
+              <div className={`font-bold text-lg mb-1 ${plan.highlighted ? "text-white" : "ln-text"}`}>
                 {t(plan.nameKey)}
               </div>
               <div className="flex items-baseline gap-1 mb-2">
-                <span
-                  className="text-4xl font-black"
-                  style={{ color: plan.highlighted ? '#ffffff' : (theme === 'light' ? '#111827' : 'var(--foreground)') }}
-                >
+                <span className={`text-4xl font-black ${plan.highlighted ? "text-white" : "ln-text"}`}>
                   {plan.price}
                 </span>
-                <span
-                  className="text-sm"
-                  style={{ color: plan.highlighted ? 'rgba(255,255,255,0.8)' : (theme === 'light' ? '#6b7280' : 'var(--foreground-muted)') }}
-                >
+                <span className={`text-sm ${plan.highlighted ? "text-white/80" : "ln-text-muted"}`}>
                   {t(plan.periodKey)}
                 </span>
               </div>
-              <p
-                className="text-sm mb-6"
-                style={{ color: plan.highlighted ? '#f0fdf4' : (theme === 'light' ? '#6b7280' : 'var(--foreground-muted)') }}
-              >
+              <p className={`text-sm mb-6 ${plan.highlighted ? "text-[#f0fdf4]" : "ln-text-muted"}`}>
                 {t(plan.descKey)}
               </p>
 
@@ -132,53 +87,26 @@ export default function Pricing() {
                   <li key={featureKey} className="flex items-start gap-3">
                     <Check
                       className="w-4 h-4 mt-0.5 flex-shrink-0"
-                      style={{ color: plan.highlighted ? '#ffffff' : '#22c55e' }}
+                      style={{ color: plan.highlighted ? "#ffffff" : "#22c55e" }}
                       strokeWidth={2.5}
                     />
-                    <span
-                      className="text-sm"
-                      style={{ color: plan.highlighted ? '#ffffff' : (theme === 'light' ? '#374151' : 'var(--foreground-muted)') }}
-                    >
+                    <span className={`text-sm ${plan.highlighted ? "text-white" : "ln-text-muted"}`}>
                       {t(featureKey)}
                     </span>
                   </li>
                 ))}
               </ul>
 
-              <button
-                className="w-full py-3 rounded-full font-semibold text-sm transition-all duration-300 active:scale-[0.98]"
-                style={
-                  plan.highlighted
-                    ? {
-                        backgroundColor: '#ffffff',
-                        color: '#16a34a',
-                      }
-                    : {
-                        backgroundColor: theme === 'light' ? '#111827' : 'var(--background-secondary)',
-                        color: theme === 'light' ? '#ffffff' : 'var(--foreground)',
-                      }
-                }
-                onMouseEnter={e => {
-                  if (!plan.highlighted) {
-                    e.currentTarget.style.backgroundColor = theme === 'light' ? '#374151' : '#1a1a1a';
-                  } else {
-                    e.currentTarget.style.backgroundColor = '#f0fdf4';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!plan.highlighted) {
-                    e.currentTarget.style.backgroundColor = theme === 'light' ? '#111827' : 'var(--background-secondary)';
-                  } else {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                  }
-                }}
+              <Button
+                variant={plan.highlighted ? "onBrand" : "dark"}
+                className="w-full !px-0 !py-3 text-sm"
               >
                 {t(plan.ctaKey)}
-              </button>
-            </motion.div>
-          ))}
-        </div>
+              </Button>
+            </Card>
+          </motion.div>
+        ))}
       </div>
-    </section>
+    </Section>
   );
 }

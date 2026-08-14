@@ -82,7 +82,7 @@ class TrackerApi {
       );
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       return FoodLogModel.fromJson(body);
     } on DioException catch (e) {
@@ -134,7 +134,7 @@ class TrackerApi {
       );
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       return WaterLogModel.fromJson(body);
     } on DioException catch (e) {
@@ -188,7 +188,7 @@ class TrackerApi {
       );
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       return WeightLogModel.fromJson(body);
     } on DioException catch (e) {

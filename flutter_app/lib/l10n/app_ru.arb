@@ -1,0 +1,558 @@
+{
+  "@@locale": "ru",
+  "appName": "NutriMind",
+  "commonCancel": "Отмена",
+  "commonSave": "Сохранить",
+  "commonDelete": "Удалить",
+  "commonDone": "Готово",
+  "commonYesDelete": "Да, удалить",
+  "commonTryAgain": "Попробовать снова",
+  "commonConfirm": "Подтвердить",
+  "commonClose": "Закрыть",
+  "commonError": "Что-то пошло не так. Проверь соединение и попробуй снова.",
+  "commonErrorShort": "Что-то пошло не так.",
+  "commonErrorWithRetry": "Что-то пошло не так. Попробуй снова.",
+  "themeLight": "Светлая",
+  "themeDark": "Тёмная",
+  "themeSystem": "Системная",
+  "themeDescriptionLight": "Всегда светлая тема оформления.",
+  "themeDescriptionDark": "Всегда тёмная тема оформления.",
+  "themeDescriptionSystem": "Тема оформления следует за настройкой системы.",
+  "languageEnglish": "English",
+  "languageGeorgian": "ქართული",
+  "languageRussian": "Русский",
+  "languageSectionLabel": "ЯЗЫК",
+  "languageFieldTheme": "Тема",
+  "authLoginTitle": "NutriMind",
+  "authLoginSubtitle": "С возвращением",
+  "authEmailLabel": "Email",
+  "authEmailRequired": "Введи email",
+  "authEmailInvalid": "Похоже, email указан неверно",
+  "authPasswordLabel": "Пароль",
+  "authPasswordRequired": "Введи пароль",
+  "authPasswordHelper": "Мин. 8 символов, с заглавной буквы, есть цифра",
+  "authLoginButton": "Войти",
+  "authForgotPassword": "Забыл пароль?",
+  "authNoAccountRegister": "Нет аккаунта? Зарегистрироваться",
+  "authServerDebugLink": "Настройка сервера (debug)",
+  "authSessionExpired": "Сессия истекла, войди снова.",
+  "authRegisterTitle": "Регистрация",
+  "authRegisterName": "Полное имя",
+  "authRegisterNameRequired": "Введи имя",
+  "authRegisterPassword": "Пароль",
+  "authRegisterCreate": "Создать аккаунт",
+  "authForgotTitle": "Восстановление пароля",
+  "authForgotInstructions": "Введи email, привязанный к аккаунту — мы отправим код для сброса пароля.",
+  "authForgotSendCode": "Отправить код",
+  "authCodeTitle": "Введи код",
+  "authCodeInstructions": "Мы отправили код на {email}",
+  "authCodeField": "Код",
+  "authCodeRequired": "Код состоит из 6 цифр",
+  "authCodeConfirm": "Подтвердить",
+  "authCodeResend": "Отправить код повторно",
+  "authResetTitle": "Новый пароль",
+  "authResetInstructions": "Введи новый пароль для {email}",
+  "authResetNewPassword": "Новый пароль",
+  "authResetConfirmPassword": "Подтверди пароль",
+  "authResetConfirmRequired": "Подтверди пароль",
+  "authResetMismatch": "Пароли не совпадают",
+  "authResetSave": "Сохранить новый пароль",
+  "authResetSuccess": "Пароль изменён. Теперь можешь войти.",
+  "authEmailVerifyTitle": "Подтверждение email",
+  "authEmailVerifyInstructions": "Мы отправим код подтверждения на {email}",
+  "authEmailVerifyEnterCode": "Введи код из письма",
+  "authEmailVerifySendCode": "Отправить код",
+  "authEmailVerifyResend": "Отправить код повторно",
+  "authPasswordMinLength": "Пароль должен содержать минимум 8 символов",
+  "authPasswordNeedUpper": "Первая буква пароля должна быть заглавной",
+  "authPasswordNeedDigit": "Пароль должен содержать хотя бы одну цифру",
+  "authServerUnreachable": "Сервер не отвечает. Проверь соединение и попробуй ещё раз.",
+  "authNoConnection": "Нет связи с сервером. Проверь интернет-соединение.",
+  "authSecureConnectionFailed": "Не удалось установить безопасное соединение с сервером.",
+  "authRequestCancelled": "Запрос был отменён.",
+  "authEmptyResponse": "Сервер вернул пустой ответ.",
+  "authNoAuthToken": "Сервер не выдал токен авторизации.",
+  "authConfirmationMissing": "Сервер не вернул подтверждение.",
+  "onboardingStep1Title": "Шаг 1 из 4 — Аккаунт",
+  "onboardingStep1Subtitle": "Сначала соберём имя, email и пароль. Остальные шаги — позже.",
+  "onboardingStep2Title": "Шаг 2 из 4 — Личные данные",
+  "onboardingStep2Subtitle": "Дата рождения и пол.",
+  "onboardingStep3Title": "Шаг 3 из 4 — Тело и цель",
+  "onboardingStep3Subtitle": "Рост, вес, целевой вес, уровень активности и цель.",
+  "onboardingStep4Title": "Шаг 4 из 4 — Питание и аллергии",
+  "onboardingStep4Subtitle": "Уже почти готово! Эти поля необязательны — можешь заполнить позже в разделе Профиль.",
+  "onboardingBirthday": "Дата рождения",
+  "onboardingBirthdayRequired": "Укажи дату рождения",
+  "onboardingBirthdayNotSet": "Не указана",
+  "onboardingGender": "Пол",
+  "onboardingGenderMale": "Мужской",
+  "onboardingGenderFemale": "Женский",
+  "onboardingGenderOther": "Не указывать",
+  "onboardingGenderRequired": "Выбери вариант",
+  "onboardingDietaryPreferences": "Диетические предпочтения (необязательно)",
+  "onboardingDietaryHint": "Например, вегетарианец, кето…",
+  "onboardingAllergies": "Аллергии и непереносимости (необязательно)",
+  "onboardingAllergiesHint": "Например, орехи, молоко…",
+  "onboardingHeight": "Рост, см",
+  "onboardingHeightHint": "например, 175",
+  "onboardingCurrentWeight": "Текущий вес, кг",
+  "onboardingCurrentWeightHint": "например, 70.5",
+  "onboardingTargetWeight": "Целевой вес, кг",
+  "onboardingTargetWeightHint": "например, 65",
+  "onboardingActivityLevel": "Уровень активности",
+  "onboardingActivityLevelRequired": "Выбери уровень активности",
+  "onboardingPrimaryGoal": "Главная цель",
+  "onboardingPrimaryGoalRequired": "Выбери главную цель",
+  "onboardingPaceLabel": "Темп: {value} кг/неделю",
+  "onboardingPaceChipLabel": "{value} кг/нед.",
+  "onboardingRequired": "Заполни",
+  "onboardingEnterNumber": "Введи число",
+  "onboardingMustBePositive": "Должно быть > 0",
+  "onboardingBack": "Назад",
+  "onboardingNext": "Далее",
+  "onboardingFinish": "Завершить регистрацию",
+  "onboardingGenericError": "Не удалось зарегистрироваться.",
+  "onboardingPartialSaveWarning": "Профиль создан, но некоторые данные не сохранились — заполни их позже в разделе Профиль.",
+  "settingsTitle": "Настройки",
+  "settingsSectionAppearance": "ВНЕШНИЙ ВИД",
+  "settingsSectionTheme": "Тема оформления",
+  "settingsSectionAccount": "АККАУНТ",
+  "settingsSectionAbout": "О ПРИЛОЖЕНИИ",
+  "settingsSectionApiEnvironmentDebug": "API-ОКРУЖЕНИЕ (ТОЛЬКО ДЛЯ РАЗРАБОТКИ)",
+  "settingsChangePassword": "Сменить пароль",
+  "settingsDeleteAccount": "Удалить аккаунт",
+  "settingsVersion": "Версия",
+  "settingsLogout": "Выйти из аккаунта",
+  "profileTitle": "Профиль",
+  "profileSave": "Сохранить изменения",
+  "profileUpdated": "Профиль обновлён",
+  "profileUpdateError": "Не удалось сохранить.",
+  "profileSavePhotoTitle": "Откуда взять фото?",
+  "profilePhotoCamera": "Сделать фото",
+  "profilePhotoGallery": "Выбрать из галереи",
+  "profilePhotoCropTitle": "Обрезать фото",
+  "profilePhotoCropError": "Не удалось обрезать фото. Попробуй ещё раз.",
+  "profilePhotoReadError": "Не удалось прочитать обрезанное фото.",
+  "profilePhotoTooLarge": "Фото слишком большое, попробуй другое",
+  "profilePhotoUpdated": "Фото обновлено",
+  "profileCameraError": "Не удалось открыть камеру. Попробуй выбрать фото из галереи.",
+  "profileGalleryError": "Не удалось открыть галерею.",
+  "profileSectionBasic": "Основное",
+  "profileSectionBody": "Параметры тела",
+  "profileSectionGoalActivity": "Цель и активность",
+  "profileFieldName": "Имя",
+  "profileFieldBirthday": "Дата рождения",
+  "profileFieldGender": "Пол",
+  "profileMetricHeight": "Рост, см",
+  "profileMetricHeightHint": "например, 175",
+  "profileMetricCurrentWeight": "Текущий вес, кг",
+  "profileMetricCurrentWeightHint": "например, 70.5",
+  "profileMetricTargetWeight": "Целевой вес, кг",
+  "profileMetricTargetWeightHint": "например, 65",
+  "profileBmiLabel": "ИМТ: {label}",
+  "profileViewWeightHistory": "Посмотреть историю веса",
+  "profilePrimaryGoal": "Главная цель",
+  "profileActivityLevel": "Уровень активности",
+  "profilePace": "Темп похудения: {value} кг/неделю",
+  "profilePaceChip": "{value} кг/нед.",
+  "profileDietaryPreferences": "Диетические предпочтения",
+  "profileDietaryHint": "Например, вегетарианец…",
+  "profileAllergies": "Аллергии и непереносимости",
+  "profileAllergiesAiHint": "Используется AI-распознаванием фото для предупреждений о конфликтах.",
+  "profileAllergiesHint": "Например, орехи…",
+  "profileBmiUnderweight": "Недостаточный вес",
+  "profileBmiNormal": "Норма",
+  "profileBmiOverweight": "Избыточный вес",
+  "profileBmiObese": "Ожирение",
+  "dietVegetarian": "Вегетарианец",
+  "dietVegan": "Веган",
+  "dietKeto": "Кето",
+  "dietPaleo": "Палео",
+  "dietLowCarb": "Низкоуглеводная",
+  "dietLowFat": "Низкожировая",
+  "dietMediterranean": "Средиземноморская",
+  "dietHalal": "Халяль",
+  "dietKosher": "Кошер",
+  "allergyNuts": "Орехи",
+  "allergyShellfish": "Морепродукты",
+  "allergyEggs": "Яйца",
+  "allergySoy": "Соя",
+  "allergyWheat": "Пшеница",
+  "allergyFish": "Рыба",
+  "allergyMilk": "Молоко",
+  "activitySedentary": "Малоподвижный",
+  "activityLightlyActive": "Лёгкая активность",
+  "activityModeratelyActive": "Умеренная активность",
+  "activityVeryActive": "Высокая активность",
+  "activityExtraActive": "Очень высокая активность",
+  "goalLoseWeight": "Похудение",
+  "goalMaintain": "Поддержание веса",
+  "goalGainMuscle": "Набор массы",
+  "goalEatHealthier": "Здоровое питание",
+  "deleteAccountTitle": "Удаление аккаунта",
+  "deleteAccountWarningTitle": "Это действие необратимо",
+  "deleteAccountWarningBody": "Будут безвозвратно удалены: твой профиль, вся история питания, вес, фотографии и переписка с AI-ассистентом. Это действие нельзя отменить.",
+  "deleteAccountAcknowledge": "Я понимаю, что это действие нельзя отменить",
+  "deleteAccountAcknowledgeRequired": "Подтверди, что понимаешь риск",
+  "deleteAccountCurrentPassword": "Текущий пароль",
+  "deleteAccountCurrentPasswordRequired": "Введи текущий пароль",
+  "deleteAccountHelperBeforeAck": "Сначала подтверди, что понимаешь риск",
+  "deleteAccountHelperAfterAck": "Подтверди пароль, чтобы продолжить",
+  "deleteAccountConfirmButton": "Удалить аккаунт навсегда",
+  "deleteAccountDialogTitle": "Точно удалить аккаунт?",
+  "deleteAccountDialogBody": "Это последнее предупреждение. Все твои данные будут удалены без возможности восстановления.",
+  "deleteAccountWrongPasswordMatch": "Текущий пароль неверен",
+  "changePasswordTitle": "Смена пароля",
+  "changePasswordCurrent": "Текущий пароль",
+  "changePasswordCurrentRequired": "Введи текущий пароль",
+  "changePasswordNew": "Новый пароль",
+  "changePasswordConfirm": "Подтверди новый пароль",
+  "changePasswordConfirmRequired": "Подтверди пароль",
+  "changePasswordSave": "Изменить пароль",
+  "trackerTitle": "Трекер",
+  "trackerDateToday": "Сегодня",
+  "trackerDateYesterday": "Вчера",
+  "trackerDeleteRecordTitle": "Удалить запись?",
+  "trackerDeleteRecordBody": "«{name}» будет удалена из сегодняшнего дневника.",
+  "trackerMealPickerTitle": "К какому приёму пищи отнести?",
+  "trackerCameraChoiceTitle": "Что фотографируем?",
+  "trackerCameraFood": "Сфотографировать еду",
+  "trackerCameraFoodSubtitle": "Узнать КБЖУ и добавить запись в дневник",
+  "trackerCameraBeverage": "Сфотографировать напиток",
+  "trackerCameraBeverageSubtitle": "Авто-добавление воды и калорий в один шаг",
+  "trackerEmptyLog": "Пока нет записей",
+  "trackerFoodSubtitle": "{calories} ккал • Б/У/Ж {protein}/{carbs}/{fat} г",
+  "trackerCaloriesToday": "Калории сегодня",
+  "trackerCaloriesEaten": "Калорий съедено",
+  "trackerCaloriesKcalOf": " / {target} ккал",
+  "trackerCaloriesKcalOnly": " ккал",
+  "trackerWaterTitle": "Вода",
+  "trackerWaterGoalReached": "Цель достигнута!",
+  "trackerWaterPctOfGoal": "{pct}% дневной цели",
+  "trackerWaterRemaining": "{amount} осталось",
+  "trackerWaterError": "Не удалось сохранить.",
+  "trackerWaterAddTitle": "Добавить воду",
+  "trackerWaterAddInstructions": "Введи количество в литрах (0.1–10 л)",
+  "trackerWaterLiters": "Литры",
+  "trackerWaterHint": "например, 0.5",
+  "trackerWaterRequired": "Введи количество",
+  "trackerWaterMin": "Минимум 0.1 л",
+  "trackerWaterMax": "Максимум 10 л",
+  "trackerWeightCardTitle": "Вес",
+  "trackerWeightCardCurrent": "Текущий вес: {value} кг",
+  "trackerWeightCardAdd": "Добавить вес",
+  "trackerDockCameraTooltip": "Камера",
+  "trackerDockChatTooltip": "Чат с NutriBot",
+  "trackerDockAddFoodTooltip": "Добавить еду",
+  "trackerDockProfileTooltip": "Профиль",
+  "trackerDockSettingsTooltip": "Настройки",
+  "trackerDatePrevTooltip": "Предыдущий день",
+  "trackerDateNextTooltip": "Следующий день",
+  "trackerTooltipDelete": "Удалить",
+  "trackerTooltipRefine": "Уточнить",
+  "trackerMealBreakfast": "Завтрак",
+  "trackerMealLunch": "Обед",
+  "trackerMealDinner": "Ужин",
+  "trackerMealSnack": "Перекус",
+  "trackerMealDrinks": "Напитки",
+  "addFoodTitle": "Добавить еду",
+  "addFoodMealLabel": "Приём пищи",
+  "addFoodMealBreakfast": "Завтрак",
+  "addFoodMealLunch": "Обед",
+  "addFoodMealDinner": "Ужин",
+  "addFoodMealSnack": "Перекус",
+  "addFoodName": "Название",
+  "addFoodQuantity": "Количество",
+  "addFoodUnit": "Ед.",
+  "addFoodUnitG": "г",
+  "addFoodUnitMl": "мл",
+  "addFoodUnitPcs": "шт",
+  "addFoodCalories": "Калории, ккал",
+  "addFoodProtein": "Белки, г",
+  "addFoodCarbs": "Углеводы, г",
+  "addFoodFat": "Жиры, г",
+  "addFoodFiber": "Клетчатка, г (необязательно)",
+  "addFoodButtonAdd": "Добавить",
+  "addFoodFieldRequired": "Заполни «{label}»",
+  "addFoodEnterNumber": "Введи число",
+  "addFoodMustBeNonNegative": "Должно быть ≥ 0",
+  "addFoodMustBePositive": "Должно быть > 0",
+  "photoFoodTitle": "Фото еды",
+  "photoFoodCameraError": "Не удалось открыть камеру. Попробуй выбрать фото из галереи.",
+  "photoFoodGalleryError": "Не удалось открыть галерею.",
+  "photoFoodInstructions": "Сфотографируй еду или выбери снимок из галереи",
+  "photoFoodTakePhoto": "Сделать фото",
+  "photoFoodPickGallery": "Выбрать из галереи",
+  "photoFoodAnalyzing": "Анализируем фото…",
+  "photoFoodErrorTitle": "Не удалось распознать блюдо на фото. Попробуй сделать более чёткое фото.",
+  "photoFoodAllergyWarningTitle": "⚠️ Возможен конфликт с аллергией",
+  "photoFoodAllergyWarningBullet": "•  {text}",
+  "photoFoodNoName": "Без названия",
+  "photoFoodIngredientsTitle": "Что распознано",
+  "photoBeverageTitle": "Фото напитка",
+  "photoBeverageInstructions": "Сфотографируй напиток или выбери снимок из галереи",
+  "photoBeverageAnalyzing": "Анализируем фото…",
+  "photoBeverageSugar": "Сахар",
+  "photoBeverageMl": "{value} мл",
+  "photoBeverageUnsure": "Не уверен(а) в определении — проверь и подтверди данные.",
+  "photoBeverageDescriptionMissing": "— описание отсутствует",
+  "photoBeverageNameLabel": "Название напитка",
+  "photoBeverageNameRequired": "Введи название",
+  "photoBeverageVolumeLabel": "Объём, мл",
+  "photoBeverageVolumeRequired": "Введи объём",
+  "photoBeverageCaloriesLabel": "Калории, ккал",
+  "photoBeverageMoreDetails": "Подробнее (белки, жиры, углеводы, сахар)",
+  "photoBeverageProteinLabel": "Белки, г",
+  "photoBeverageCarbsLabel": "Углеводы, г",
+  "photoBeverageFatLabel": "Жиры, г",
+  "photoBeverageSugarLabel": "Сахар, г",
+  "photoBeverageNonNegative": "Не может быть отрицательным",
+  "photoBeveragePositiveRequired": "Объём должен быть больше 0",
+  "photoBeverageConfirm": "Подтвердить и сохранить",
+  "photoBeverageSaved": "Напиток сохранён",
+  "photoBeverageSaveError": "Не удалось сохранить напиток. Попробуй снова.",
+  "photoBeverageMismatchWarning": "Судя по фото, это не похоже на «{name}».",
+  "photoBeverageMismatchLooksLike": "Больше похоже на: {suggestion}.",
+  "photoBeverageMismatchFix": "Исправить",
+  "photoBeverageMismatchProceed": "Всё равно сохранить",
+  "photoBeverageVerifyFailed": "Не удалось проверить соответствие фото — сохранено без проверки.",
+  "editFoodTitle": "Уточнить описание",
+  "editFoodHint": "Например: это бурый рис, а не белый, и масла было меньше",
+  "editFoodRequired": "Введи описание — его отправим в ИИ для пересчёта.",
+  "editFoodHelpText": "Опиши, что на самом деле в блюде — это поможет точнее пересчитать калории и макросы. Изображение не используется.",
+  "editFoodRecalculate": "Пересчитать",
+  "editFoodAnalyzing": "Анализируем описание…",
+  "editFoodConfidenceHigh": "Высокая точность",
+  "editFoodConfidenceMedium": "Средняя точность",
+  "editFoodConfidenceLow": "Низкая точность",
+  "editFoodNoDescription": "— описание отсутствует",
+  "editFoodRecalcBadge": "Пересчитано",
+  "trackerFoodProtein": "Белки",
+  "trackerFoodCarbs": "Углеводы",
+  "trackerFoodFat": "Жиры",
+  "weightHistoryTitle": "История веса",
+  "weightHistoryAddTitle": "Добавить запись о весе",
+  "weightHistoryWeight": "Вес, кг",
+  "weightHistoryWeightHint": "например, 70.5",
+  "weightHistoryWeightRequired": "Введи вес",
+  "weightHistoryWeightMustBePositive": "Вес должен быть больше 0",
+  "weightHistoryNote": "Заметка (необязательно)",
+  "weightHistoryNoteHint": "например, утренний замер",
+  "weightHistorySave": "Сохранить",
+  "weightHistoryErrorSave": "Не удалось сохранить.",
+  "weightHistoryDeleteTitle": "Удалить запись?",
+  "weightHistoryDeleteBody": "Эта запись о весе будет удалена без возможности восстановления.",
+  "weightHistoryEmpty": "Пока нет записей",
+  "chatTitle": "Чат",
+  "chatClearHistoryTitle": "Удалить всю историю переписки?",
+  "chatClearHistoryBody": "Это действие необратимо.",
+  "chatClearHistoryConfirm": "Удалить",
+  "chatMenuTooltip": "Меню",
+  "chatMenuClearHistory": "Очистить историю",
+  "chatEmptyState": "Спроси меня о питании, целях по калориям или продуктах!",
+  "chatInputHint": "Спроси о питании...",
+  "chatSendTooltip": "Отправить",
+  "chatError": "Что-то пошло не так. Попробуй ещё раз.",
+  "emailVerifyBannerMessage": "Подтверди свой email, чтобы не потерять доступ к аккаунту.",
+  "emailVerifyBannerAction": "Подтвердить",
+  "emailVerifyBannerDismissTooltip": "Скрыть",
+  "apiEnvCardTitle": "API-окружение (только для разработки)",
+  "apiEnvCardCurrentUrl": "Текущий URL",
+  "apiEnvCardBaseUrlApplied": "Базовый URL: {url}",
+  "apiEnvCardBaseUrlAppliedBody": "Новые запросы уже пойдут по нему. Потяни экран или перейди в другой раздел, чтобы обновить уже загруженные экраны.",
+  "apiEnvCardPresets": "Быстрые пресеты",
+  "apiEnvCardPresetIos": "iOS Simulator (localhost)",
+  "apiEnvCardPresetAndroid": "Android Emulator",
+  "apiEnvCardCustomUrl": "Свой URL (например, для устройства в локальной сети)",
+  "apiEnvCardBaseUrlField": "Базовый URL",
+  "apiEnvCardBaseUrlRequired": "Введи URL",
+  "apiEnvCardBaseUrlInvalid": "URL должен начинаться с http:// или https://",
+  "apiEnvCardApply": "Применить",
+  "apiEnvCardReset": "Сбросить к умолчанию",
+  "tagInputDefaultHint": "Введи и нажми Enter…",
+  "userFacingErrorServerEmpty": "Сервер вернул пустой ответ.",
+  "userFacingErrorFoodPhotoRecognize": "Не удалось распознать блюдо на фото. Попробуй сделать более чёткое фото.",
+  "userFacingErrorFoodReanalyze": "Не удалось проанализировать описание. Попробуй переформулировать.",
+  "userFacingErrorBeverageRecognize": "Не удалось распознать напиток. Попробуй другое фото.",
+  "userFacingErrorPhotoProcess": "Не удалось обработать фото. Попробуй снова.",
+  "userFacingErrorDescriptionProcess": "Не удалось обработать описание. Попробуй снова.",
+  "userFacingErrorUploadPhoto": "Не удалось загрузить фото. Проверь размер файла (макс. 5 МБ).",
+  "userFacingErrorPhotoUrl": "Сервер не вернул ссылку на фото.",
+  "onboardingRequiredField": "Заполни «{label}»",
+  "@onboardingRequiredField": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "@onboardingPaceLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@onboardingPaceChipLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@profileBmiLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "@profilePace": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@profilePaceChip": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "homeLoading": "Загрузка...",
+  "homeGreeting": "Привет, {name}!",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeTrackerPreview": "Здесь будет трекер питания.",
+  "homeLogout": "Выйти",
+  "@apiEnvCardBaseUrlApplied": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerDeleteRecordBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerFoodSubtitle": {
+    "placeholders": {
+      "calories": {
+        "type": "String"
+      },
+      "protein": {
+        "type": "String"
+      },
+      "carbs": {
+        "type": "String"
+      },
+      "fat": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerCaloriesKcalOf": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerWaterPctOfGoal": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerWaterRemaining": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerWeightCardCurrent": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@photoFoodAllergyWarningBullet": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "photoBeverageCameraError": "Не удалось открыть камеру. Попробуй выбрать фото из галереи.",
+  "photoBeverageGalleryError": "Не удалось открыть галерею.",
+  "photoBeverageTakePhoto": "Сделать фото",
+  "photoBeveragePickGallery": "Выбрать из галереи",
+  "@photoBeverageMl": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@photoBeverageMismatchWarning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@photoBeverageMismatchLooksLike": {
+    "placeholders": {
+      "suggestion": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerWaterProgress": "{current} / {goal}",
+  "photoFoodConfidenceHigh": "Высокая точность",
+  "photoFoodConfidenceMedium": "Средняя точность",
+  "photoFoodConfidenceLow": "Низкая точность",
+  "photoBeverageConfidenceHigh": "Высокая точность",
+  "photoBeverageConfidenceMedium": "Средняя точность",
+  "photoBeverageConfidenceLow": "Низкая точность",
+  "macroProteinShort": "Б",
+  "macroCarbsShort": "У",
+  "macroFatShort": "Ж",
+  "macroSugarShort": "Сахар",
+  "unitGramsShort": "г",
+  "unitKcalShort": "ккал",
+  "weightHistoryLatestMissing": "Нет данных",
+  "weightHistoryTarget": "Цель: {value} кг",
+  "@weightHistoryTarget": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "weightHistoryRemaining": "Осталось: {value} кг",
+  "@weightHistoryRemaining": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "weightHistoryChartGoalLabel": "Цель",
+  "weightHistoryMustBePositive": "Должен быть > 0",
+  "weightHistoryTooLarge": "Слишком большое значение"
+}

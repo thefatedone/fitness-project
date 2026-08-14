@@ -830,7 +830,7 @@ async def verify_beverage_name(
     genai.configure(api_key=settings.GEMINI_API_KEY)
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
 
-    # Verification prompt. Two design points worth calling out:
+    # Verification prompt. Three design points worth calling out:
     #
     #   * "Plausibly" is deliberately weaker than "definitely" —
     #     the model is asked whether the image is *consistent*
@@ -846,12 +846,32 @@ async def verify_beverage_name(
     #     can show "this looks like {detected_instead} instead of
     #     {claimed_name}?" rather than just "no", giving the
     #     user a concrete next-step suggestion.
+    #
+    #   * The DETERMINISTIC WATER RULE (placed FIRST, with
+    #     explicit priority labelling) hard-codes the only
+    #     case where the general fuzzy-match rule would mislead
+    #     the user: a "water" claim over a photo of any visible
+    #     color. Water is *definitionally* clear/colorless/
+    #     transparent, so the model has zero legitimate
+    #     ambiguity here — any visible color (brown, dark,
+    #     yellow, orange, red, green, etc.) or opacity must
+    #     produce `plausible=false` with high certainty. This
+    #     is exactly the failure mode reported in production
+    #     (a Coca-Cola photo saved as "Вода"), where the model
+    #     was happy to call a brown fizzy liquid "consistent
+    #     with water" because it had no explicit anchor for the
+    #     case. Combined with `temperature=0` on this specific
+    #     call (see below), the judgment is now deterministic
+    #     rather than sampled.
     prompt = f"""Does this image plausibly show a beverage called '{claimed_name}'?
 Consider color, packaging, branding, and what's visible in the container.
 Respond with ONLY valid JSON, no markdown or explanation:
 {{"plausible": true|false, "detected_instead": "string or null"}}
 
-Rules:
+DETERMINISTIC WATER RULE — HIGHEST PRIORITY, OVERRIDES THE GENERAL RULES BELOW:
+If the claimed name is water, still water, sparkling water, mineral water, or a direct translation of these (e.g. Russian 'вода', French 'eau', Spanish 'agua', German 'Wasser') in ANY language, the photographed liquid MUST appear clear, colorless, and transparent for plausible=true. ANY visible color (brown, dark, yellow, orange, red, green, blue, etc.) or opacity makes plausible=false with HIGH CERTAINTY — no ambiguity should be allowed for this specific case since water's visual signature is unambiguous.
+
+General rules:
 - `plausible` should be true when the image is consistent with the claimed name (any of several brands is fine — we want a fuzzy match).
 - `plausible` should be false when the image clearly shows a DIFFERENT beverage (e.g. claimed "Cola" but image shows a green liquid).
 - `detected_instead` should be a short string describing what the image actually shows (e.g. "green tea", "orange juice", "sparkling water") when `plausible` is false; null when `plausible` is true.
@@ -862,9 +882,22 @@ Rules:
     #   * parse failure → 422 (the model's output was malformed,
     #     not the request)
     #   * any other Gemini error → 500 (transport / quota / etc.)
+    #
+    # `generation_config={"temperature": 0}` is passed PER-CALL
+    # (not on `GenerativeModel` construction) so the other
+    # endpoints in this file — which benefit from sampling for
+    # ingredient-name creativity — keep their default temperature.
+    # Determinism matters most for THIS prompt because it's the
+    # one the user sees as the gate on a save action: sampling
+    # here would mean the same photo + claim could plausibly
+    # toggle between two SnackBars across calls, which would be a
+    # confusing UX bug.
     try:
         image_part = {"mime_type": file.content_type, "data": base64_image}
-        response = model.generate_content([prompt, image_part])
+        response = model.generate_content(
+            [prompt, image_part],
+            generation_config={"temperature": 0},
+        )
         verification = json.loads(_strip_markdown_fence(response.text))
     except json.JSONDecodeError:
         raise HTTPException(

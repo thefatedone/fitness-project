@@ -120,7 +120,7 @@ class ChatProvider extends ChangeNotifier {
       // we don't want a thrown exception to leave `isSending` stuck on).
       errorMessage = e is ApiException
           ? e.message
-          : 'Что-то пошло не так. Попробуй ещё раз.';
+          : 'Something went wrong. Try again.';
       isSending = false;
       _cleanupFailedPlaceholder(assistantIndex);
       notifyListeners();

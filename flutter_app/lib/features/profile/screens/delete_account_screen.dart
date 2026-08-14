@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
 import '../../auth/providers/auth_api.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/account_api.dart';
@@ -43,10 +44,11 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Удаление аккаунта'),
+        title: Text(l10n.deleteAccountTitle),
         // Subtle visual cue: light red tint so the AppBar reads as a
         // "danger zone" without screaming. Keeps the rest of the
         // appbar chrome (icons, text) legible.
@@ -73,7 +75,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                     FormField<bool>(
                       initialValue: _acknowledged,
                       validator: (v) =>
-                          v == true ? null : 'Подтверди, что понимаешь риск',
+                          v == true ? null : l10n.deleteAccountAcknowledgeRequired,
                       builder: (state) => Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -90,9 +92,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                             // the destructive button stays disabled).
                             controlAffinity: ListTileControlAffinity.leading,
                             contentPadding: EdgeInsets.zero,
-                            title: const Text(
-                              'Я понимаю, что это действие нельзя отменить',
-                            ),
+                            title: Text(l10n.deleteAccountAcknowledge),
                           ),
                           if (state.hasError)
                             Padding(
@@ -122,16 +122,16 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                       // and this is the simpler implementation.
                       enabled: _acknowledged,
                       decoration: InputDecoration(
-                        labelText: 'Текущий пароль',
+                        labelText: l10n.deleteAccountCurrentPassword,
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: const OutlineInputBorder(),
                         helperText: _acknowledged
-                            ? 'Подтверди пароль, чтобы продолжить'
-                            : 'Сначала подтверди, что понимаешь риск',
+                            ? l10n.deleteAccountHelperAfterAck
+                            : l10n.deleteAccountHelperBeforeAck,
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) {
-                          return 'Введи текущий пароль';
+                          return l10n.deleteAccountCurrentPasswordRequired;
                         }
                         return null;
                       },
@@ -155,7 +155,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Удалить аккаунт навсегда'),
+                          : Text(l10n.deleteAccountConfirmButton),
                     ),
                   ],
                 ),
@@ -177,18 +177,16 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Точно удалить аккаунт?'),
-        content: const Text(
-          'Это последнее предупреждение. Все твои данные будут удалены '
-          'без возможности восстановления.',
-        ),
+        title: Text(l10n.deleteAccountDialogTitle),
+        content: Text(l10n.deleteAccountDialogBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Отмена'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -196,7 +194,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
               backgroundColor: theme.colorScheme.error,
               foregroundColor: theme.colorScheme.onError,
             ),
-            child: const Text('Да, удалить'),
+            child: Text(l10n.commonYesDelete),
           ),
         ],
       ),
@@ -267,11 +265,12 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _isDeleting = false);
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text('Что-то пошло не так. Попробуй ещё раз.'),
+          SnackBar(
+            content: Text(l10n.commonErrorWithRetry),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -294,6 +293,7 @@ class _WarningCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         // Slightly stronger than the amber allergy card: a thin
@@ -321,7 +321,7 @@ class _WarningCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Это действие необратимо',
+                  l10n.deleteAccountWarningTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.error,
@@ -329,9 +329,7 @@ class _WarningCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Будут безвозвратно удалены: твой профиль, вся история '
-                  'питания, вес, фотографии и переписка с AI-ассистентом. '
-                  'Это действие нельзя отменить.',
+                  l10n.deleteAccountWarningBody,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onErrorContainer,
                     height: 1.35,

@@ -46,7 +46,14 @@ class AuthProvider extends ChangeNotifier {
 
   /// Last user-facing error message, or `null` if the most recent action
   /// succeeded. Cleared at the start of every new auth action.
+  ///
+  /// Carries an English fallback; the matching [_errorMessageKey]
+  /// (when non-null) lets the UI render the active locale's copy via
+  /// `AppLocalizations.of(context)!.lookup(...)`. See
+  /// [ApiException.localizedMessage] for the same key+message
+  /// pattern at the HTTP layer.
   String? _errorMessage;
+  String? _errorMessageKey;
 
   /// True while a network call is in flight; UI uses this to disable the
   /// "Sign in" button and show a spinner.
@@ -72,6 +79,13 @@ class AuthProvider extends ChangeNotifier {
   AuthStatus get status => _status;
   UserModel? get currentUser => _currentUser;
   String? get errorMessage => _errorMessage;
+
+  /// Optional ARB key paired with [errorMessage]. UI code should
+  /// prefer this over [errorMessage] so the active locale's copy is
+  /// shown. See [ApiException.messageKey] for the matching HTTP-side
+  /// pattern.
+  String? get errorMessageKey => _errorMessageKey;
+
   bool get isLoading => _isLoading;
 
   /// Convenience flag for screens that only need a yes/no answer.
@@ -161,6 +175,7 @@ class AuthProvider extends ChangeNotifier {
     await tokenStorage.deleteToken();
     _currentUser = null;
     _errorMessage = null;
+    _errorMessageKey = null;
     _status = AuthStatus.unauthenticated;
     notifyListeners();
   }
@@ -194,6 +209,7 @@ class AuthProvider extends ChangeNotifier {
     unawaited(tokenStorage.deleteToken());
     _currentUser = null;
     _errorMessage = null;
+    _errorMessageKey = null;
     _status = AuthStatus.unauthenticated;
     sessionExpiredNotice = true;
     notifyListeners();
@@ -204,6 +220,7 @@ class AuthProvider extends ChangeNotifier {
   void clearError() {
     if (_errorMessage != null) {
       _errorMessage = null;
+      _errorMessageKey = null;
       notifyListeners();
     }
   }
@@ -252,6 +269,7 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> _runAuthAction(Future<void> Function() action) async {
     _isLoading = true;
     _errorMessage = null;
+    _errorMessageKey = null;
     notifyListeners();
 
     try {
@@ -269,13 +287,15 @@ class AuthProvider extends ChangeNotifier {
         await tokenStorage.deleteToken();
       }
       _errorMessage = e.message;
+      _errorMessageKey = e.messageKey;
       _status = AuthStatus.unauthenticated;
       return false;
     } catch (_) {
       // Defensive: any non-ApiException that somehow escapes the auth
       // client (e.g. a bug in fetchCurrentUser) shouldn't crash the UI.
       _errorMessage =
-          'Что-то пошло не так. Проверь соединение и попробуй снова.';
+          'Something went wrong. Please check your connection and try again.';
+      _errorMessageKey = 'commonError';
       _status = AuthStatus.unauthenticated;
       return false;
     } finally {

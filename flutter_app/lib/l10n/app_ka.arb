@@ -1,0 +1,558 @@
+{
+  "@@locale": "ka",
+  "appName": "NutriMind",
+  "commonCancel": "გაუქმება",
+  "commonSave": "შენახვა",
+  "commonDelete": "წაშლა",
+  "commonDone": "მზადია",
+  "commonYesDelete": "დიახ, წაშლა",
+  "commonTryAgain": "თავიდან ცდა",
+  "commonConfirm": "დადასტურება",
+  "commonClose": "დახურვა",
+  "commonError": "რაღაც შეცდომით წარიდგა. შეამოწმე კავშირი და თავიდან სცადე.",
+  "commonErrorShort": "რაღაც შეცდომით წარიდგა.",
+  "commonErrorWithRetry": "რაღაც შეცდომით წარიდგა. თავიდან სცადე.",
+  "themeLight": "ღია",
+  "themeDark": "მუქი",
+  "themeSystem": "სისტემური",
+  "themeDescriptionLight": "ყოველთვის ღია თემა.",
+  "themeDescriptionDark": "ყოველთვის მუქი თემა.",
+  "themeDescriptionSystem": "თემა მიჰყვება სისტემის პარამეტტრებს.",
+  "languageEnglish": "English",
+  "languageGeorgian": "ქართული",
+  "languageRussian": "Русский",
+  "languageSectionLabel": "ენა",
+  "languageFieldTheme": "თემა",
+  "authLoginTitle": "NutriMind",
+  "authLoginSubtitle": "კეთილი იყო მობრძანება",
+  "authEmailLabel": "ელ.ფოსტა",
+  "authEmailRequired": "შეიყვანე ელ.ფოსტა",
+  "authEmailInvalid": "ეს ელ.ფოსტა არ გამოიყურება სწორად",
+  "authPasswordLabel": "პაროლი",
+  "authPasswordRequired": "შეიყვანე პაროლი",
+  "authPasswordHelper": "მინ. 8 სიმბოლო, ერთი დიდი ასო, ერთი ციფრა",
+  "authLoginButton": "შესვლა",
+  "authForgotPassword": "დაგავიწყდა პაროლი?",
+  "authNoAccountRegister": "არ გაქვს ანგარიში? დარეგისტრირდი",
+  "authServerDebugLink": "სერვერის პარამეტტრები (debug)",
+  "authSessionExpired": "სესია ამოიწურა. გთხოვ, თავიდან შედი.",
+  "authRegisterTitle": "რეგისტტრაცია",
+  "authRegisterName": "სრული სახელი",
+  "authRegisterNameRequired": "შეიყვანე სახელი",
+  "authRegisterPassword": "პაროლი",
+  "authRegisterCreate": "ანგარიშის შექმნა",
+  "authForgotTitle": "პაროლის აღდგენა",
+  "authForgotInstructions": "შეიყვანე ანგარიშთან დაკავშირებული ელ.ფოსტა — გამოგიგზავნებთ კოდს პაროლის გადასაყენებლად.",
+  "authForgotSendCode": "კოდის გაგზავნა",
+  "authCodeTitle": "შეიყვანე კოდი",
+  "authCodeInstructions": "კოდი გამოგზავნეთ მისამართზე {email}",
+  "authCodeField": "კოდი",
+  "authCodeRequired": "კოდი უნდა იყოს 6 ციფრისგან შემდგარი",
+  "authCodeConfirm": "დადასტურება",
+  "authCodeResend": "კოდის თავიდან გამოგზავნა",
+  "authResetTitle": "ახალი პაროლი",
+  "authResetInstructions": "შეიყვანე ახალი პაროლი მისამართისთვის {email}",
+  "authResetNewPassword": "ახალი პაროლი",
+  "authResetConfirmPassword": "გაიმეორე პაროლი",
+  "authResetConfirmRequired": "დაადასტურე პაროლი",
+  "authResetMismatch": "პაროლები არ ემთხვევა",
+  "authResetSave": "ახალი პაროლის შენახვა",
+  "authResetSuccess": "პაროლი შეიცვალა. ახლა შეგიძლია შეხვიდე.",
+  "authEmailVerifyTitle": "ელ.ფოსტის დადასტურება",
+  "authEmailVerifyInstructions": "დადასტურების კოდს გამოვუგზავნით მისამართზე {email}",
+  "authEmailVerifyEnterCode": "შეიყვანე წერილში მოსალოდნე კოდი",
+  "authEmailVerifySendCode": "კოდის გაგზავნა",
+  "authEmailVerifyResend": "კოდის თავიდან გამოგზავნა",
+  "authPasswordMinLength": "პაროლი უნდა შედგებოდეს მინიმუმ 8 სიმბოლოსგან",
+  "authPasswordNeedUpper": "პაროლის პირველი ასო უნდა იყოს დიდი",
+  "authPasswordNeedDigit": "პაროლი უნდა შეიცავდეს მინიმუმ ერთ ციფრას",
+  "authServerUnreachable": "სერვერი არ პასუხობს. შეამოწმე კავშირი და თავიდან სცადე.",
+  "authNoConnection": "სერვერთან კავშირი ვერ დამყარდა. შეამოწმე ინტერნეტი.",
+  "authSecureConnectionFailed": "უსაფრთხო კავშირი სერვერთან ვერ დამყარდა.",
+  "authRequestCancelled": "მოთხოვნა გაუქმდა.",
+  "authEmptyResponse": "სერვერმა ცარიელი პასუხი დააბრუნა.",
+  "authNoAuthToken": "სერვერმა ავთენტიფკატორი არ გასცა.",
+  "authConfirmationMissing": "სერვერმა დადასტურება არ დააბრუნა.",
+  "onboardingStep1Title": "ნაბიჯი 1 / 4 — ანგარიში",
+  "onboardingStep1Subtitle": "ჯერ შევიკრიბოთ სახელი, ელ.ფოსტა და პაროლი. დანარჩენი ნაბიჯები შემდეგ.",
+  "onboardingStep2Title": "ნაბიჯი 2 / 4 — პირადი მონაცემები",
+  "onboardingStep2Subtitle": "დაბადების თარიღი და სქესი.",
+  "onboardingStep3Title": "ნაბიჯი 3 / 4 — სხეული და მიზანი",
+  "onboardingStep3Subtitle": "სიმაღლე, წონა, სამიზნო წონა, აქტივობის დონე და მიზანი.",
+  "onboardingStep4Title": "ნაბიჯი 4 / 4 — კვება და ალერგიები",
+  "onboardingStep4Subtitle": "თითქმის მზად ხარ! ეს ველები არასავალდებელია — შეგიძლია მოგვიანებით შეავსო პროფილის განყოფილებაში.",
+  "onboardingBirthday": "დაბადების თარიღი",
+  "onboardingBirthdayRequired": "შეიყვანე დაბადების თარიღი",
+  "onboardingBirthdayNotSet": "არ არის მითითებული",
+  "onboardingGender": "სქესი",
+  "onboardingGenderMale": "მამრობითი",
+  "onboardingGenderFemale": "მდედრობითი",
+  "onboardingGenderOther": "არ მინდა მითითება",
+  "onboardingGenderRequired": "აირჩიე ვარიანტი",
+  "onboardingDietaryPreferences": "კვების უპირატესობები (არასავალდებელია)",
+  "onboardingDietaryHint": "მაგალითად, ვეგეტარიანელი, კეტტო…",
+  "onboardingAllergies": "ალერგიები და შეუთავსებლობა (არასავალდებელია)",
+  "onboardingAllergiesHint": "მაგალითად, თხილი, რძე…",
+  "onboardingHeight": "სიმაღლე, სმ",
+  "onboardingHeightHint": "მაგ. 175",
+  "onboardingCurrentWeight": "მიმდინარე წონა, კგ",
+  "onboardingCurrentWeightHint": "მაგ. 70.5",
+  "onboardingTargetWeight": "სამიზნო წონა, კგ",
+  "onboardingTargetWeightHint": "მაგ. 65",
+  "onboardingActivityLevel": "აქტივობის დონე",
+  "onboardingActivityLevelRequired": "აირჩიე აქტივობის დონე",
+  "onboardingPrimaryGoal": "მთავარი მიზანი",
+  "onboardingPrimaryGoalRequired": "აირჩიე მთავარი მიზანი",
+  "onboardingPaceLabel": "ტემპი: {value} კგ/კვირაში",
+  "onboardingPaceChipLabel": "{value} კგ/კვირა",
+  "onboardingRequired": "შეავსე",
+  "onboardingEnterNumber": "შეიყვანე რიცხვი",
+  "onboardingMustBePositive": "უნდა იყოს 0-ზე მეტი",
+  "onboardingBack": "უკან",
+  "onboardingNext": "შემდეგ",
+  "onboardingFinish": "რეგისტრაციის დასრულება",
+  "onboardingGenericError": "რეგისტრაცია ვერ დასრულდა.",
+  "onboardingPartialSaveWarning": "პროფილი შეიქმნა, მაგრამ ზოგიერი მონაცემი არ შენახულა — შეავსე მოგვიანებით პროფილის განყოფილებაში.",
+  "settingsTitle": "პარამეტტრები",
+  "settingsSectionAppearance": "გარეგნობა",
+  "settingsSectionTheme": "თემა",
+  "settingsSectionAccount": "ანგარიში",
+  "settingsSectionAbout": "პროგრამის შესახებ",
+  "settingsSectionApiEnvironmentDebug": "API გარემო (მხოლოდ დევ)",
+  "settingsChangePassword": "პაროლის შეცვლა",
+  "settingsDeleteAccount": "ანგარიშის წაშლა",
+  "settingsVersion": "ვერსია",
+  "settingsLogout": "სისტემიდან გასვლა",
+  "profileTitle": "პროფილი",
+  "profileSave": "ცვლილებების შენახვა",
+  "profileUpdated": "პროფილი განახლდა",
+  "profileUpdateError": "ვერ შენახდა.",
+  "profileSavePhotoTitle": "საიდან მივიღოთ ფოტო?",
+  "profilePhotoCamera": "გადაღება",
+  "profilePhotoGallery": "არჩევა გალერეიდან",
+  "profilePhotoCropTitle": "ფოტოს მოჭრა",
+  "profilePhotoCropError": "ფოტოს მოჭრა ვერ მოხერხდა. თავიდან სცადე.",
+  "profilePhotoReadError": "მოჭრილი ფოტოს წაკითხვა ვერ მოხერხდა.",
+  "profilePhotoTooLarge": "ფოტო ძალიან დიდია, სცადე სხვა",
+  "profilePhotoUpdated": "ფოტო განახლდა",
+  "profileCameraError": "კამერის გახსნა ვერ მოხერხდა. სცადე გალერეიდან არჩევა.",
+  "profileGalleryError": "გალერეის გახსნა ვერ მოხერხდა.",
+  "profileSectionBasic": "ძირითადი",
+  "profileSectionBody": "სხეულის პარამეტტრები",
+  "profileSectionGoalActivity": "მიზანი და აქტივობა",
+  "profileFieldName": "სახელი",
+  "profileFieldBirthday": "დაბადების თარიღი",
+  "profileFieldGender": "სქესი",
+  "profileMetricHeight": "სიმაღლე, სმ",
+  "profileMetricHeightHint": "მაგ. 175",
+  "profileMetricCurrentWeight": "მიმდინარე წონა, კგ",
+  "profileMetricCurrentWeightHint": "მაგ. 70.5",
+  "profileMetricTargetWeight": "სამიზნო წონა, კგ",
+  "profileMetricTargetWeightHint": "მაგ. 65",
+  "profileBmiLabel": "BMI: {label}",
+  "profileViewWeightHistory": "წონის ისტორიის ნახვა",
+  "profilePrimaryGoal": "მთავარი მიზანი",
+  "profileActivityLevel": "აქტივობის დონე",
+  "profilePace": "წონის კლების ტემპი: {value} კგ/კვირაში",
+  "profilePaceChip": "{value} კგ/კვირა",
+  "profileDietaryPreferences": "კვების უპირატესობები",
+  "profileDietaryHint": "მაგ. ვეგეტარიანელი…",
+  "profileAllergies": "ალერგიები და შეუთავსებლობა",
+  "profileAllergiesAiHint": "AI ფოტო-ამოცნობა იყენებს კონფლიქტების გაფრთხილებლად.",
+  "profileAllergiesHint": "მაგ. თხილი…",
+  "profileBmiUnderweight": "წონის დეფიციდი",
+  "profileBmiNormal": "ნორმა",
+  "profileBmiOverweight": "ჭარბი წონა",
+  "profileBmiObese": "სიმსუქნე",
+  "dietVegetarian": "ვეგეტარიანელი",
+  "dietVegan": "ვეგანი",
+  "dietKeto": "კეტტო",
+  "dietPaleo": "პალეო",
+  "dietLowCarb": "ნახშირწყლის დაბალი",
+  "dietLowFat": "ცხიმის დაბალი",
+  "dietMediterranean": "ხმელთაშუა ზღვის",
+  "dietHalal": "ჰალალი",
+  "dietKosher": "კოშერული",
+  "allergyNuts": "თხილი",
+  "allergyShellfish": "ზღვის პროდუქტტლი",
+  "allergyEggs": "კვერცხი",
+  "allergySoy": "სოია",
+  "allergyWheat": "ხორბალი",
+  "allergyFish": "თევზი",
+  "allergyMilk": "რძე",
+  "activitySedentary": "უმოძრაო",
+  "activityLightlyActive": "მცირე აქტივობით",
+  "activityModeratelyActive": "ზომიერი აქტივობით",
+  "activityVeryActive": "მაღალი აქტივობით",
+  "activityExtraActive": "ძალიან მაღალი აქტივობით",
+  "goalLoseWeight": "წონის კლება",
+  "goalMaintain": "წონის შენარჩუნება",
+  "goalGainMuscle": "კუნთოვანი მასის მომატება",
+  "goalEatHealthier": "ჯანსაღი კვება",
+  "deleteAccountTitle": "ანგარიშის წაშლა",
+  "deleteAccountWarningTitle": "ეს მოქმედება შეუქცევადია",
+  "deleteAccountWarningBody": "სამუდამტანოდ წაიშლება: შენი პროფილი, კვების ისტორია, წონის ისტორია, ფოტოები და AI ასისტენტთან საუბრების ისტორია. ეს ვერ გაუქმდება.",
+  "deleteAccountAcknowledge": "მესმის, რომ ეს მოქმედება ვერ გაუქმდება",
+  "deleteAccountAcknowledgeRequired": "დაადასტურე, რომ გესმის რისკი",
+  "deleteAccountCurrentPassword": "მიმდინარე პაროლი",
+  "deleteAccountCurrentPasswordRequired": "შეიყვანე მიმდინარე პაროლი",
+  "deleteAccountHelperBeforeAck": "ჯერ დაადასტურე, რომ გესმის რისკი",
+  "deleteAccountHelperAfterAck": "დაადასტურე პაროლი გასაგრძელებლად",
+  "deleteAccountConfirmButton": "წაშალე ანგარიში სამუდამტანოდ",
+  "deleteAccountDialogTitle": "ნამდვილებით წაშლა?",
+  "deleteAccountDialogBody": "ეს ბოლო გაფრთხილებაა. ყველა მონაცემი წაიშლება და ვერ აღდგება.",
+  "deleteAccountWrongPasswordMatch": "მიმდინარე პაროლი არასწორია",
+  "changePasswordTitle": "პაროლის შეცვლა",
+  "changePasswordCurrent": "მიმდინარე პაროლი",
+  "changePasswordCurrentRequired": "შეიყვანე მიმდინარე პაროლი",
+  "changePasswordNew": "ახალი პაროლი",
+  "changePasswordConfirm": "დაადასტურე ახალი პაროლი",
+  "changePasswordConfirmRequired": "დაადასტურე პაროლი",
+  "changePasswordSave": "პაროლის შეცვლა",
+  "trackerTitle": "თრეკერი",
+  "trackerDateToday": "დღეს",
+  "trackerDateYesterday": "გუშინ",
+  "trackerDeleteRecordTitle": "წავშალოთ ჩანაწერი?",
+  "trackerDeleteRecordBody": "„{name}“ წაიშლება დღევნდელი ჟურნალიდან.",
+  "trackerMealPickerTitle": "რომელ კვებას მიაკუთვნოთ?",
+  "trackerCameraChoiceTitle": "რას ვუღებთ ფოტოს?",
+  "trackerCameraFood": "საჭმლის გადაღება",
+  "trackerCameraFoodSubtitle": "კბზ-ცხ-ცხ-ც გამოთვლა და ჩანაწერი ჟურნალში",
+  "trackerCameraBeverage": "სასმელის გადაღება",
+  "trackerCameraBeverageSubtitle": "წყალსა და კალორიებს ავტომატურად დამატება ერთ ნაბიჯში",
+  "trackerEmptyLog": "ჩანაწერები ჯერ არ არის",
+  "trackerFoodSubtitle": "{calories} კკალ • ც-ნ-ც {protein}/{carbs}/{fat} გ",
+  "trackerCaloriesToday": "დღევნდელი კალორიები",
+  "trackerCaloriesEaten": "მიღებული კალორიები",
+  "trackerCaloriesKcalOf": " / {target} კკალ",
+  "trackerCaloriesKcalOnly": " კკალ",
+  "trackerWaterTitle": "წყალი",
+  "trackerWaterGoalReached": "დღევანდელი მიზანი მიღწეულია!",
+  "trackerWaterPctOfGoal": "დღევანდელი მიზნის {pct}%",
+  "trackerWaterRemaining": "დარჩა {amount}",
+  "trackerWaterError": "ვერ შენახდა.",
+  "trackerWaterAddTitle": "წყლის დამატება",
+  "trackerWaterAddInstructions": "შეიყვანე რაოდენობა ლიტტრებში (0.1–10 ლ)",
+  "trackerWaterLiters": "ლიტტრები",
+  "trackerWaterHint": "მაგ. 0.5",
+  "trackerWaterRequired": "შეიყვანე რაოდენობა",
+  "trackerWaterMin": "მინიმუმ 0.1 ლ",
+  "trackerWaterMax": "მაქსიმუმ 10 ლ",
+  "trackerWeightCardTitle": "წონა",
+  "trackerWeightCardCurrent": "მიმდინარე წონა: {value} კგ",
+  "trackerWeightCardAdd": "წონის დამატება",
+  "trackerDockCameraTooltip": "კამერა",
+  "trackerDockChatTooltip": "NutriBot-თან ჩატი",
+  "trackerDockAddFoodTooltip": "საჭმლის დამატება",
+  "trackerDockProfileTooltip": "პროფილი",
+  "trackerDockSettingsTooltip": "პარამეტტრები",
+  "trackerDatePrevTooltip": "წინა დღე",
+  "trackerDateNextTooltip": "შემდეგი დღე",
+  "trackerTooltipDelete": "წაშლა",
+  "trackerTooltipRefine": "დაზუსტება",
+  "trackerMealBreakfast": "საუზმე",
+  "trackerMealLunch": "სადილე",
+  "trackerMealDinner": "ვახშამი",
+  "trackerMealSnack": "საჭმელი",
+  "trackerMealDrinks": "სასმელები",
+  "addFoodTitle": "საჭმლის დამატება",
+  "addFoodMealLabel": "კვება",
+  "addFoodMealBreakfast": "საუზმე",
+  "addFoodMealLunch": "სადილე",
+  "addFoodMealDinner": "ვახშამი",
+  "addFoodMealSnack": "საჭმელი",
+  "addFoodName": "სახელი",
+  "addFoodQuantity": "რაოდენობა",
+  "addFoodUnit": "ერთ.",
+  "addFoodUnitG": "გ",
+  "addFoodUnitMl": "მლ",
+  "addFoodUnitPcs": "ცალი",
+  "addFoodCalories": "კალორიები, კკალ",
+  "addFoodProtein": "ცილები, გ",
+  "addFoodCarbs": "ნახშირწყლები, გ",
+  "addFoodFat": "ცხიმები, გ",
+  "addFoodFiber": "ბოჭკოვი, გ (არასავალდებელია)",
+  "addFoodButtonAdd": "დამატება",
+  "addFoodFieldRequired": "შეავსე «{label}»",
+  "addFoodEnterNumber": "შეიყვანე რიცხვი",
+  "addFoodMustBeNonNegative": "უნდა იყოს ≥ 0",
+  "addFoodMustBePositive": "უნდა იყოს > 0",
+  "photoFoodTitle": "საჭმლის ფოტო",
+  "photoFoodCameraError": "კამერის გახსნა ვერ მოხერხდა. სცადე გალერეიდან არჩევა.",
+  "photoFoodGalleryError": "გალერეის გახსნა ვერ მოხერხდა.",
+  "photoFoodInstructions": "გადაიღე საჭმელი ან აირჩიე ფოტო გალერეიდან",
+  "photoFoodTakePhoto": "ფოტოს გადაღება",
+  "photoFoodPickGallery": "არჩევა გალერეიდან",
+  "photoFoodAnalyzing": "ფოტოს ანალიზი…",
+  "photoFoodErrorTitle": "კერძელობის ფოტოზე ამოცნობა ვერ მოხერხდა. სცადე უფრო ნათელი ფოტო.",
+  "photoFoodAllergyWarningTitle": "⚠️ შესაძლო შეუთავსებლობა ალერგიასთან",
+  "photoFoodAllergyWarningBullet": "•  {text}",
+  "photoFoodNoName": "უსახელო",
+  "photoFoodIngredientsTitle": "რა იქნა ამოცნობილი",
+  "photoBeverageTitle": "სასმელის ფოტო",
+  "photoBeverageInstructions": "გადაიღე სასმელი ან აირჩიე ფოტო გალერეიდან",
+  "photoBeverageAnalyzing": "ფოტოს ანალიზი…",
+  "photoBeverageSugar": "შაქარი",
+  "photoBeverageMl": "{value} მლ",
+  "photoBeverageUnsure": "ამოცნობაში დარწმუნებული არ ვარ — შეამოწმე და დაადასტურე მონაცემები.",
+  "photoBeverageDescriptionMissing": "— აღწერა არ არის",
+  "photoBeverageNameLabel": "სასმელის სახელი",
+  "photoBeverageNameRequired": "შეიყვანე სახელი",
+  "photoBeverageVolumeLabel": "მოცულობა, მლ",
+  "photoBeverageVolumeRequired": "შეიყვანე მოცულობა",
+  "photoBeverageCaloriesLabel": "კალორიები, კკალ",
+  "photoBeverageMoreDetails": "მეტი დეტალი (ცილები, ცხიმები, ნახშირწყლები, შაქარი)",
+  "photoBeverageProteinLabel": "ცილები, გ",
+  "photoBeverageCarbsLabel": "ნახშირწყლები, გ",
+  "photoBeverageFatLabel": "ცხიმები, გ",
+  "photoBeverageSugarLabel": "შაქარი, გ",
+  "photoBeverageNonNegative": "არ შეიძლება უარყოფითი იყოს",
+  "photoBeveragePositiveRequired": "მოცულობა უნდა იყოს 0-ზე მეტი",
+  "photoBeverageConfirm": "დადასტურება და შენახვა",
+  "photoBeverageSaved": "სასმელი შენახულია",
+  "photoBeverageSaveError": "სასმელის შენახვა ვერ მოხერხდა. თავიდან სცადე.",
+  "photoBeverageMismatchWarning": "ფოტოს მიხედვით ეს „{name}“ არ ჰგავს.",
+  "photoBeverageMismatchLooksLike": "უფრო ჰგავს: {suggestion}.",
+  "photoBeverageMismatchFix": "შესწორება",
+  "photoBeverageMismatchProceed": "მაინც შენახვა",
+  "photoBeverageVerifyFailed": "ფოტოს შესაბამისობა ვერ შემოწმდა — შენახულია გადამოწმების გარეშე.",
+  "editFoodTitle": "აღწერის დაზუსტება",
+  "editFoodHint": "მაგალითად: სინამდვილეში ეს ყავისფერი ბრინჯია, არა თეთრი, და ზეთი ნაკლები იყო",
+  "editFoodRequired": "შეიყვანე აღწერა — ის AI-ს გადაეგზავნება ხელმეოდან.",
+  "editFoodHelpText": "აღწერე, რა არის ნამდვილევლ კერძეში — ეს AI-ს დაეხმარება უფრო ზუსტად გადათვალოს კალორიები და მაკროელემენტები. ფოტო არ გამოიყენება.",
+  "editFoodRecalculate": "ხელახლა გამოთვლა",
+  "editFoodAnalyzing": "აღწერის ანალიზი…",
+  "editFoodConfidenceHigh": "მაღალი სიზუსტე",
+  "editFoodConfidenceMedium": "საშუალო სიზუსტე",
+  "editFoodConfidenceLow": "დაბალი სიზუსტე",
+  "editFoodNoDescription": "— აღწერა არ არის",
+  "editFoodRecalcBadge": "გადათვალა",
+  "trackerFoodProtein": "ცილები",
+  "trackerFoodCarbs": "ნახშირწყლები",
+  "trackerFoodFat": "ცხიმები",
+  "weightHistoryTitle": "წონის ისტორია",
+  "weightHistoryAddTitle": "წონის ჩანაწერის დამატება",
+  "weightHistoryWeight": "წონა, კგ",
+  "weightHistoryWeightHint": "მაგ. 70.5",
+  "weightHistoryWeightRequired": "შეიყვანე წონა",
+  "weightHistoryWeightMustBePositive": "წონა უნდა იყოს 0-ზე მეტი",
+  "weightHistoryNote": "შენიშვნა (არასავალდებელია)",
+  "weightHistoryNoteHint": "მაგ. საღამოს გაზომება",
+  "weightHistorySave": "შენახვა",
+  "weightHistoryErrorSave": "ვერ შენახდა.",
+  "weightHistoryDeleteTitle": "ჩანაწერის წაშლა?",
+  "weightHistoryDeleteBody": "ეს წონის ჩანაწერი სამუდამტანოდ წაიშლება.",
+  "weightHistoryEmpty": "წონის ჩანაწერები ჯერ არ არის",
+  "chatTitle": "ჩატი",
+  "chatClearHistoryTitle": "წაშალოთ ჩატის მთელი ისტორია?",
+  "chatClearHistoryBody": "ეს მოქმედება შეუქცევადია.",
+  "chatClearHistoryConfirm": "წაშლა",
+  "chatMenuTooltip": "მენიუ",
+  "chatMenuClearHistory": "ისტორიის გასუფთავება",
+  "chatEmptyState": "მკითხე კვებაზე, კალორიების მიზნებზე ან პროდუქტტლზე!",
+  "chatInputHint": "კვების შესახებ მკითხე…",
+  "chatSendTooltip": "გაგზავნა",
+  "chatError": "რაღაც შეცდომით წარიდგა. თავიდან სცადე.",
+  "emailVerifyBannerMessage": "დაადასტურე ელ.ფოსტა, რომ ანგარიშზე წვდომა არ დაკარგო.",
+  "emailVerifyBannerAction": "დადასტურება",
+  "emailVerifyBannerDismissTooltip": "დამალვა",
+  "apiEnvCardTitle": "API გარემო (მხოლოდ დევ)",
+  "apiEnvCardCurrentUrl": "მიმდინარე URL",
+  "apiEnvCardBaseUrlApplied": "საბაზისო URL: {url}",
+  "apiEnvCardBaseUrlAppliedBody": "ახალი მოთხოვნები ამით იმუშავებს. ჩამოტრიელი-განახლებით ან სხვა განყოფილებაში გადასვლით განაახლე უკვე ჩატისტული ეკრანები.",
+  "apiEnvCardPresets": "სწრაფი პრესეტები",
+  "apiEnvCardPresetIos": "iOS სიმულატორი (localhost)",
+  "apiEnvCardPresetAndroid": "Android ემულიატორი",
+  "apiEnvCardCustomUrl": "საკუთარი URL (მაგ. ლოკალურ ქსელში მოწყობილი მოწყობილობისთვის)",
+  "apiEnvCardBaseUrlField": "საბაზისო URL",
+  "apiEnvCardBaseUrlRequired": "შეიყვანე URL",
+  "apiEnvCardBaseUrlInvalid": "URL უნდა იწყებოდეს http:// ან https://-ით",
+  "apiEnvCardApply": "გამოყენება",
+  "apiEnvCardReset": "ნაგულისზე დაბრუნება",
+  "tagInputDefaultHint": "შეიყვანე და დააჭერი Enter…",
+  "userFacingErrorServerEmpty": "სერვერმა ცარიელი პასუხი დააბრუნა.",
+  "userFacingErrorFoodPhotoRecognize": "კერძელობის ფოტოზე ამოცნობა ვერ მოხერხდა. სცადე უფრო ნათელი ფოტო.",
+  "userFacingErrorFoodReanalyze": "აღწერის ანალიზი ვერ მოხერხდა. სცადე სხვანაირად ჩამოტანა.",
+  "userFacingErrorBeverageRecognize": "სასმელის ამოცნობა ვერ მოხერხდა. სცადე სხვა ფოტო.",
+  "userFacingErrorPhotoProcess": "ფოტოს დამუშავება ვერ მოხერხდა. თავიდან სცადე.",
+  "userFacingErrorDescriptionProcess": "აღწერის დამუშავება ვერ მოხერხდა. თავიდან სცადე.",
+  "userFacingErrorUploadPhoto": "ფოტოს ატვირთვა ვერ მოხერხდა. შეამოწმე ფაილის ზომა (მაქს. 5 მბ).",
+  "userFacingErrorPhotoUrl": "სერვერმა ფოტოს URL არ დააბრუნა.",
+  "onboardingRequiredField": "შეავსე «{label}»",
+  "@onboardingRequiredField": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "@onboardingPaceLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@onboardingPaceChipLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@profileBmiLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "@profilePace": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@profilePaceChip": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "homeLoading": "იტვირთება…",
+  "homeGreeting": "გამარჯობა, {name}!",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeTrackerPreview": "აქ იქნება კვების თრეკერი.",
+  "homeLogout": "სისტემიდან გასვლა",
+  "@apiEnvCardBaseUrlApplied": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerDeleteRecordBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerFoodSubtitle": {
+    "placeholders": {
+      "calories": {
+        "type": "String"
+      },
+      "protein": {
+        "type": "String"
+      },
+      "carbs": {
+        "type": "String"
+      },
+      "fat": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerCaloriesKcalOf": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerWaterPctOfGoal": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerWaterRemaining": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@trackerWeightCardCurrent": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@photoFoodAllergyWarningBullet": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "photoBeverageCameraError": "კამერის გახსნა ვერ მოხერხდა. სცადე გალერეიდან არჩევა.",
+  "photoBeverageGalleryError": "გალერეის გახსნა ვერ მოხერხდა.",
+  "photoBeverageTakePhoto": "ფოტოს გადაღება",
+  "photoBeveragePickGallery": "არჩევა გალერეიდან",
+  "@photoBeverageMl": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@photoBeverageMismatchWarning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@photoBeverageMismatchLooksLike": {
+    "placeholders": {
+      "suggestion": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerWaterProgress": "{current} / {goal}",
+  "photoFoodConfidenceHigh": "მაღალი სიზუსტე",
+  "photoFoodConfidenceMedium": "საშუალო სიზუსტე",
+  "photoFoodConfidenceLow": "დაბალი სიზუსტე",
+  "photoBeverageConfidenceHigh": "მაღალი სიზუსტე",
+  "photoBeverageConfidenceMedium": "საშუალო სიზუსტე",
+  "photoBeverageConfidenceLow": "დაბალი სიზუსტე",
+  "macroProteinShort": "ც",
+  "macroCarbsShort": "ნ",
+  "macroFatShort": "ც",
+  "macroSugarShort": "შ",
+  "unitGramsShort": "გ",
+  "unitKcalShort": "კკალ",
+  "weightHistoryLatestMissing": "მონაცემები არ არის",
+  "weightHistoryTarget": "მიზანი: {value} კგ",
+  "@weightHistoryTarget": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "weightHistoryRemaining": "დარჩა: {value} კგ",
+  "@weightHistoryRemaining": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "weightHistoryChartGoalLabel": "მიზანი",
+  "weightHistoryMustBePositive": "0-ზე მეტი უნდა იყოს",
+  "weightHistoryTooLarge": "ძალიან დიდი მნიშვნელობა"
+}

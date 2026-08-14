@@ -3,10 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
+
 import '../models/food_log_model.dart';
 import '../models/food_recognition_result.dart';
 import '../providers/food_recognition_provider.dart';
 import '../providers/tracker_provider.dart';
+
+import '../../../widgets/glass/glass_card.dart';
+import '../../../widgets/glass/glass_scale_pulse_badge.dart';
 
 /// Screen for correcting an already-logged AI food entry by editing
 /// its free-text description and asking Gemini to re-estimate the
@@ -19,7 +24,7 @@ import '../providers/tracker_provider.dart';
 /// exclusive states — edit form / analyzing / result / error — based
 /// on the provider's observable state.
 ///
-/// Tapping "Готово" pops with `true` so the caller can react (e.g.
+/// Tapping "Done" pops with `true` so the caller can react (e.g.
 /// show a confirmation toast), but the [TrackerProvider] has *already*
 /// been updated in-place by [FoodRecognitionProvider] via
 /// `updateLocalFoodEntry`, so no refetch is required.
@@ -57,7 +62,7 @@ class EditFoodDescriptionScreen extends StatefulWidget {
 
 class _EditFoodDescriptionScreenState
     extends State<EditFoodDescriptionScreen> {
-  /// Drives the whole form so the "Пересчитать" button can call
+  /// Drives the whole form so the "Recalculate" button can call
   /// `currentState!.validate()` without re-walking the tree.
   final _formKey = GlobalKey<FormState>();
 
@@ -166,9 +171,12 @@ class _EditFoodDescriptionScreenState
       body = _ResultView(result: recognition.lastResult!, onDone: _done);
     } else if (recognition.isAnalyzing) {
       body = const _AnalyzingView();
-    } else if (recognition.errorMessage != null && !recognition.isAnalyzing) {
+    } else if (!recognition.isAnalyzing &&
+        (recognition.errorMessage != null ||
+            recognition.errorMessageKey != null)) {
       body = _ErrorView(
-        message: recognition.errorMessage!,
+        message:
+            FoodRecognitionProvider.localizeError(context, recognition),
         onRetry: _retry,
       );
     } else {
@@ -183,7 +191,7 @@ class _EditFoodDescriptionScreenState
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Уточнить описание'),
+        title: Text(AppLocalizations.of(context).editFoodTitle),
         backgroundColor: theme.colorScheme.surface,
       ),
       body: SafeArea(child: body),
@@ -196,7 +204,7 @@ class _EditFoodDescriptionScreenState
 // =============================================================================
 
 /// Initial state: a contextual "we're editing X" line + multi-line
-/// description editor + "Пересчитать" submit button.
+/// description editor + "Recalculate" submit button.
 class _EditForm extends StatelessWidget {
   const _EditForm({
     required this.formKey,
@@ -235,15 +243,13 @@ class _EditForm extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Уточняем',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                    GlassScalePulseBadge(
+                      label: AppLocalizations.of(context).editFoodRecalcBadge,
+                      color: theme.colorScheme.primary,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      foodName.isEmpty ? 'Без названия' : foodName,
+                      foodName.isEmpty ? 'No name' : foodName,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -256,7 +262,7 @@ class _EditForm extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
-                'Описание',
+                AppLocalizations.of(context).editFoodHint.split('—').first.trim() + ':',
                 style: theme.textTheme.labelLarge?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -269,16 +275,16 @@ class _EditForm extends StatelessWidget {
               maxLines: 10,
               keyboardType: TextInputType.multiline,
               textInputAction: TextInputAction.newline,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 border: OutlineInputBorder(),
                 hintText:
-                    'Например: это бурый рис, а не белый, и масла было меньше',
+                    AppLocalizations.of(context).editFoodHint,
                 isDense: false,
               ),
               validator: (v) {
                 final raw = (v ?? '').trim();
                 if (raw.isEmpty) {
-                  return 'Введи описание — его отправим в ИИ для пересчёта.';
+                  return 'Please enter a description — it will be sent to the AI for re-estimation.';
                 }
                 return null;
               },
@@ -287,9 +293,7 @@ class _EditForm extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
-                'Опиши, что на самом деле в блюде — это поможет '
-                'точнее пересчитать калории и макросы. Изображение '
-                'не используется.',
+                AppLocalizations.of(context).editFoodHelpText,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -299,7 +303,7 @@ class _EditForm extends StatelessWidget {
             FilledButton.icon(
               onPressed: onSubmit,
               icon: const Icon(Icons.refresh),
-              label: const Text('Пересчитать'),
+              label: Text(AppLocalizations.of(context).editFoodRecalculate),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
               ),
@@ -327,7 +331,7 @@ class _AnalyzingView extends StatelessWidget {
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
           Text(
-            'Анализируем описание...',
+            AppLocalizations.of(context).editFoodAnalyzing,
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
@@ -356,11 +360,19 @@ class _ResultView extends StatelessWidget {
   // Confidence → (label, color) — used for the badge. Same map as
   // `photo_food_screen.dart`'s identical widget; kept inline so
   // this file doesn't depend on anything photo-screen-internal.
-  static const Map<String, ({String label, Color color})> _confidenceStyle = {
-    'high': (label: 'Высокая точность', color: Color(0xFF22C55E)), // green
-    'medium': (label: 'Средняя точность', color: Color(0xFFEAB308)), // amber
-    'low': (label: 'Низкая точность', color: Color(0xFFEF4444)), // red
-  };
+    // Build the confidence style map at access time so the labels
+  // can be pulled from `AppLocalizations.of(context)`. The map is
+  // a (non-const) instance getter rather than a `static const`
+  // because the labels are runtime values supplied by the active
+  // locale and change whenever the user switches language.
+  Map<String, ({String label, Color color})> _confidenceStyle(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return {
+      'high': (label: l10n.editFoodConfidenceHigh, color: const Color(0xFF22C55E)),
+      'medium': (label: l10n.editFoodConfidenceMedium, color: const Color(0xFFEAB308)),
+      'low': (label: l10n.editFoodConfidenceLow, color: const Color(0xFFEF4444)),
+    };
+  }
 
   String _fmt(double v) =>
       v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
@@ -392,8 +404,9 @@ class _ResultView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final confidence = _confidenceStyle[result.confidence] ??
-        _confidenceStyle['medium']!;
+    final confidenceStyle = _confidenceStyle(context);
+    final confidence = confidenceStyle[result.confidence] ??
+        confidenceStyle['medium']!;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -424,7 +437,7 @@ class _ResultView extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '⚠️ Возможен конфликт с аллергией',
+                            AppLocalizations.of(context).photoFoodAllergyWarningTitle,
                             style: theme.textTheme.titleSmall?.copyWith(
                               color: const Color(0xFFB45309),
                               fontWeight: FontWeight.w700,
@@ -459,38 +472,40 @@ class _ResultView extends StatelessWidget {
             ),
           if (result.hasAllergyWarning) const SizedBox(height: 16),
 
-          // Main result card.
-          Card(
-            elevation: 0,
-            color: theme.colorScheme.surfaceContainerHighest,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          result.foodName.isEmpty
-                              ? 'Без названия'
-                              : result.foodName,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+          // Main result card — wrapped in a [GlassCard] so the
+          // reanalysis result blends with the rest of the Liquid
+          // Glass language. The border colour follows confidence:
+          // a bright accent for high confidence (a "trust" cue),
+          // neutral for low confidence.
+          GlassCard(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+            borderRadius: BorderRadius.circular(20),
+            borderColorOverride: result.confidence == 'high'
+                ? theme.colorScheme.primary
+                : null,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        result.foodName.isEmpty
+                            ? AppLocalizations.of(context).photoFoodNoName
+                            : result.foodName,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      _ConfidenceChip(
-                        label: confidence.label,
-                        color: confidence.color,
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    _ConfidenceChip(
+                      label: confidence.label,
+                      color: confidence.color,
+                    ),
+                  ],
+                ),
                   if (result.description.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -503,24 +518,30 @@ class _ResultView extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Compact macro row — mirrors `_MacroRow` visually
-                  // so the two screens feel of a piece.
-                  Row(
-                    children: [
-                      _macroChip(context, 'ккал',
-                          result.calories.round().toString()),
-                      _macroChip(context, 'Б',
-                          '${_fmt(result.protein)} г'),
-                      _macroChip(context, 'У',
-                          '${_fmt(result.carbs)} г'),
-                      _macroChip(context, 'Ж',
-                          '${_fmt(result.fat)} г'),
-                    ],
-                  ),
+                  // so the two screens feel of a piece. The short
+                  // labels and unit suffixes come from
+                  // `AppLocalizations.of(context)` so they switch
+                  // with the active locale.
+                  Builder(builder: (ctx) {
+                    final l10n = AppLocalizations.of(ctx);
+                    return Row(
+                      children: [
+                        _macroChip(ctx, l10n.unitKcalShort,
+                            result.calories.round().toString()),
+                        _macroChip(ctx, l10n.macroProteinShort,
+                            '${_fmt(result.protein)} ${l10n.unitGramsShort}'),
+                        _macroChip(ctx, l10n.macroCarbsShort,
+                            '${_fmt(result.carbs)} ${l10n.unitGramsShort}'),
+                        _macroChip(ctx, l10n.macroFatShort,
+                            '${_fmt(result.fat)} ${l10n.unitGramsShort}'),
+                      ],
+                    );
+                  }),
 
                   if (result.ingredients.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text(
-                      'Что распознано',
+                      AppLocalizations.of(context).photoFoodIngredientsTitle,
                       style: theme.textTheme.labelLarge?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -552,14 +573,13 @@ class _ResultView extends StatelessWidget {
                 ],
               ),
             ),
-          ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: onDone,
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
             ),
-            child: const Text('Готово'),
+            child: Text(AppLocalizations.of(context).commonDone),
           ),
         ],
       ),
@@ -629,7 +649,7 @@ class _ErrorView extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Попробовать снова'),
+              label: Text(AppLocalizations.of(context).commonTryAgain),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
               ),

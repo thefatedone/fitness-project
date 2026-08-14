@@ -31,6 +31,19 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Localisations: provides GlobalMaterialLocalizations and
+  # GlobalWidgetsLocalizations, which Flutter's MaterialApp reads
+  # via `localizationsDelegates` to translate its built-in widgets
+  # (DatePicker button labels, AlertDialog action text, scrollbar
+  # tooltips, etc.) into the locale selected via
+  # `LocaleProvider`. Without this package, setting
+  # `MaterialApp.locale: Locale('ka')` has no visible effect —
+  # built-in widgets fall back to English. The package is
+  # `sdk: flutter` so the version tracks the Flutter SDK
+  # automatically; no separate version constraint needed.
+  flutter_localizations:
+    sdk: flutter
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -65,6 +78,17 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Localisation via `flutter: gen-l10n` (Flutter's built-in ARB
+  # code generator). The `gen-l10n` tool reads ARB files from
+  # `lib/l10n/` (per `l10n.yaml` at the project root) and generates
+  # a strongly-typed `AppLocalizations` class at
+  # `lib/l10n/app_localizations.dart`. The generated class is the
+  # single source of truth for all user-facing strings in the app —
+  # the existing `LocaleProvider` (driven from the Settings
+  # language switcher) is wired to `MaterialApp.locale` so the
+  # generated delegates translate at runtime.
+  generate: true
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
+import '../../../widgets/glass/glass_button.dart';
+import '../../../widgets/glass/glass_card.dart';
+
 import '../providers/password_reset_provider.dart';
 import 'reset_password_screen.dart';
 
@@ -50,13 +54,14 @@ class _EnterResetCodeScreenState extends State<EnterResetCodeScreen> {
         MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
       );
     } else {
-      // Generic bad-code copy ("Неверный или истёкший код.") comes
-      // straight from the backend via `ApiException.message`.
+      // Generic bad-code copy comes straight from the backend via
+      // `ApiException.message`.
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(reset.errorMessage ?? 'Что-то пошло не так.'),
+            content: Text(reset.errorMessage ?? l10n.commonErrorShort),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -78,9 +83,10 @@ class _EnterResetCodeScreenState extends State<EnterResetCodeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final reset = context.watch<PasswordResetProvider>();
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Введи код')),
+      appBar: AppBar(title: Text(l10n.authCodeTitle)),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -90,90 +96,97 @@ class _EnterResetCodeScreenState extends State<EnterResetCodeScreen> {
             ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Мы отправили код на ${reset.email}',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    TextFormField(
-                      controller: _codeCtrl,
-                      keyboardType: TextInputType.number,
-                      // No leading-zero ambiguity, no autocorrect, no
-                      // spaces in the middle — the user is typing six
-                      // discrete digits. Limiting to 6 chars via
-                      // `maxLength` also keeps the UI from showing
-                      // partial 7+ digit overflows.
-                      maxLength: 6,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      textAlign: TextAlign.center,
-                      textInputAction: TextInputAction.done,
-                      // Numeric-only input. `FilteringTextInputFormatter`
-                      // strips anything that isn't a digit at the
-                      // keystroke level — way more user-friendly than
-                      // catching non-digits in the validator.
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      onFieldSubmitted: (_) => _onSubmit(),
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 8,
-                        // Monospaced so the 8px letter-spacing actually
-                        // produces evenly-spaced digits (proportional
-                        // digits would visually crowd together).
-                        fontFamily: 'monospace',
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'Код',
-                        counterText: '', // hide the 0/6 counter
-                        border: const OutlineInputBorder(),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
+              child: GlassCard(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                borderRadius: BorderRadius.circular(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.authCodeInstructions(reset.email),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      validator: (v) {
-                        final code = (v ?? '').trim();
-                        if (code.length != 6) {
-                          return 'Код состоит из 6 цифр';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: reset.isLoading ? null : _onSubmit,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        controller: _codeCtrl,
+                        keyboardType: TextInputType.number,
+                        // No leading-zero ambiguity, no autocorrect, no
+                        // spaces in the middle — the user is typing six
+                        // discrete digits. Limiting to 6 chars via
+                        // `maxLength` also keeps the UI from showing
+                        // partial 7+ digit overflows.
+                        maxLength: 6,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        textAlign: TextAlign.center,
+                        textInputAction: TextInputAction.done,
+                        // Numeric-only input. `FilteringTextInputFormatter`
+                        // strips anything that isn't a digit at the
+                        // keystroke level — way more user-friendly than
+                        // catching non-digits in the validator.
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        onFieldSubmitted: (_) => _onSubmit(),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 8,
+                          // Monospaced so the 8px letter-spacing actually
+                          // produces evenly-spaced digits (proportional
+                          // digits would visually crowd together).
+                          fontFamily: 'monospace',
+                        ),
+                        decoration: InputDecoration(
+                          labelText: l10n.authCodeField,
+                          counterText: '', // hide the 0/6 counter
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                        ),
+                        validator: (v) {
+                          final code = (v ?? '').trim();
+                          if (code.length != 6) {
+                            return l10n.authCodeRequired;
+                          }
+                          return null;
+                        },
                       ),
-                      child: reset.isLoading
-                          ? const SizedBox(
+                      const SizedBox(height: 24),
+                      GlassButton(
+                        label: reset.isLoading ? '' : l10n.authCodeConfirm,
+                        onPressed: reset.isLoading ? null : _onSubmit,
+                        expand: true,
+                        variant: GlassButtonVariant.primary,
+                      ),
+                      if (reset.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Center(
+                            child: SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.2,
-                                color: Colors.white,
                               ),
-                            )
-                          : const Text('Подтвердить'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: reset.isLoading ? null : _onResend,
-                      child: const Text('Отправить код повторно'),
-                    ),
-                  ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: reset.isLoading ? null : _onResend,
+                        child: Text(l10n.authCodeResend),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

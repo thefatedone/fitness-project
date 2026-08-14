@@ -1,0 +1,587 @@
+{
+  "@@locale": "en",
+  "@@author": "NutriMind",
+  "appName": "NutriMind",
+  "commonCancel": "Cancel",
+  "commonSave": "Save",
+  "commonDelete": "Delete",
+  "commonDone": "Done",
+  "commonYesDelete": "Yes, delete",
+  "commonTryAgain": "Try again",
+  "commonConfirm": "Confirm",
+  "commonClose": "Close",
+  "commonError": "Something went wrong. Please check your connection and try again.",
+  "commonErrorShort": "Something went wrong. Try again.",
+  "commonErrorWithRetry": "Something went wrong. Try again.",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "themeDescriptionLight": "Always use the light theme.",
+  "themeDescriptionDark": "Always use the dark theme.",
+  "themeDescriptionSystem": "Theme follows your system setting.",
+  "languageEnglish": "English",
+  "languageGeorgian": "ქართული",
+  "languageRussian": "Русский",
+  "languageSectionLabel": "Language",
+  "languageFieldTheme": "Theme",
+  "authLoginTitle": "NutriMind",
+  "authLoginSubtitle": "Welcome back",
+  "authEmailLabel": "Email",
+  "authEmailRequired": "Please enter your email",
+  "authEmailInvalid": "That doesn't look like a valid email",
+  "authPasswordLabel": "Password",
+  "authPasswordRequired": "Please enter your password",
+  "authPasswordHelper": "Min. 8 characters, one uppercase letter, one digit",
+  "authLoginButton": "Log in",
+  "authForgotPassword": "Forgot password?",
+  "authNoAccountRegister": "Don't have an account? Sign up",
+  "authServerDebugLink": "Server settings (debug)",
+  "authSessionExpired": "Your session expired, please log in again.",
+  "authRegisterTitle": "Sign up",
+  "authRegisterName": "Full name",
+  "authRegisterNameRequired": "Please enter your name",
+  "authRegisterPassword": "Password",
+  "authRegisterCreate": "Create account",
+  "authForgotTitle": "Reset password",
+  "authForgotInstructions": "Enter the email associated with your account — we'll send a code to reset your password.",
+  "authForgotSendCode": "Send code",
+  "authCodeTitle": "Enter code",
+  "authCodeInstructions": "We sent a code to {email}",
+  "@authCodeInstructions": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authCodeField": "Code",
+  "authCodeRequired": "Code must be 6 digits",
+  "authCodeConfirm": "Confirm",
+  "authCodeResend": "Resend code",
+  "authResetTitle": "New password",
+  "authResetInstructions": "Enter a new password for {email}",
+  "@authResetInstructions": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authResetNewPassword": "New password",
+  "authResetConfirmPassword": "Confirm password",
+  "authResetConfirmRequired": "Please confirm your password",
+  "authResetMismatch": "Passwords don't match",
+  "authResetSave": "Save new password",
+  "authResetSuccess": "Password changed. You can now log in.",
+  "authEmailVerifyTitle": "Verify your email",
+  "authEmailVerifyInstructions": "We'll send a verification code to {email}",
+  "@authEmailVerifyInstructions": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authEmailVerifyEnterCode": "Enter the code from the email",
+  "authEmailVerifySendCode": "Send code",
+  "authEmailVerifyResend": "Resend code",
+  "authPasswordMinLength": "Password must be at least 8 characters",
+  "authPasswordNeedUpper": "First letter of the password must be uppercase",
+  "authPasswordNeedDigit": "Password must contain at least one digit",
+  "authServerUnreachable": "Server is not responding. Please check your connection and try again.",
+  "authNoConnection": "Cannot reach the server. Check your internet connection.",
+  "authSecureConnectionFailed": "Could not establish a secure connection to the server.",
+  "authRequestCancelled": "Request was cancelled.",
+  "authEmptyResponse": "Server returned an empty response.",
+  "authNoAuthToken": "Server did not issue an authentication token.",
+  "authConfirmationMissing": "Server did not return confirmation.",
+  "onboardingStep1Title": "Step 1 of 4 — Account",
+  "onboardingStep1Subtitle": "First, let's collect your name, email and password. The remaining steps come later.",
+  "onboardingStep2Title": "Step 2 of 4 — Personal details",
+  "onboardingStep2Subtitle": "Date of birth and gender.",
+  "onboardingStep3Title": "Step 3 of 4 — Body and goal",
+  "onboardingStep3Subtitle": "Height, weight, target weight, activity level and goal.",
+  "onboardingStep4Title": "Step 4 of 4 — Nutrition and allergies",
+  "onboardingStep4Subtitle": "Almost done! These fields are optional — you can fill them out later in the Profile section.",
+  "onboardingBirthday": "Date of birth",
+  "onboardingBirthdayRequired": "Please enter your date of birth",
+  "onboardingBirthdayNotSet": "Not set",
+  "onboardingGender": "Gender",
+  "onboardingGenderMale": "Male",
+  "onboardingGenderFemale": "Female",
+  "onboardingGenderOther": "Prefer not to say",
+  "onboardingGenderRequired": "Please pick an option",
+  "onboardingDietaryPreferences": "Dietary preferences (optional)",
+  "onboardingDietaryHint": "For example, vegetarian, keto…",
+  "onboardingAllergies": "Allergies and intolerances (optional)",
+  "onboardingAllergiesHint": "For example, nuts, milk…",
+  "onboardingHeight": "Height, cm",
+  "onboardingHeightHint": "e.g. 175",
+  "onboardingCurrentWeight": "Current weight, kg",
+  "onboardingCurrentWeightHint": "e.g. 70.5",
+  "onboardingTargetWeight": "Target weight, kg",
+  "onboardingTargetWeightHint": "e.g. 65",
+  "onboardingActivityLevel": "Activity level",
+  "onboardingActivityLevelRequired": "Please pick an activity level",
+  "onboardingPrimaryGoal": "Primary goal",
+  "onboardingPrimaryGoalRequired": "Please pick a primary goal",
+  "onboardingPaceLabel": "Pace: {value} kg/week",
+  "@onboardingPaceLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingPaceChipLabel": "{value} kg/wk",
+  "@onboardingPaceChipLabel": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingRequired": "Required",
+  "onboardingEnterNumber": "Please enter a number",
+  "onboardingMustBePositive": "Must be greater than 0",
+  "onboardingBack": "Back",
+  "onboardingNext": "Next",
+  "onboardingFinish": "Finish registration",
+  "onboardingGenericError": "Could not complete registration.",
+  "onboardingPartialSaveWarning": "Profile was created, but some details didn't save — fill them in later in the Profile section.",
+  "settingsTitle": "Settings",
+  "settingsSectionAppearance": "APPEARANCE",
+  "settingsSectionTheme": "Theme",
+  "settingsSectionAccount": "ACCOUNT",
+  "settingsSectionAbout": "ABOUT",
+  "settingsSectionApiEnvironmentDebug": "API ENVIRONMENT (DEV ONLY)",
+  "settingsChangePassword": "Change password",
+  "settingsDeleteAccount": "Delete account",
+  "settingsVersion": "Version",
+  "settingsLogout": "Log out",
+  "profileTitle": "Profile",
+  "profileSave": "Save changes",
+  "profileUpdated": "Profile updated",
+  "profileUpdateError": "Could not save.",
+  "profileSavePhotoTitle": "Where from?",
+  "profilePhotoCamera": "Take a photo",
+  "profilePhotoGallery": "Pick from gallery",
+  "profilePhotoCropTitle": "Crop photo",
+  "profilePhotoCropError": "Could not crop photo. Try again.",
+  "profilePhotoReadError": "Could not read cropped photo.",
+  "profilePhotoTooLarge": "Photo is too large, try a different one",
+  "profilePhotoUpdated": "Photo updated",
+  "profileCameraError": "Could not open camera. Try picking from gallery instead.",
+  "profileGalleryError": "Could not open gallery.",
+  "profileSectionBasic": "Basic",
+  "profileSectionBody": "Body measurements",
+  "profileSectionGoalActivity": "Goal and activity",
+  "profileFieldName": "Name",
+  "profileFieldBirthday": "Date of birth",
+  "profileFieldGender": "Gender",
+  "profileMetricHeight": "Height, cm",
+  "profileMetricHeightHint": "e.g. 175",
+  "profileMetricCurrentWeight": "Current weight, kg",
+  "profileMetricCurrentWeightHint": "e.g. 70.5",
+  "profileMetricTargetWeight": "Target weight, kg",
+  "profileMetricTargetWeightHint": "e.g. 65",
+  "profileBmiLabel": "BMI: {label}",
+  "@profileBmiLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "profileViewWeightHistory": "View weight history",
+  "profilePrimaryGoal": "Primary goal",
+  "profileActivityLevel": "Activity level",
+  "profilePace": "Weight-loss pace: {value} kg/week",
+  "@profilePace": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePaceChip": "{value} kg/wk",
+  "@profilePaceChip": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "profileDietaryPreferences": "Dietary preferences",
+  "profileDietaryHint": "e.g. vegetarian…",
+  "profileAllergies": "Allergies and intolerances",
+  "profileAllergiesAiHint": "Used by AI photo recognition to flag conflicts.",
+  "profileAllergiesHint": "e.g. nuts…",
+  "profileBmiUnderweight": "Underweight",
+  "profileBmiNormal": "Normal",
+  "profileBmiOverweight": "Overweight",
+  "profileBmiObese": "Obese",
+  "dietVegetarian": "Vegetarian",
+  "dietVegan": "Vegan",
+  "dietKeto": "Keto",
+  "dietPaleo": "Paleo",
+  "dietLowCarb": "Low-carb",
+  "dietLowFat": "Low-fat",
+  "dietMediterranean": "Mediterranean",
+  "dietHalal": "Halal",
+  "dietKosher": "Kosher",
+  "allergyNuts": "Nuts",
+  "allergyShellfish": "Shellfish",
+  "allergyEggs": "Eggs",
+  "allergySoy": "Soy",
+  "allergyWheat": "Wheat",
+  "allergyFish": "Fish",
+  "allergyMilk": "Milk",
+  "activitySedentary": "Sedentary",
+  "activityLightlyActive": "Lightly active",
+  "activityModeratelyActive": "Moderately active",
+  "activityVeryActive": "Very active",
+  "activityExtraActive": "Extra active",
+  "goalLoseWeight": "Lose weight",
+  "goalMaintain": "Maintain weight",
+  "goalGainMuscle": "Gain muscle",
+  "goalEatHealthier": "Eat healthier",
+  "deleteAccountTitle": "Delete account",
+  "deleteAccountWarningTitle": "This action is irreversible",
+  "deleteAccountWarningBody": "These will be permanently deleted: your profile, food log history, weight history, photos, and chat history with the AI assistant. This cannot be undone.",
+  "deleteAccountAcknowledge": "I understand that this action cannot be undone",
+  "deleteAccountAcknowledgeRequired": "Please confirm that you understand the risk",
+  "deleteAccountCurrentPassword": "Current password",
+  "deleteAccountCurrentPasswordRequired": "Please enter your current password",
+  "deleteAccountHelperBeforeAck": "First, confirm that you understand the risk",
+  "deleteAccountHelperAfterAck": "Confirm your password to continue",
+  "deleteAccountConfirmButton": "Delete account permanently",
+  "deleteAccountDialogTitle": "Delete account for real?",
+  "deleteAccountDialogBody": "This is your final warning. All your data will be deleted and cannot be recovered.",
+  "deleteAccountWrongPasswordMatch": "Current password is incorrect",
+  "changePasswordTitle": "Change password",
+  "changePasswordCurrent": "Current password",
+  "changePasswordCurrentRequired": "Please enter your current password",
+  "changePasswordNew": "New password",
+  "changePasswordConfirm": "Confirm new password",
+  "changePasswordConfirmRequired": "Please confirm your password",
+  "changePasswordSave": "Change password",
+  "trackerTitle": "Tracker",
+  "trackerDateToday": "Today",
+  "trackerDateYesterday": "Yesterday",
+  "trackerDeleteRecordTitle": "Delete record?",
+  "trackerDeleteRecordBody": "\"{name}\" will be removed from today's log.",
+  "@trackerDeleteRecordBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerMealPickerTitle": "Which meal does this belong to?",
+  "trackerCameraChoiceTitle": "What are we photographing?",
+  "trackerCameraFood": "Photograph food",
+  "trackerCameraFoodSubtitle": "Identify macros and add an entry to the log",
+  "trackerCameraBeverage": "Photograph beverage",
+  "trackerCameraBeverageSubtitle": "Auto-add water and calories in one step",
+  "trackerEmptyLog": "No entries yet",
+  "trackerFoodSubtitle": "{calories} kcal • P/C/F {protein}/{carbs}/{fat} g",
+  "@trackerFoodSubtitle": {
+    "placeholders": {
+      "calories": {
+        "type": "String"
+      },
+      "protein": {
+        "type": "String"
+      },
+      "carbs": {
+        "type": "String"
+      },
+      "fat": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerCaloriesToday": "Calories today",
+  "trackerCaloriesEaten": "Calories consumed",
+  "trackerCaloriesKcalOf": " / {target} kcal",
+  "@trackerCaloriesKcalOf": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerCaloriesKcalOnly": " kcal",
+  "trackerWaterTitle": "Water",
+  "trackerWaterGoalReached": "Daily goal reached!",
+  "trackerWaterPctOfGoal": "{pct}% of daily goal",
+  "@trackerWaterPctOfGoal": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerWaterRemaining": "{amount} remaining",
+  "@trackerWaterRemaining": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerWaterError": "Could not save.",
+  "trackerWaterAddTitle": "Add water",
+  "trackerWaterAddInstructions": "Enter amount in litres (0.1–10 L)",
+  "trackerWaterLiters": "Litres",
+  "trackerWaterHint": "e.g. 0.5",
+  "trackerWaterRequired": "Please enter the amount",
+  "trackerWaterMin": "Minimum is 0.1 L",
+  "trackerWaterMax": "Maximum is 10 L",
+  "trackerWeightCardTitle": "Weight",
+  "trackerWeightCardCurrent": "Current weight: {value} kg",
+  "@trackerWeightCardCurrent": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerWeightCardAdd": "Add weight",
+  "trackerDockCameraTooltip": "Camera",
+  "trackerDockChatTooltip": "Chat with NutriBot",
+  "trackerDockAddFoodTooltip": "Add food",
+  "trackerDockProfileTooltip": "Profile",
+  "trackerDockSettingsTooltip": "Settings",
+  "trackerDatePrevTooltip": "Previous day",
+  "trackerDateNextTooltip": "Next day",
+  "trackerTooltipDelete": "Delete",
+  "trackerTooltipRefine": "Refine",
+  "trackerMealBreakfast": "Breakfast",
+  "trackerMealLunch": "Lunch",
+  "trackerMealDinner": "Dinner",
+  "trackerMealSnack": "Snack",
+  "trackerMealDrinks": "Drinks",
+  "addFoodTitle": "Add food",
+  "addFoodMealLabel": "Meal",
+  "addFoodMealBreakfast": "Breakfast",
+  "addFoodMealLunch": "Lunch",
+  "addFoodMealDinner": "Dinner",
+  "addFoodMealSnack": "Snack",
+  "addFoodName": "Name",
+  "addFoodQuantity": "Quantity",
+  "addFoodUnit": "Unit",
+  "addFoodUnitG": "g",
+  "addFoodUnitMl": "ml",
+  "addFoodUnitPcs": "pcs",
+  "addFoodCalories": "Calories, kcal",
+  "addFoodProtein": "Protein, g",
+  "addFoodCarbs": "Carbs, g",
+  "addFoodFat": "Fat, g",
+  "addFoodFiber": "Fiber, g (optional)",
+  "addFoodButtonAdd": "Add",
+  "addFoodFieldRequired": "Please fill in \"{label}\"",
+  "@addFoodFieldRequired": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "addFoodEnterNumber": "Please enter a number",
+  "addFoodMustBeNonNegative": "Must be ≥ 0",
+  "addFoodMustBePositive": "Must be > 0",
+  "photoFoodTitle": "Photo of food",
+  "photoFoodCameraError": "Could not open camera. Try picking from gallery instead.",
+  "photoFoodGalleryError": "Could not open gallery.",
+  "photoFoodInstructions": "Take a photo of your food or pick one from the gallery",
+  "photoFoodTakePhoto": "Take photo",
+  "photoFoodPickGallery": "Pick from gallery",
+  "photoFoodAnalyzing": "Analyzing photo…",
+  "photoFoodErrorTitle": "Could not recognize the dish in the photo. Try a clearer photo.",
+  "photoFoodAllergyWarningTitle": "⚠️ Possible allergy conflict",
+  "photoFoodAllergyWarningBullet": "•  {text}",
+  "@photoFoodAllergyWarningBullet": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "photoFoodNoName": "No name",
+  "photoFoodIngredientsTitle": "Ingredients detected",
+  "photoBeverageTitle": "Photo of beverage",
+  "photoBeverageInstructions": "Take a photo of your drink or pick one from the gallery",
+  "photoBeverageAnalyzing": "Analyzing photo…",
+  "photoBeverageSugar": "Sugar",
+  "photoBeverageMl": "{value} ml",
+  "@photoBeverageMl": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "photoBeverageUnsure": "Not sure about the identification — please review and confirm the details.",
+  "photoBeverageDescriptionMissing": "— no description",
+  "photoBeverageNameLabel": "Beverage name",
+  "photoBeverageNameRequired": "Please enter the name",
+  "photoBeverageVolumeLabel": "Volume, ml",
+  "photoBeverageVolumeRequired": "Please enter the volume",
+  "photoBeverageCaloriesLabel": "Calories, kcal",
+  "photoBeverageMoreDetails": "More details (protein, fat, carbs, sugar)",
+  "photoBeverageProteinLabel": "Protein, g",
+  "photoBeverageCarbsLabel": "Carbs, g",
+  "photoBeverageFatLabel": "Fat, g",
+  "photoBeverageSugarLabel": "Sugar, g",
+  "photoBeverageNonNegative": "Must be ≥ 0",
+  "photoBeveragePositiveRequired": "Volume must be greater than 0",
+  "photoBeverageConfirm": "Confirm and save",
+  "photoBeverageSaved": "Beverage saved",
+  "photoBeverageSaveError": "Could not save the beverage. Try again.",
+  "photoBeverageMismatchWarning": "This doesn't look like \"{name}\" in the photo.",
+  "@photoBeverageMismatchWarning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "photoBeverageMismatchLooksLike": "Looks more like: {suggestion}.",
+  "@photoBeverageMismatchLooksLike": {
+    "placeholders": {
+      "suggestion": {
+        "type": "String"
+      }
+    }
+  },
+  "photoBeverageMismatchFix": "Fix",
+  "photoBeverageMismatchProceed": "Save anyway",
+  "photoBeverageVerifyFailed": "Could not verify the photo match — saved without verification.",
+  "editFoodTitle": "Refine description",
+  "editFoodHint": "For example: this is brown rice, not white, and there is less oil",
+  "editFoodRequired": "Please enter a description — it will be sent to the AI for re-estimation.",
+  "editFoodHelpText": "Describe what is really in the dish — this will help the AI recalculate calories and macros more accurately. The image is not used.",
+  "editFoodRecalculate": "Recalculate",
+  "editFoodAnalyzing": "Analyzing description…",
+  "editFoodConfidenceHigh": "High confidence",
+  "editFoodConfidenceMedium": "Medium confidence",
+  "editFoodConfidenceLow": "Low confidence",
+  "editFoodNoDescription": "— no description",
+  "editFoodRecalcBadge": "Recalculated",
+  "trackerFoodProtein": "Protein",
+  "trackerFoodCarbs": "Carbs",
+  "trackerFoodFat": "Fat",
+  "weightHistoryTitle": "Weight history",
+  "weightHistoryAddTitle": "Add weight entry",
+  "weightHistoryWeight": "Weight, kg",
+  "weightHistoryWeightHint": "e.g. 70.5",
+  "weightHistoryWeightRequired": "Please enter a weight",
+  "weightHistoryWeightMustBePositive": "Weight must be greater than 0",
+  "weightHistoryNote": "Note (optional)",
+  "weightHistoryNoteHint": "e.g. morning weigh-in",
+  "weightHistorySave": "Save",
+  "weightHistoryErrorSave": "Could not save.",
+  "weightHistoryDeleteTitle": "Delete entry?",
+  "weightHistoryDeleteBody": "This weight entry will be permanently deleted.",
+  "weightHistoryEmpty": "No weight entries yet",
+  "chatTitle": "Chat",
+  "chatClearHistoryTitle": "Clear all chat history?",
+  "chatClearHistoryBody": "This action cannot be undone.",
+  "chatClearHistoryConfirm": "Clear",
+  "chatMenuTooltip": "Menu",
+  "chatMenuClearHistory": "Clear history",
+  "chatEmptyState": "Ask me about nutrition, calorie goals, or foods!",
+  "chatInputHint": "Ask about nutrition…",
+  "chatSendTooltip": "Send",
+  "chatError": "Something went wrong. Try again.",
+  "emailVerifyBannerMessage": "Verify your email so you don't lose access to your account.",
+  "emailVerifyBannerAction": "Verify",
+  "emailVerifyBannerDismissTooltip": "Dismiss",
+  "apiEnvCardTitle": "API environment (dev only)",
+  "apiEnvCardCurrentUrl": "Current URL",
+  "apiEnvCardBaseUrlApplied": "Base URL: {url}",
+  "@apiEnvCardBaseUrlApplied": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "apiEnvCardBaseUrlAppliedBody": "New requests will use it. Pull-to-refresh or navigate to another section to update already-loaded screens.",
+  "apiEnvCardPresets": "Quick presets",
+  "apiEnvCardPresetIos": "iOS Simulator (localhost)",
+  "apiEnvCardPresetAndroid": "Android Emulator",
+  "apiEnvCardCustomUrl": "Custom URL (e.g. for a device on the local network)",
+  "apiEnvCardBaseUrlField": "Base URL",
+  "apiEnvCardBaseUrlRequired": "Please enter a URL",
+  "apiEnvCardBaseUrlInvalid": "URL must start with http:// or https://",
+  "apiEnvCardApply": "Apply",
+  "apiEnvCardReset": "Reset to default",
+  "tagInputDefaultHint": "Type and press Enter…",
+  "userFacingErrorServerEmpty": "Server returned an empty response.",
+  "userFacingErrorFoodPhotoRecognize": "Could not recognize the dish in the photo. Try a clearer photo.",
+  "userFacingErrorFoodReanalyze": "Could not analyze the description. Try rephrasing.",
+  "userFacingErrorBeverageRecognize": "Could not recognize the beverage. Try a different photo.",
+  "userFacingErrorPhotoProcess": "Could not process the photo. Try again.",
+  "userFacingErrorDescriptionProcess": "Could not process the description. Try again.",
+  "userFacingErrorUploadPhoto": "Could not upload photo. Check file size (max. 5 MB).",
+  "userFacingErrorPhotoUrl": "Server did not return a photo URL.",
+  "onboardingRequiredField": "Please fill in «{label}»",
+  "@onboardingRequiredField": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "homeLoading": "Loading…",
+  "homeGreeting": "Hi, {name}!",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeTrackerPreview": "Here will be the nutrition tracker.",
+  "homeLogout": "Log out",
+  "photoBeverageCameraError": "Could not open camera. Try picking from gallery instead.",
+  "photoBeverageGalleryError": "Could not open gallery.",
+  "photoBeverageTakePhoto": "Take photo",
+  "photoBeveragePickGallery": "Pick from gallery",
+  "trackerWaterProgress": "{current} / {goal}",
+  "photoFoodConfidenceHigh": "High confidence",
+  "photoFoodConfidenceMedium": "Medium confidence",
+  "photoFoodConfidenceLow": "Low confidence",
+  "photoBeverageConfidenceHigh": "High confidence",
+  "photoBeverageConfidenceMedium": "Medium confidence",
+  "photoBeverageConfidenceLow": "Low confidence",
+  "macroProteinShort": "P",
+  "macroCarbsShort": "C",
+  "macroFatShort": "F",
+  "macroSugarShort": "S",
+  "unitGramsShort": "g",
+  "unitKcalShort": "kcal",
+  "weightHistoryLatestMissing": "No data yet",
+  "weightHistoryTarget": "Goal: {value} kg",
+  "@weightHistoryTarget": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "weightHistoryRemaining": "Remaining: {value} kg",
+  "@weightHistoryRemaining": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "weightHistoryChartGoalLabel": "Goal",
+  "weightHistoryMustBePositive": "Must be > 0",
+  "weightHistoryTooLarge": "Value too large"
+}

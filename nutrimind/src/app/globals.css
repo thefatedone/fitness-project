@@ -156,3 +156,206 @@ html[lang="en"] body {
 button, [role="button"], a, select, [onClick], .clickable {
   cursor: pointer;
 }
+
+/* ==========================================================================
+   Landing page design tokens & primitives
+   All theme-dependent styling lives HERE as CSS, driven by [data-theme].
+   Components should never branch on theme in JS — use these classes instead.
+   ========================================================================== */
+
+/* Section backgrounds (alternating rhythm down the page) */
+.ln-section {
+  background-color: var(--background);
+}
+.ln-section-tint {
+  background-color: var(--background);
+}
+[data-theme="light"] .ln-section-tint {
+  background-color: #f0fdf4;
+}
+.ln-section-alt {
+  background-color: var(--background-secondary);
+}
+
+/* Typography */
+.ln-heading {
+  color: var(--foreground);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.ln-subheading {
+  color: var(--foreground-muted);
+}
+.ln-eyebrow {
+  color: var(--color-brand-dark);
+}
+[data-theme="dark"] .ln-eyebrow {
+  color: var(--color-brand-light);
+}
+.ln-text {
+  color: var(--foreground);
+}
+.ln-text-muted {
+  color: var(--foreground-muted);
+}
+.ln-text-subtle {
+  color: var(--foreground-subtle);
+}
+
+/* Generic themed card */
+.ln-card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+}
+[data-theme="light"] .ln-card {
+  background-color: #f9fafb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.ln-card-hover {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+.ln-card-hover:hover {
+  border-color: var(--color-brand-light);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px -5px rgba(34, 197, 94, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+[data-theme="dark"] .ln-card-hover:hover {
+  box-shadow: 0 10px 25px -5px rgba(34, 197, 94, 0.15), 0 0 0 1px rgba(34, 197, 94, 0.2);
+}
+
+/* Solid raised card (used by highlighted pricing tier, stat pills, etc) */
+.ln-card-solid {
+  background-color: var(--background-secondary);
+}
+[data-theme="light"] .ln-card-solid {
+  background-color: #ffffff;
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+[data-theme="dark"] .ln-card-solid {
+  box-shadow: 0 25px 80px -20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(34, 197, 94, 0.05);
+}
+
+/* Hero stat-card date label */
+.ln-date-label {
+  color: #4b5563;
+}
+[data-theme="dark"] .ln-date-label {
+  color: #4ade80;
+}
+
+/* Macro progress bar track */
+.ln-progress-track {
+  background-color: #e5e7eb;
+}
+[data-theme="dark"] .ln-progress-track {
+  background-color: #1f2937;
+}
+
+/* Ambient glow, dark theme only (Hero background accent) */
+.ln-glow {
+  display: none;
+}
+[data-theme="dark"] .ln-glow {
+  display: block;
+}
+
+/* Highlighted / brand-solid card (e.g. "Pro" pricing tier) */
+.ln-card-highlighted {
+  background-color: var(--color-brand);
+  border: 2px solid var(--color-brand-dark);
+  box-shadow: 0 0 60px -10px rgba(34, 197, 94, 0.4);
+}
+[data-theme="dark"] .ln-card-highlighted {
+  border-color: var(--color-brand);
+}
+
+/* Badge / pill (e.g. Hero "AI-Powered" badge) */
+.ln-badge {
+  background-color: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  color: var(--color-brand-light);
+}
+[data-theme="light"] .ln-badge {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  color: var(--color-brand-dark);
+}
+
+/* Buttons */
+.ln-btn-primary {
+  background-color: var(--color-brand);
+  color: #000000;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.ln-btn-primary:hover {
+  background-color: var(--color-brand-dark);
+}
+.ln-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.ln-btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+}
+.ln-btn-secondary:hover {
+  background-color: var(--card);
+  border-color: var(--border-hover);
+}
+.ln-btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.ln-btn-dark {
+  background-color: var(--background-secondary);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+[data-theme="light"] .ln-btn-dark {
+  background-color: #111827;
+  color: #ffffff;
+}
+.ln-btn-dark:hover {
+  background-color: var(--border-hover);
+}
+[data-theme="light"] .ln-btn-dark:hover {
+  background-color: #374151;
+}
+.ln-btn-dark:active {
+  transform: scale(0.98);
+}
+
+.ln-btn-on-brand {
+  background-color: #ffffff;
+  color: var(--color-brand-dark);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.ln-btn-on-brand:hover {
+  background-color: #f0fdf4;
+}
+.ln-btn-on-brand:active {
+  transform: scale(0.98);
+}
+
+/* Nav / footer link */
+.ln-link {
+  color: var(--foreground-muted);
+  transition: color 0.2s ease;
+}
+.ln-link:hover {
+  color: var(--foreground);
+}
+
+/* Divider */
+.ln-divider {
+  border-color: var(--border);
+}
+
+/* Form input (Contact form) */
+.ln-input {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}

@@ -37,8 +37,11 @@ import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
+
 import '../../../core/config/app_config.dart';
 import '../../../shared/widgets/tag_input.dart';
+import '../../../widgets/glass/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../tracker/screens/weight_history_screen.dart';
 import '../providers/profile_provider.dart';
@@ -223,21 +226,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   ({String label, Color color}) _bmiCategory(double bmi) {
+    final l10n = AppLocalizations.of(context);
     if (bmi < 18.5) {
-      return (label: 'Недостаточный вес', color: const Color(0xFF3B82F6));
+      return (label: l10n.profileBmiUnderweight, color: const Color(0xFF3B82F6));
     }
     if (bmi < 25) {
-      return (label: 'Норма', color: const Color(0xFF22C55E));
+      return (label: l10n.profileBmiNormal, color: const Color(0xFF22C55E));
     }
     if (bmi < 30) {
-      return (label: 'Избыточный вес', color: const Color(0xFFF97316));
+      return (label: l10n.profileBmiOverweight, color: const Color(0xFFF97316));
     }
-    return (label: 'Ожирение', color: const Color(0xFFEF4444));
+    return (label: l10n.profileBmiObese, color: const Color(0xFFEF4444));
   }
 
   // ---- date picker ----------------------------------------------------------
 
-  Future<void> _pickDate() async {
+  Future<void> _pickDate(BuildContext context) async {
     final initial = _dateOfBirth ??
         DateTime.now().subtract(const Duration(days: 365 * 25));
     final picked = await showDatePicker(
@@ -255,7 +259,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// camera or gallery. Mirrors the meal-type picker pattern from
   /// `tracker_home_screen.dart` and the cancel-vs-error semantics from
   /// `photo_food_screen.dart`.
-  Future<void> _onCameraTap() async {
+  Future<void> _onCameraTap(BuildContext context) async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       showDragHandle: true,
@@ -266,7 +270,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
               child: Text(
-                'Откуда взять фото?',
+                AppLocalizations.of(ctx).profileSavePhotoTitle,
                 style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -274,12 +278,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt),
-              title: const Text('Сделать фото'),
+              title: Text(AppLocalizations.of(ctx).profilePhotoCamera),
               onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library),
-              title: const Text('Выбрать из галереи'),
+              title: Text(AppLocalizations.of(ctx).profilePhotoGallery),
               onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
             ),
             const SizedBox(height: 8),
@@ -288,13 +292,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
     if (source == null) return;
-    await _pickCropUpload(source);
+    await _pickCropUpload(context, source);
   }
 
   /// Runs the picker → cropper → upload pipeline for a single image
   /// source. Each step has explicit cancellation / failure handling so
   /// no one path can leak an unhelpful error to the user.
-  Future<void> _pickCropUpload(ImageSource source) async {
+  Future<void> _pickCropUpload(BuildContext context, ImageSource source) async {
     // (1) Pick — silent on cancel, SnackBar with a Russian hint on a
     // real exception (mirrors photo_food_screen.dart's picker block).
     final XFile? picked;
@@ -332,7 +336,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
         uiSettings: [
           AndroidUiSettings(
-            toolbarTitle: 'Обрезать фото',
+            toolbarTitle: AppLocalizations.of(context).profilePhotoCropTitle,
             toolbarColor: Theme.of(context).colorScheme.primary,
             toolbarWidgetColor: Theme.of(context).colorScheme.onPrimary,
             cropStyle: CropStyle.circle,
@@ -341,7 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             hideBottomControls: false,
           ),
           IOSUiSettings(
-            title: 'Обрезать фото',
+            title: AppLocalizations.of(context).profilePhotoCropTitle,
             cropStyle: CropStyle.circle,
             aspectRatioLockEnabled: true,
             aspectRatioPresets: const [CropAspectRatioPreset.square],
@@ -350,7 +354,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     } catch (_) {
       if (!mounted) return;
-      _showSnack('Не удалось обрезать фото. Попробуй ещё раз.');
+      _showSnack(AppLocalizations.of(context).profilePhotoCropError);
       return;
     }
     if (cropped == null || !mounted) return;
@@ -367,13 +371,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bytes = await croppedFile.readAsBytes();
     } catch (_) {
       if (!mounted) return;
-      _showSnack('Не удалось прочитать обрезанное фото.');
+      _showSnack(AppLocalizations.of(context).profilePhotoReadError);
       return;
     }
     if (!mounted) return;
     final String encoded = base64Encode(bytes);
     if (encoded.length > _maxBase64Chars) {
-      _showSnack('Фото слишком большое, попробуй другое');
+      _showSnack(AppLocalizations.of(context).profilePhotoTooLarge);
       return;
     }
 
@@ -390,7 +394,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) return;
 
     if (ok) {
-      _showSnack('Фото обновлено');
+      _showSnack(AppLocalizations.of(context).profilePhotoUpdated);
     } else if (profile.errorMessage != null) {
       _showSnack(profile.errorMessage!);
     }
@@ -398,8 +402,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showPickerError(ImageSource source) {
     final hint = source == ImageSource.camera
-        ? 'Не удалось открыть камеру. Попробуй выбрать фото из галереи.'
-        : 'Не удалось открыть галерею.';
+        ? AppLocalizations.of(context).profileCameraError
+        : AppLocalizations.of(context).profileGalleryError;
     _showSnack(hint);
   }
 
@@ -413,7 +417,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ---- save ----------------------------------------------------------------
 
-  Future<void> _onSave() async {
+  Future<void> _onSave(BuildContext context) async {
     final u = context.read<AuthProvider>().currentUser;
     final auth = context.read<AuthProvider>();
     final profile = context.read<ProfileProvider>();
@@ -471,8 +475,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         SnackBar(
           content: Text(
             ok
-                ? 'Профиль обновлён'
-                : (profile.errorMessage ?? 'Не удалось сохранить.'),
+                ? AppLocalizations.of(context).profileUpdated
+                : (profile.errorMessage ??
+                    AppLocalizations.of(context).profileUpdateError),
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -497,7 +502,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ---- navigation to other profile screens -------------------------------
 
-  // (Settings now owns "Сменить пароль" and "Удалить аккаунт" —
+  // (Settings now owns "Сменить пароль" and "Delete аккаунт" —
   // profile_screen stays focused on editable profile DATA only.
   // The corresponding _openChangePassword / _openDeleteAccount
   // methods, and the imports for ChangePasswordScreen /
@@ -516,7 +521,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _postBuildEffects(errorMessage: profile.errorMessage);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Профиль')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).profileTitle)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -524,14 +529,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _PhotoSection(
               photoUrl: _fullPhotoUrl(u?.profilePhoto),
               isLoading: profile.isUploadingPhoto,
-              onCameraTap: _onCameraTap,
+              onCameraTap: () => _onCameraTap(context),
               theme: theme,
             ),
             const SizedBox(height: 12),
             _BasicInfoCard(
               fullNameCtrl: _fullNameCtrl,
               dateOfBirth: _dateOfBirth,
-              onPickDate: _pickDate,
+              onPickDate: () => _pickDate(context),
               sex: _sex,
               onSexChanged: (v) => setState(() => _sex = v),
               theme: theme,
@@ -591,7 +596,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: profile.isSaving ? null : _onSave,
+              onPressed: profile.isSaving ? null : () => _onSave(context),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
               ),
@@ -604,7 +609,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('Сохранить изменения'),
+                  : Text(AppLocalizations.of(context).profileSave),
             ),
           ],
         ),
@@ -776,17 +781,14 @@ class _BasicInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Основное',
+              AppLocalizations.of(context).profileSectionBasic,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -796,8 +798,8 @@ class _BasicInfoCard extends StatelessWidget {
             TextFormField(
               controller: fullNameCtrl,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Имя',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).profileFieldName,
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
@@ -807,14 +809,14 @@ class _BasicInfoCard extends StatelessWidget {
               onTap: onPickDate,
               borderRadius: BorderRadius.circular(8),
               child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Дата рождения',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).profileFieldBirthday,
                   prefixIcon: Icon(Icons.cake_outlined),
                   border: OutlineInputBorder(),
                 ),
                 child: Text(
                   dateOfBirth == null
-                      ? 'Не указана'
+                      ? AppLocalizations.of(context).onboardingBirthdayNotSet
                       : '${dateOfBirth!.day.toString().padLeft(2, '0')}.'
                           '${dateOfBirth!.month.toString().padLeft(2, '0')}.'
                           '${dateOfBirth!.year}',
@@ -829,20 +831,19 @@ class _BasicInfoCard extends StatelessWidget {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: sex,
-              decoration: const InputDecoration(
-                labelText: 'Пол',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).profileFieldGender,
                 prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              items: const [
-                DropdownMenuItem<String>(value: 'male', child: Text('Мужской')),
-                DropdownMenuItem<String>(value: 'female', child: Text('Женский')),
+              items: [
+                DropdownMenuItem<String>(value: 'male', child: Text(AppLocalizations.of(context).onboardingGenderMale)),
+                DropdownMenuItem<String>(value: 'female', child: Text(AppLocalizations.of(context).onboardingGenderFemale)),
               ],
               onChanged: onSexChanged,
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -870,11 +871,11 @@ class _BodyMetricsCard extends StatelessWidget {
   final ThemeData theme;
   final VoidCallback onNavigateToHistory;
 
-  static String? _requiredNumber(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Заполни';
+  String? _requiredNumber(BuildContext context, String? v) {
+    if (v == null || v.trim().isEmpty) return AppLocalizations.of(context).onboardingRequired;
     final n = double.tryParse(v.trim().replaceAll(',', '.'));
-    if (n == null) return 'Введи число';
-    if (n <= 0) return 'Должно быть > 0';
+    if (n == null) return AppLocalizations.of(context).onboardingEnterNumber;
+    if (n <= 0) return AppLocalizations.of(context).onboardingMustBePositive;
     return null;
   }
 
@@ -894,32 +895,29 @@ class _BodyMetricsCard extends StatelessWidget {
           prefixIcon: const Icon(Icons.straighten),
           border: const OutlineInputBorder(),
         ),
-        validator: (v) => _requiredNumber(v),
+        validator: (v) => _requiredNumber(context, v),
       );
     }
 
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Параметры тела',
+              AppLocalizations.of(context).profileSectionBody,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 12),
-            metricField(heightCtrl, 'Рост, см', 'например, 175'),
+            metricField(heightCtrl, AppLocalizations.of(context).profileMetricHeight, AppLocalizations.of(context).profileMetricHeightHint),
             const SizedBox(height: 12),
-            metricField(currentWeightCtrl, 'Текущий вес, кг', 'например, 70.5'),
+            metricField(currentWeightCtrl, AppLocalizations.of(context).profileMetricCurrentWeight, AppLocalizations.of(context).profileMetricCurrentWeightHint),
             const SizedBox(height: 12),
-            metricField(targetWeightCtrl, 'Целевой вес, кг', 'например, 65'),
+            metricField(targetWeightCtrl, AppLocalizations.of(context).profileMetricTargetWeight, AppLocalizations.of(context).profileMetricTargetWeightHint),
             const SizedBox(height: 16),
 
             // BMI display — recomputed on every rebuild because
@@ -932,7 +930,7 @@ class _BodyMetricsCard extends StatelessWidget {
                       color: cat.color, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'ИМТ: ${cat.label}',
+                    AppLocalizations.of(context).profileBmiLabel(cat.label),
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: cat.color,
                       fontWeight: FontWeight.w600,
@@ -963,7 +961,7 @@ class _BodyMetricsCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Посмотреть историю веса',
+                      AppLocalizations.of(context).profileViewWeightHistory,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.w600,
@@ -981,7 +979,6 @@ class _BodyMetricsCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -1051,17 +1048,14 @@ class _GoalActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Цель и активность',
+              AppLocalizations.of(context).profileSectionGoalActivity,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -1069,7 +1063,7 @@ class _GoalActivityCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Главная цель',
+              AppLocalizations.of(context).profilePrimaryGoal,
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -1084,7 +1078,7 @@ class _GoalActivityCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Уровень активности',
+              AppLocalizations.of(context).profileActivityLevel,
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -1099,7 +1093,9 @@ class _GoalActivityCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Темп похудения: ${_formatPace(weightLossPace)} кг/неделю',
+              AppLocalizations.of(context).profilePace(
+                _formatPace(weightLossPace),
+              ),
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -1109,12 +1105,13 @@ class _GoalActivityCard extends StatelessWidget {
               min: 0.25,
               max: 1.0,
               divisions: paceDivisions,
-              label: '${_formatPace(weightLossPace)} кг/нед.',
+              label: AppLocalizations.of(context).profilePaceChip(
+                _formatPace(weightLossPace),
+              ),
               onChanged: onPaceChanged,
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -1141,17 +1138,14 @@ class _PreferencesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Диетические предпочтения',
+              AppLocalizations.of(context).profileDietaryPreferences,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -1162,11 +1156,10 @@ class _PreferencesCard extends StatelessWidget {
               value: value,
               onChanged: onChanged,
               disabled: disabled,
-              hintText: 'Например, вегетарианец…',
+              hintText: AppLocalizations.of(context).profileDietaryHint,
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -1195,21 +1188,15 @@ class _AllergiesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest,
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      borderRadius: BorderRadius.circular(20),
       // Subtle amber border so the allergies section reads as
       // "important — this drives safety elsewhere" without screaming.
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: const Color(0xFFFCD34D).withValues(alpha: 0.6),
-          width: 1.5,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
+      // The border colour override rides on top of the standard
+      // gradient stroke so the warning persists in both themes.
+      borderColorOverride: const Color(0xFFFCD34D),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -1221,7 +1208,7 @@ class _AllergiesCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Аллергии и непереносимости',
+                  AppLocalizations.of(context).profileAllergies,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFFB45309),
@@ -1231,7 +1218,7 @@ class _AllergiesCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Используется AI-распознаванием фото для предупреждений о конфликтах.',
+              AppLocalizations.of(context).profileAllergiesAiHint,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -1241,11 +1228,10 @@ class _AllergiesCard extends StatelessWidget {
               value: value,
               onChanged: onChanged,
               disabled: disabled,
-              hintText: 'Например, орехи…',
+              hintText: AppLocalizations.of(context).profileAllergiesHint,
             ),
           ],
         ),
-      ),
     );
   }
 }

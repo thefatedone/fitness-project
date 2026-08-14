@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../l10n/gen/app_localizations.dart';
+import '../../widgets/glass/glass_chip.dart';
+
 /// Free-text tag input that mirrors the behaviour of
 /// `nutrimind/src/components/ui/tag-input.tsx` on the web — the user
 /// can type any custom string, press Enter (or Drop a comma) to commit
@@ -229,7 +232,8 @@ class _TagInputFieldState extends State<TagInputField> {
                   textInputAction: TextInputAction.done,
                   onSubmitted: _onSubmitted,
                   decoration: InputDecoration(
-                    hintText: widget.hintText ?? 'Введи и нажми Enter…',
+                    hintText: widget.hintText ??
+                        AppLocalizations.of(context).tagInputDefaultHint,
                     border: InputBorder.none,
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -246,12 +250,17 @@ class _TagInputFieldState extends State<TagInputField> {
 }
 
 /// Pill-shaped tag chip with an inline × remove handle. The handle is
-/// absent in the disabled state.
+/// absent in the disabled state. The visual is delegated to the
+/// shared [GlassChip] so tag rendering stays consistent with every
+/// other glass surface in the app (and so the Reduce Transparency
+/// fallback is handled in one place, not two).
 class _TagChip extends StatelessWidget {
   final String label;
   final VoidCallback? onRemove;
   final Color color;
+  // ignore: unused_element_parameter
   final Color backgroundColor;
+  // ignore: unused_element_parameter
   final Color borderColor;
 
   const _TagChip({
@@ -264,43 +273,10 @@ class _TagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        border: Border.all(color: borderColor),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      // When there's no remove handle (disabled), give the chip
-      // symmetric horizontal padding so it still reads as a rounded
-      // pill rather than a thin sliver on the right.
-      padding: EdgeInsets.only(
-        left: 12,
-        right: onRemove == null ? 12 : 4,
-        top: 4,
-        bottom: 4,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          if (onRemove != null)
-            InkResponse(
-              onTap: onRemove,
-              radius: 14,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(Icons.close, size: 14, color: color),
-              ),
-            ),
-        ],
-      ),
+    return GlassChip(
+      label: label,
+      onRemove: onRemove,
+      color: color,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/verify_email_sheet.dart';
+import '../../l10n/gen/app_localizations.dart';
 
 /// "Verify your email" reminder banner.
 ///
@@ -43,6 +44,7 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
+    final l10n = AppLocalizations.of(context);
 
     // Same build() reads all four "no banner" conditions AND owns
     // the dismissal state, so a setState() inside this widget's
@@ -80,7 +82,7 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Подтверди свой email, чтобы не потерять доступ к аккаунту.',
+                  l10n.emailVerifyBannerMessage,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: const Color(0xFF92400E), // amber-800
                         height: 1.25,
@@ -96,10 +98,10 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner> {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   foregroundColor: const Color(0xFFB45309),
                 ),
-                child: const Text('Подтвердить'),
+                child: Text(l10n.emailVerifyBannerAction),
               ),
               IconButton(
-                tooltip: 'Скрыть',
+                tooltip: l10n.emailVerifyBannerDismissTooltip,
                 onPressed: () {
                   // The setState() lands on the SAME State that owns
                   // the `_dismissed` flag this same build() reads —

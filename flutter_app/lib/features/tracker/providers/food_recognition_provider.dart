@@ -1,6 +1,9 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+
+import '../../../l10n/gen/app_localizations.dart';
+import '../../../l10n/gen/app_localizations_lookup.dart';
 
 import '../../auth/providers/auth_api.dart';
 import '../models/food_log_model.dart';
@@ -34,7 +37,23 @@ class FoodRecognitionProvider extends ChangeNotifier {
   FoodRecognitionResult? lastResult;
 
   /// Most recent user-presentable error, or `null` if none / cleared.
+  ///
+  /// Setting [errorMessageKey] lets the consumer [localizeError] look
+  /// up the active-locale copy via `AppLocalizations.of(context)` — see
+  /// the resolver below.
   String? errorMessage;
+  String? errorMessageKey;
+
+  /// Translate the current error state to the active locale. Falls back
+  /// through the key → legacy string → generic-error chain.
+  static String localizeError(BuildContext context, FoodRecognitionProvider p) {
+    final l10n = AppLocalizations.of(context);
+    if (p.errorMessageKey != null) {
+      final fromL10n = l10n.lookup(p.errorMessageKey!);
+      if (fromL10n != null) return fromL10n;
+    }
+    return p.errorMessage ?? l10n.commonError;
+  }
 
   /// Per-row Gemini description cache.
   ///
@@ -124,9 +143,11 @@ class FoodRecognitionProvider extends ChangeNotifier {
       return false;
     } catch (_) {
       // Defensive: any non-ApiException (parse error, OOM, …) shouldn't
-      // crash the UI — the user just sees a generic hint.
-      errorMessage =
-          'Не удалось обработать фото. Попробуй снова.';
+      // crash the UI — the user just sees a generic hint. The
+      // `errorMessageKey` lets the consumer [localizeError] render
+      // the active locale's copy.
+      errorMessage = null;
+      errorMessageKey = 'userFacingErrorPhotoProcess';
       isAnalyzing = false;
       notifyListeners();
       return false;
@@ -210,9 +231,11 @@ class FoodRecognitionProvider extends ChangeNotifier {
       return false;
     } catch (_) {
       // Defensive: any non-ApiException (parse error, OOM, …) shouldn't
-      // crash the UI — the user just sees a generic hint.
-      errorMessage =
-          'Не удалось обработать описание. Попробуй снова.';
+      // crash the UI — the user just sees a generic hint. The
+      // `errorMessageKey` lets the consumer [localizeError] render
+      // the active locale's copy.
+      errorMessage = null;
+      errorMessageKey = 'userFacingErrorDescriptionProcess';
       isAnalyzing = false;
       notifyListeners();
       return false;

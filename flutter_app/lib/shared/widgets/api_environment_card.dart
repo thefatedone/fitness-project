@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/config/api_environment_provider.dart';
+import '../../l10n/gen/app_localizations.dart';
 
 /// Debug-only card that shows the *currently effective* API base URL
 /// and lets the developer switch the `Dio` client between presets
@@ -19,7 +20,7 @@ import '../../core/config/api_environment_provider.dart';
 /// or the presets themselves change.
 ///
 /// The widget reads [ApiEnvironmentProvider] via `context.watch`
-/// (so the "Текущий URL" line stays live — tapping a preset
+/// (so the "Current URL" line stays live — tapping a preset
 /// updates the display in the same frame `setOverride` notifies)
 /// and writes via `context.read` for the same reason.
 ///
@@ -62,7 +63,7 @@ class ApiEnvironmentCard extends StatefulWidget {
   /// registered itself with. That Scaffold is now visually covered
   /// by the modal sheet itself, so any SnackBar attached to it
   /// fires "successfully" but is invisible — the user taps
-  /// "Применить", nothing happens on screen, and they think the
+  /// "Apply", nothing happens on screen, and they think the
   /// change didn't land.
   ///
   /// The fix is to wrap the builder's content in
@@ -152,6 +153,7 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
   /// the SnackBar renders at the bottom of the modal sheet — i.e.
   /// visibly, on top of the sheet's background.
   Future<void> _apply(String? url) async {
+    final l10n = AppLocalizations.of(context);
     final provider = context.read<ApiEnvironmentProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final before = provider.effectiveUrl;
@@ -185,14 +187,12 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Базовый URL: $after',
+                l10n.apiEnvCardBaseUrlApplied(after),
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4),
               Text(
-                'Новые запросы уже пойдут по нему. Потяни экран или '
-                'перейди в другой раздел, чтобы обновить уже '
-                'загруженные экраны.',
+                l10n.apiEnvCardBaseUrlAppliedBody,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -215,7 +215,8 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Watching instead of reading so the "Текущий URL" line stays
+    final l10n = AppLocalizations.of(context);
+    // Watching instead of reading so the "Current URL" line stays
     // live — every `setOverride` triggers a `notifyListeners`, which
     // rebuilds this whole card, which re-reads `effectiveUrl`.
     final provider = context.watch<ApiEnvironmentProvider>();
@@ -240,7 +241,7 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 4),
               child: Text(
-                'Текущий URL',
+                l10n.apiEnvCardCurrentUrl,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -259,7 +260,7 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 10),
               child: Text(
-                'Быстрые пресеты',
+                l10n.apiEnvCardPresets,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -274,12 +275,12 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
               children: [
                 ActionChip(
                   avatar: const Icon(Icons.laptop_mac, size: 18),
-                  label: const Text('iOS Simulator (localhost)'),
+                  label: Text(l10n.apiEnvCardPresetIos),
                   onPressed: () => _apply(_iOSSimulatorUrl),
                 ),
                 ActionChip(
                   avatar: const Icon(Icons.android, size: 18),
-                  label: const Text('Android Emulator'),
+                  label: Text(l10n.apiEnvCardPresetAndroid),
                   onPressed: () => _apply(_androidEmulatorUrl),
                 ),
               ],
@@ -288,7 +289,7 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 6),
               child: Text(
-                'Свой URL (например, для устройства в локальной сети)',
+                l10n.apiEnvCardCustomUrl,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -309,10 +310,10 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
                     // with the field's own validation error for
                     // the same real estate.
                     enableSuggestions: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Базовый URL',
+                    decoration: InputDecoration(
+                      labelText: l10n.apiEnvCardBaseUrlField,
                       hintText: 'http://192.168.1.23:8000',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     // Validator mirrors the validation in
@@ -323,10 +324,10 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
                     // call site that doesn't pre-validate.
                     validator: (v) {
                       final raw = (v ?? '').trim();
-                      if (raw.isEmpty) return 'Введи URL';
+                      if (raw.isEmpty) return l10n.apiEnvCardBaseUrlRequired;
                       if (!raw.startsWith('http://') &&
                           !raw.startsWith('https://')) {
-                        return 'URL должен начинаться с http:// или https://';
+                        return l10n.apiEnvCardBaseUrlInvalid;
                       }
                       return null;
                     },
@@ -339,7 +340,7 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
                         child: FilledButton.icon(
                           onPressed: _applyCustom,
                           icon: const Icon(Icons.check, size: 18),
-                          label: const Text('Применить'),
+                          label: Text(l10n.apiEnvCardApply),
                           style: FilledButton.styleFrom(
                             minimumSize: const Size.fromHeight(44),
                           ),
@@ -350,7 +351,7 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
                         child: OutlinedButton.icon(
                           onPressed: _reset,
                           icon: const Icon(Icons.restart_alt, size: 18),
-                          label: const Text('Сбросить к умолчанию'),
+                          label: Text(l10n.apiEnvCardReset),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size.fromHeight(44),
                           ),

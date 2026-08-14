@@ -1,8 +1,8 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
-import '../../core/platform/accessibility_service.dart';
+import '../../theme/glass_tokens.dart';
+import '../../utils/accessibility_utils.dart';
+import '../../widgets/glass/glass_surface.dart';
 
 /// A single dock entry — what icon to show, what it does on tap,
 /// and whether the entry is the "primary" action (rendered larger
@@ -56,16 +56,12 @@ class DockItem {
 /// Stack rather than a Scaffold slot. The body ListView picks up the
 /// extra bottom padding so its last item still clears the Dock.
 ///
-/// Accessibility fallback: when the iOS "Reduce Transparency" setting
-/// is enabled (Settings → Accessibility → Display & Text Size →
-/// Reduce Transparency), the frosted-glass blur is replaced by a
-/// fully-opaque solid surface — the same fallback Apple's own apps
-/// apply. The setting is queried over a small platform channel and
-/// re-checked whenever the app returns to the foreground (the only
-/// realistic moment a user could have just toggled it). See
-/// `lib/core/platform/accessibility_service.dart` for the design
-/// rationale on why this is a one-shot query at resume-time rather
-/// than an EventChannel.
+/// Visual treatment is delegated to [GlassSurface] (with the
+/// `dockRadius` corner), so every other glass surface in the app
+/// draws from the same set of blur/tint/border tokens. The Reduce
+/// Transparency accessibility fallback is now provided uniformly
+/// across all glass widgets via [ReduceTransparencyScope] — the Dock
+/// no longer carries its own platform-channel hookup.
 class AppDock extends StatefulWidget {
   const AppDock({super.key, required this.items});
 
@@ -75,7 +71,7 @@ class AppDock extends StatefulWidget {
   State<AppDock> createState() => _AppDockState();
 }
 
-class _AppDockState extends State<AppDock> with WidgetsBindingObserver {
+class _AppDockState extends State<AppDock> {
   /// Per-item "is the user currently pressing" map. We track a bool
   /// per item key so the AnimatedScale can drive a press-state per
   /// item independently — when the user holds down on item 2 and
@@ -83,68 +79,8 @@ class _AppDockState extends State<AppDock> with WidgetsBindingObserver {
   /// tap-up.
   final Map<int, bool> _pressed = {};
 
-  /// Mirror of `UIAccessibility.isReduceTransparencyEnabled`.
-  ///
-  /// `true` means the user has explicitly asked the system to skip
-  /// translucent / blurred material in favour of solid surfaces —
-  /// Apple's convention applies to *our* pill too, so we render a
-  /// solid background instead of the `BackdropFilter` blur.
-  ///
-  /// Defaults to `false` so the first frame (drawn before the
-  /// platform-channel round-trip resolves) is the
-  /// accessible-default frosted-glass look. On Android / tests / any
-  /// env where the platform channel isn't wired, [AccessibilityService]
-  /// falls back to `false` and we render the regular look there too.
-  bool _reduceTransparency = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // The lifecycle observer is what lets us re-check the
-    // accessibility setting when the user comes back from Settings
-    // (their only realistic way to toggle Reduce Transparency while
-    // our app is running). Without this, toggling, backgrounding,
-    // and foregrounding the app would leave the Dock showing the
-    // old look until something else triggered a full rebuild.
-    WidgetsBinding.instance.addObserver(this);
-    _refreshReduceTransparency();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // `resumed` fires when the app returns to the foreground after
-    // being backgrounded — exactly when a user could have just
-    // toggled Reduce Transparency in Settings. `paused`/`inactive`
-    // are intentionally ignored: we only need to re-check on
-    // resume.
-    if (state == AppLifecycleState.resumed) {
-      _refreshReduceTransparency();
-    }
-  }
-
-  /// Pulls the current accessibility value and, if it changed since
-  /// we last saw it, schedules a rebuild. The `mounted` guard plus
-  /// the equality check together prevent duplicate rebuild frames on
-  /// hot-reload and on quick pause→resume→resume flutter sequences,
-  /// which would otherwise drag every dock item through its press
-  /// animation rebuild cycle for no visual change.
-  Future<void> _refreshReduceTransparency() async {
-    final next = await AccessibilityService.isReduceTransparencyEnabled();
-    if (!mounted) return;
-    if (next != _reduceTransparency) {
-      setState(() => _reduceTransparency = next);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final mediaQuery = MediaQuery.of(context);
 
     // Default safe-area-aware bottom margin: the home indicator
@@ -154,53 +90,8 @@ class _AppDockState extends State<AppDock> with WidgetsBindingObserver {
     // room above the indicator without overlapping it.
     final bottomMargin = mediaQuery.padding.bottom + 16;
 
-    // Two colour recipes, picked per accessibility setting.
-    //
-    //   * `opaqueCardColor` — the theme's own card surface, fully
-    //     opaque. Used when Reduce Transparency is on, so the pill
-    //     is unambiguously solid.
-    //   * `frostedCardColor` — the same token with ~78% alpha, so
-    //     the BackdropFilter blur underneath reads as a tinted
-    //     glass. With alpha, the *blur* (not the Container) is what
-    //     gives the pill its character.
-    //
-    // Both modes share the same hairline border + soft drop
-    // shadow — those are presentational, not transparency-driven,
-    // and removing them would over-correct the accessible fallback
-    // into looking like a different widget entirely.
-    final opaqueCardColor = theme.colorScheme.surfaceContainerHighest;
-    final frostedCardColor = opaqueCardColor.withValues(alpha: 0.78);
-    final borderColor =
-        theme.colorScheme.outlineVariant.withValues(alpha: 0.6);
-    final shadowColor = Colors.black.withValues(alpha: 0.12);
-
-    // The pill geometry is identical in both modes — only the
-    // surface treatment changes. Building the same `Container` and
-    // `Row` in both branches (rather than two parallel widget
-    // trees) keeps the press-animation, disabled-opacity, and
-    // emphasized-entry behaviour in one place and guarantees they
-    // stay in sync across modes.
-    final pill = Container(
-      decoration: BoxDecoration(
-        color: _reduceTransparency ? opaqueCardColor : frostedCardColor,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: borderColor,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: shadowColor,
-            blurRadius: 18,
-            spreadRadius: 0,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 8,
-      ),
+    final pill = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -232,37 +123,16 @@ class _AppDockState extends State<AppDock> with WidgetsBindingObserver {
             child: Material(
               // Material is here so the children can have ink-wells
               // for the press animation; the Material is invisible
-              // (no `color` or `elevation`) so the BackdropFilter
+              // (no `color` or `elevation`) so the GlassSurface
               // below shows through.
               type: MaterialType.transparency,
-              child: _wrapInGlassOrSolid(pill, _reduceTransparency),
+              child: GlassSurface(
+                borderRadius: BorderRadius.circular(GlassTokens.dockRadius),
+                child: pill,
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  /// Wraps [child] in the appropriate surface treatment for the
-  /// current accessibility setting.
-  ///
-  /// With Reduce Transparency ON, the underlying Container is
-  /// already fully opaque, so wrapping in a `BackdropFilter` would
-  /// be a no-op *and* wasteful of GPU — we serve the child directly.
-  ///
-  /// With the setting OFF, we round the corners of the blurred
-  /// region (the rounded corners come *through* the blur, not from
-  /// the underlying Container) and apply the 20-sigma blur, exactly
-  /// as iOS / macOS docks do.
-  Widget _wrapInGlassOrSolid(Widget child, bool reduceTransparency) {
-    if (reduceTransparency) {
-      return child;
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: child,
       ),
     );
   }

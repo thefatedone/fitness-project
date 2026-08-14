@@ -34,18 +34,23 @@ const List<String> dietaryOptions = [
   'Kosher',
 ];
 
-/// Russian translations of [dietaryOptions] for the UI.
-const Map<String, String> dietaryLabelsRu = {
-  'Vegetarian': 'Вегетарианец',
-  'Vegan': 'Веган',
-  'Keto': 'Кето',
-  'Paleo': 'Палео',
-  'Low-Carb': 'Низкоуглеводная',
-  'Low-Fat': 'Низкожировая',
-  'Mediterranean': 'Средиземноморская',
+/// English fallback translations of [dietaryOptions] for the UI.
+/// When the active locale is Russian (or Georgian in a future
+/// revision), the UI layer looks up the localised string from
+/// `AppLocalizations`; this map is only the default when no
+/// translation is found (defensive — should never trigger under
+/// normal flow).
+const Map<String, String> dietaryLabelsEn = {
+  'Vegetarian': 'Vegetarian',
+  'Vegan': 'Vegan',
+  'Keto': 'Keto',
+  'Paleo': 'Paleo',
+  'Low-Carb': 'Low-carb',
+  'Low-Fat': 'Low-fat',
+  'Mediterranean': 'Mediterranean',
   'Dash': 'DASH',
-  'Halal': 'Халяль',
-  'Kosher': 'Кошер',
+  'Halal': 'Halal',
+  'Kosher': 'Kosher',
 };
 
 /// Tag values the backend stores for food allergies.
@@ -59,34 +64,37 @@ const List<String> allergyOptions = [
   'Milk',
 ];
 
-/// Russian translations of [allergyOptions] for the UI.
-const Map<String, String> allergyLabelsRu = {
-  'Nuts': 'Орехи',
-  'Shellfish': 'Морепродукты',
-  'Eggs': 'Яйца',
-  'Soy': 'Соя',
-  'Wheat': 'Пшеница',
-  'Fish': 'Рыба',
-  'Milk': 'Молоко',
+/// English fallback translations of [allergyOptions] for the UI.
+/// See [dietaryLabelsEn] for the same fallback contract.
+const Map<String, String> allergyLabelsEn = {
+  'Nuts': 'Nuts',
+  'Shellfish': 'Shellfish',
+  'Eggs': 'Eggs',
+  'Soy': 'Soy',
+  'Wheat': 'Wheat',
+  'Fish': 'Fish',
+  'Milk': 'Milk',
 };
 
 /// Activity-level options. Each entry is `{value, label}` so the
 /// dropdown can store the enum-like backend value but display the
-/// Russian label.
+/// localised label. The labels here are English fallbacks — the
+/// profile screen applies localisation at render time.
 const List<Map<String, String>> activityLevels = [
-  {'value': 'sedentary', 'label': 'Малоподвижный'},
-  {'value': 'lightly_active', 'label': 'Легкая активность'},
-  {'value': 'moderately_active', 'label': 'Умеренная активность'},
-  {'value': 'very_active', 'label': 'Высокая активность'},
-  {'value': 'extra_active', 'label': 'Очень высокая активность'},
+  {'value': 'sedentary', 'label': 'Sedentary'},
+  {'value': 'lightly_active', 'label': 'Lightly active'},
+  {'value': 'moderately_active', 'label': 'Moderately active'},
+  {'value': 'very_active', 'label': 'Very active'},
+  {'value': 'extra_active', 'label': 'Extra active'},
 ];
 
 /// Primary-goal options — value/label/emoji, mirroring the web client.
+/// English fallback labels — localised at render time by the UI.
 const List<Map<String, String>> primaryGoals = [
-  {'value': 'lose_weight', 'label': 'Похудение', 'emoji': '🔥'},
-  {'value': 'maintain', 'label': 'Поддержание веса', 'emoji': '⚖️'},
-  {'value': 'gain_muscle', 'label': 'Набор массы', 'emoji': '💪'},
-  {'value': 'eat_healthier', 'label': 'Здоровое питание', 'emoji': '🥗'},
+  {'value': 'lose_weight', 'label': 'Lose weight', 'emoji': '🔥'},
+  {'value': 'maintain', 'label': 'Maintain weight', 'emoji': '⚖️'},
+  {'value': 'gain_muscle', 'label': 'Gain muscle', 'emoji': '💪'},
+  {'value': 'eat_healthier', 'label': 'Eat healthier', 'emoji': '🥗'},
 ];
 
 // ============================================================================

@@ -56,7 +56,7 @@ class BeverageApi {
 
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       return BeverageRecognitionResult.fromJson(body);
     } on DioException catch (e) {
@@ -68,7 +68,8 @@ class BeverageApi {
       // a different photo is the productive next step.
       if (e.response?.statusCode == 422) {
         throw const ApiException(
-          'Не удалось распознать напиток. Попробуй другое фото.',
+          'Could not recognize the beverage. Try a different photo.',
+          messageKey: 'userFacingErrorBeverageRecognize',
         );
       }
       throw ApiException.fromDioError(e);
@@ -114,7 +115,7 @@ class BeverageApi {
 
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       return BeverageRecognitionResult.fromJson(body);
     } on DioException catch (e) {
@@ -192,7 +193,7 @@ class BeverageApi {
 
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Сервер вернул пустой ответ.');
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
       }
       return body;
     } on DioException catch (e) {

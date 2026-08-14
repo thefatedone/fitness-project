@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
 import '../providers/auth_api.dart';
 import '../providers/auth_provider.dart';
 import '../providers/email_verification_api.dart';
@@ -201,6 +202,7 @@ class _VerifyEmailSheetContentState extends State<_VerifyEmailSheetContent> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
@@ -209,7 +211,7 @@ class _VerifyEmailSheetContentState extends State<_VerifyEmailSheetContent> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Подтверждение email',
+              l10n.authEmailVerifyTitle,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -220,7 +222,7 @@ class _VerifyEmailSheetContentState extends State<_VerifyEmailSheetContent> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  'Мы отправим код подтверждения на $_email',
+                  l10n.authEmailVerifyInstructions(_email),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -241,7 +243,7 @@ class _VerifyEmailSheetContentState extends State<_VerifyEmailSheetContent> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text('Отправить код'),
+                    : Text(l10n.authEmailVerifySendCode),
               ),
             ] else ...[
               // Stage 2: enter the code. Same OTP-style field as
@@ -250,7 +252,7 @@ class _VerifyEmailSheetContentState extends State<_VerifyEmailSheetContent> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  'Введи код из письма',
+                  l10n.authEmailVerifyEnterCode,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -279,11 +281,11 @@ class _VerifyEmailSheetContentState extends State<_VerifyEmailSheetContent> {
                         letterSpacing: 8,
                         fontFamily: 'monospace',
                       ),
-                      decoration: const InputDecoration(
-                        labelText: 'Код',
+                      decoration: InputDecoration(
+                        labelText: l10n.authCodeField,
                         counterText: '',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
+                        border: const OutlineInputBorder(),
+                        contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 16,
                         ),
@@ -291,7 +293,7 @@ class _VerifyEmailSheetContentState extends State<_VerifyEmailSheetContent> {
                       validator: (v) {
                         final code = (v ?? '').trim();
                         if (code.length != 6) {
-                          return 'Код состоит из 6 цифр';
+                          return l10n.authCodeRequired;
                         }
                         return null;
                       },
@@ -311,14 +313,14 @@ class _VerifyEmailSheetContentState extends State<_VerifyEmailSheetContent> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Подтвердить'),
+                          : Text(l10n.authCodeConfirm),
                     ),
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: _isVerifying ? null : _resend,
-                        child: const Text('Отправить код повторно'),
+                        child: Text(l10n.authEmailVerifyResend),
                       ),
                     ),
                   ],

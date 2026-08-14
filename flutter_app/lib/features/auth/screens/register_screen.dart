@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../l10n/gen/app_localizations.dart';
+import '../../../widgets/glass/glass_button.dart';
+import '../../../widgets/glass/glass_card.dart';
 import '../providers/auth_api.dart';
 import '../providers/auth_provider.dart';
 
@@ -66,10 +69,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Регистрация'),
+        title: Text(l10n.authRegisterTitle),
         backgroundColor: theme.colorScheme.surface,
       ),
       body: SafeArea(
@@ -78,84 +82,89 @@ class _RegisterScreenState extends State<RegisterScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      controller: _nameCtrl,
-                      textInputAction: TextInputAction.next,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Полное имя',
-                        prefixIcon: Icon(Icons.person_outline),
-                        border: OutlineInputBorder(),
+              child: GlassCard(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                borderRadius: BorderRadius.circular(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _nameCtrl,
+                        textInputAction: TextInputAction.next,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: InputDecoration(
+                          labelText: l10n.authRegisterName,
+                          prefixIcon: const Icon(Icons.person_outline),
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return l10n.authRegisterNameRequired;
+                          }
+                          return null;
+                        },
                       ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Введи имя';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.alternate_email),
-                        border: OutlineInputBorder(),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: l10n.authEmailLabel,
+                          prefixIcon: const Icon(Icons.alternate_email),
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (v) {
+                          final trimmed = v?.trim() ?? '';
+                          if (trimmed.isEmpty) {
+                            return l10n.authEmailRequired;
+                          }
+                          if (!_emailRegex.hasMatch(trimmed)) {
+                            return l10n.authEmailInvalid;
+                          }
+                          return null;
+                        },
                       ),
-                      validator: (v) {
-                        final trimmed = v?.trim() ?? '';
-                        if (trimmed.isEmpty) {
-                          return 'Введи email';
-                        }
-                        if (!_emailRegex.hasMatch(trimmed)) {
-                          return 'Похоже, email указан неверно';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordCtrl,
-                      obscureText: true,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _onSubmit(),
-                      decoration: const InputDecoration(
-                        labelText: 'Пароль',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(),
-                        helperText:
-                            'Мин. 8 символов, с заглавной буквы, есть цифра',
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordCtrl,
+                        obscureText: true,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _onSubmit(),
+                        decoration: InputDecoration(
+                          labelText: l10n.authRegisterPassword,
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          border: const OutlineInputBorder(),
+                          helperText: l10n.authPasswordHelper,
+                        ),
+                        validator: (v) => validatePassword(v ?? ''),
                       ),
-                      validator: (v) => validatePassword(v ?? ''),
-                    ),
-                    const SizedBox(height: 24),
-
-                    FilledButton(
-                      onPressed: auth.isLoading ? null : _onSubmit,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
+                      const SizedBox(height: 24),
+                      GlassButton(
+                        label: auth.isLoading ? '' : l10n.authRegisterCreate,
+                        onPressed: auth.isLoading ? null : _onSubmit,
+                        expand: true,
+                        variant: GlassButtonVariant.primary,
                       ),
-                      child: auth.isLoading
-                          ? const SizedBox(
+                      if (auth.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Center(
+                            child: SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.4,
-                                color: Colors.white,
                               ),
-                            )
-                          : const Text('Создать аккаунт'),
-                    ),
-                  ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
