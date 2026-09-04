@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check, Clock } from "lucide-react";
 import { useTranslations } from "@/hooks/useTranslations";
 import Section from "@/components/ui/Section";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -13,7 +13,7 @@ const plans = [
     price: "$0",
     periodKey: "forever",
     descKey: "freeDescription",
-    featuresKeys: ["basicFoodLogging", "aiMessages100", "dailyMacroSummary", "communitySupport"],
+    featuresKeys: ["unlimitedManualLogging", "dailyMacroSummary", "weightTrendChart", "communitySupport"],
     highlighted: false,
     ctaKey: "getStarted",
   },
@@ -22,7 +22,7 @@ const plans = [
     price: "$9.99",
     periodKey: "perMonth",
     descKey: "proDescription",
-    featuresKeys: ["unlimitedFoodLogging", "unlimitedAiMessages", "advancedAnalytics", "mealPlanning", "prioritySupport"],
+    featuresKeys: ["aiPhotoScans60", "aiChatMessages80", "advancedAnalytics", "mealPlanningFeature", "prioritySupport"],
     highlighted: true,
     badgeKey: "mostPopular",
     ctaKey: "startFreeTrial",
@@ -32,7 +32,7 @@ const plans = [
     price: "$19.99",
     periodKey: "perMonth",
     descKey: "familyDescription",
-    featuresKeys: ["everythingInPro", "upTo5Family", "sharedMealPlans", "familyDashboard", "dedicatedSupport"],
+    featuresKeys: ["everythingInPro", "unlimitedAiAccess", "aiTrainerComingSoon", "upTo5Family", "sharedMealPlans", "dedicatedSupport"],
     highlighted: false,
     ctaKey: "startFamilyPlan",
   },
@@ -83,18 +83,40 @@ export default function Pricing() {
               </p>
 
               <ul className="space-y-3 mb-8">
-                {plan.featuresKeys.map((featureKey) => (
-                  <li key={featureKey} className="flex items-start gap-3">
-                    <Check
-                      className="w-4 h-4 mt-0.5 flex-shrink-0"
-                      style={{ color: plan.highlighted ? "#ffffff" : "#22c55e" }}
-                      strokeWidth={2.5}
-                    />
-                    <span className={`text-sm ${plan.highlighted ? "text-white" : "ln-text-muted"}`}>
-                      {t(featureKey)}
-                    </span>
-                  </li>
-                ))}
+                {plan.featuresKeys.map((featureKey) => {
+                  const isUpcoming = featureKey === "aiTrainerComingSoon";
+                  const Icon = isUpcoming ? Clock : Check;
+                  return (
+                    <li key={featureKey} className="flex items-start gap-3">
+                      <Icon
+                        className="w-4 h-4 mt-0.5 flex-shrink-0"
+                        style={{
+                          color: isUpcoming
+                            ? plan.highlighted
+                              ? "rgba(255,255,255,0.6)"
+                              : "var(--foreground-subtle)"
+                            : plan.highlighted
+                              ? "#ffffff"
+                              : "#22c55e",
+                        }}
+                        strokeWidth={2.5}
+                      />
+                      <span
+                        className={`text-sm ${
+                          isUpcoming
+                            ? plan.highlighted
+                              ? "text-white/70 italic"
+                              : "ln-text-subtle italic"
+                            : plan.highlighted
+                              ? "text-white"
+                              : "ln-text-muted"
+                        }`}
+                      >
+                        {t(featureKey)}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
 
               <Button

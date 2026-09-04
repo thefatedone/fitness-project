@@ -1037,8 +1037,8 @@ class _MacroRow extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             hasTarget
-                ? '$consumedRounded / ${_formatG(target!)} г'
-                : '$consumedRounded г',
+                ? '$consumedRounded / ${_formatG(target!)} ${AppLocalizations.of(context).unitGramsShort}'
+                : '$consumedRounded ${AppLocalizations.of(context).unitGramsShort}',
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -1070,14 +1070,19 @@ class _MacroRow extends StatelessWidget {
 
 /// Formats a water amount for display, matching the web app's
 /// `WaterTracker.tsx` exactly:
-///   * `< 1000 ml`  →  `"X ml"`
+///   * `< 1000 ml`  →  `"X ml"` (localised via
+///     [AppLocalizations.addFoodUnitMl])
 ///   * `>= 1000 ml`  →  whole litres as `"X L"`, otherwise one decimal
-///                       place `"X.X L"`.
-String _formatWaterAmount(int ml) {
-  if (ml < 1000) return '$ml мл';
+///                       place `"X.X L"` (localised via
+///                       [AppLocalizations.addFoodUnitL]).
+String _formatWaterAmount(BuildContext context, int ml) {
+  final l10n = AppLocalizations.of(context);
+  if (ml < 1000) return '$ml ${l10n.addFoodUnitMl}';
   final litres = ml / 1000;
-  if (litres == litres.roundToDouble()) return '${litres.toInt()} L';
-  return '${litres.toStringAsFixed(1)} L';
+  if (litres == litres.roundToDouble()) {
+    return '${litres.toInt()} ${l10n.addFoodUnitL}';
+  }
+  return '${litres.toStringAsFixed(1)} ${l10n.addFoodUnitL}';
 }
 
 /// Returns the time portion of an ISO 8601 datetime string as
@@ -1179,8 +1184,8 @@ class _WaterRowState extends State<_WaterRow> {
                     const SizedBox(height: 2),
                     Text(
                       AppLocalizations.of(context).trackerWaterProgress(
-                        _formatWaterAmount(totalMl),
-                        _formatWaterAmount(goalMl),
+                        _formatWaterAmount(context, totalMl),
+                        _formatWaterAmount(context, goalMl),
                       ),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
@@ -1234,7 +1239,7 @@ class _WaterRowState extends State<_WaterRow> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   AppLocalizations.of(context).trackerWaterRemaining(
-                    _formatWaterAmount(remainingMl),
+                    _formatWaterAmount(context, remainingMl),
                   ),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
@@ -1256,7 +1261,7 @@ class _WaterRowState extends State<_WaterRow> {
             children: [
               for (final ml in quickPicks)
                 GlassChip(
-                  label: _formatWaterAmount(ml),
+                  label: _formatWaterAmount(context, ml),
                   selected: ml == selectedQuickPick,
                   onTap: () {
                     // The selected state is a UI demo here; the
@@ -1328,7 +1333,7 @@ class _WaterLogList extends StatelessWidget {
                 SizedBox(
                   width: 56,
                   child: Text(
-                    _formatWaterAmount(w.amount),
+                    _formatWaterAmount(context, w.amount),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -1488,7 +1493,7 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
                 children: [
                   for (final v in _quickPicks)
                     ActionChip(
-                      label: Text(_formatWaterAmount((v * 1000).round())),
+                      label: Text(_formatWaterAmount(context, (v * 1000).round())),
                       onPressed: () {
                         _litresCtrl.text = v.toString();
                         // Keep the cursor at the end of the new value

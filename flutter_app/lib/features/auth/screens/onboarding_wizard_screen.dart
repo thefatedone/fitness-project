@@ -125,17 +125,19 @@ Widget _sectionSubtitle(BuildContext context, String text) => Padding(
 
 /// Inline error label rendered under a `FormField` when its validator
 /// rejects. Keeps the chip-row / date-row cases visually consistent
-/// with text-field errors.
+/// with text-field errors. Uses the shared `bodySmall` role from
+/// the `TextTheme` (font size 12 / weight w400) with only the
+/// colour overridden to the error token — same visual as every
+/// other error helper in the app.
 Widget _fieldError(BuildContext context, String? message) {
   if (message == null) return const SizedBox.shrink();
   return Padding(
     padding: const EdgeInsets.only(top: 6, left: 12),
     child: Text(
       message,
-      style: TextStyle(
-        color: Theme.of(context).colorScheme.error,
-        fontSize: 12,
-      ),
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.error,
+          ),
     ),
   );
 }

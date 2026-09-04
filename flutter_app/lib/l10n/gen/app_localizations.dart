@@ -1701,6 +1701,12 @@ abstract class AppLocalizations {
   /// **'ml'**
   String get addFoodUnitMl;
 
+  /// No description provided for @addFoodUnitL.
+  ///
+  /// In en, this message translates to:
+  /// **'L'**
+  String get addFoodUnitL;
+
   /// No description provided for @addFoodUnitPcs.
   ///
   /// In en, this message translates to:
@@ -2498,6 +2504,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'g'**
   String get unitGramsShort;
+
+  /// No description provided for @unitKgShort.
+  ///
+  /// In en, this message translates to:
+  /// **'kg'**
+  String get unitKgShort;
 
   /// No description provided for @unitKcalShort.
   ///

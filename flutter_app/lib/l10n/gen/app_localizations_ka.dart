@@ -863,6 +863,9 @@ class AppLocalizationsKa extends AppLocalizations {
   String get addFoodUnitMl => 'მლ';
 
   @override
+  String get addFoodUnitL => 'ლ';
+
+  @override
   String get addFoodUnitPcs => 'ცალი';
 
   @override
@@ -1303,6 +1306,9 @@ class AppLocalizationsKa extends AppLocalizations {
 
   @override
   String get unitGramsShort => 'გ';
+
+  @override
+  String get unitKgShort => 'კგ';
 
   @override
   String get unitKcalShort => 'კკალ';

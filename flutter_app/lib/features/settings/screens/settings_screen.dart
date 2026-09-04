@@ -77,10 +77,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final themeProvider = context.watch<ThemeProvider>();
-    final currentMode = themeProvider.mode;
-    final localeProvider = context.watch<LocaleProvider>();
-    final currentLocale = localeProvider.locale;
+    // `currentMode` and `currentLocale` are read locally via
+    // `Selector`s inside their respective sections, NOT
+    // screen-wide via `context.watch<…>`. A screen-wide watch
+    // would rebuild every `GlassCard` in the whole ListView
+    // (with their own `BackdropFilter`s) on every theme /
+    // locale change, which on a phone is enough blur
+    // recompute to feel like a hitch. Selector keeps each
+    // listening scope tight to the widget subtree that
+    // actually depends on the value.
 
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context).settingsTitle)),
@@ -94,47 +99,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ---------------------------------------------------------------
             _SectionLabel(AppLocalizations.of(context).settingsSectionAppearance.toUpperCase()),
             const SizedBox(height: 8),
-            GlassCard(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              borderRadius: BorderRadius.circular(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 8),
-                    child: Text(
-                      l10n.settingsSectionTheme,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+            // Selector narrows the `ThemeProvider` watching
+            // scope to JUST the theme card — only this subtree
+            // rebuilds when the theme mode changes. Every other
+            // section on the screen (Language, Account, About,
+            // API Environment) keeps its previous build, so
+            // their `BackdropFilter`s don't get needlessly
+            // recomputed on a theme switch.
+            Selector<ThemeProvider, AppThemeMode>(
+              selector: (_, p) => p.mode,
+              builder: (context, currentMode, child) {
+                return GlassCard(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 8),
+                        child: Text(
+                          l10n.settingsSectionTheme,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                        ),
                       ),
-                    ),
-                  ),
-                  // Theme switcher — custom segmented control
-                  // built on a `GlassSurface` track with a sliding
-                  // pill indicator behind the active segment.
-                  // Material 3's `SegmentedButton` works but its
-                  // built-in highlight is a flat colour; the
-                  // sliding-indicator approach matches the Dock's
-                  // pressed-state physics and reads as part of
-                  // the Liquid Glass language.
-                  SizedBox(
-                    width: double.infinity,
-                    child: _ThemeModeSwitcher(
-                      currentMode: currentMode,
-                      onChanged: _setThemeMode,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10, left: 4),
-                    child: Text(
-                      _themeDescription(context, currentMode),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      // Theme switcher — custom segmented control
+                      // built on a `GlassSurface` track with a sliding
+                      // pill indicator behind the active segment.
+                      // Material 3's `SegmentedButton` works but its
+                      // built-in highlight is a flat colour; the
+                      // sliding-indicator approach matches the Dock's
+                      // pressed-state physics and reads as part of
+                      // the Liquid Glass language.
+                      SizedBox(
+                        width: double.infinity,
+                        child: _ThemeModeSwitcher(
+                          currentMode: currentMode,
+                          onChanged: _setThemeMode,
+                        ),
                       ),
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10, left: 4),
+                        child: Text(
+                          _themeDescription(context, currentMode),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
 
             // ---------------------------------------------------------------
@@ -150,52 +167,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // names of the languages — a non-localizable constant
             // per the spec.
             const SizedBox(height: 24),
+            // The language section's `_LanguageSectionLabel` is
+            // a self-contained `StatefulWidget` that reads
+            // `LocaleProvider` internally — its rebuild is
+            // already scoped. The picker below ALSO listens
+            // tightly via a `Selector` for symmetry with the
+            // theme section.
             const _LanguageSectionLabel(),
             const SizedBox(height: 8),
-            GlassCard(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              borderRadius: BorderRadius.circular(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: SegmentedButton<AppLocale>(
-                  segments: [
-                    // Native names per the spec — these are
-                    // the languages' self-names, so they live
-                    // as constant native-language literals rather
-                    // than going through `AppLocalizations.of(…)`.
-                    // The translator never sees them translated;
-                    // they are always displayed in each language's
-                    // own script (English / ქართული / Русский),
-                    // matching the international convention for
-                    // language-picker labels.
-                    ButtonSegment(
-                      value: AppLocale.en,
-                      label: const Text('English'),
+            Selector<LocaleProvider, AppLocale>(
+              selector: (_, p) => p.locale,
+              builder: (context, currentLocale, child) {
+                return GlassCard(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<AppLocale>(
+                      segments: [
+                        // Native names per the spec — these are
+                        // the languages' self-names, so they live
+                        // as constant native-language literals rather
+                        // than going through `AppLocalizations.of(…)`.
+                        // The translator never sees them translated;
+                        // they are always displayed in each language's
+                        // own script (English / ქართული / Русский),
+                        // matching the international convention for
+                        // language-picker labels.
+                        //
+                        // Each label is wrapped in a `FittedBox` with
+                        // `BoxFit.scaleDown` so the M3 SegmentedButton
+                        // — which is a fixed-height widget — doesn't
+                        // wrap the label to a second line on narrow
+                        // phones (e.g. "ქართული" at 14pt doesn't
+                        // fit in a ~110dp segment on a 360dp screen
+                        // without shrinking slightly).
+                        ButtonSegment(
+                          value: AppLocale.en,
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('English', maxLines: 1),
+                          ),
+                        ),
+                        ButtonSegment(
+                          value: AppLocale.ka,
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(l10n.languageGeorgian, maxLines: 1),
+                          ),
+                        ),
+                        ButtonSegment(
+                          value: AppLocale.ru,
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(l10n.languageRussian, maxLines: 1),
+                          ),
+                        ),
+                      ],
+                      selected: {currentLocale},
+                      onSelectionChanged: (selection) {
+                        // SegmentedButton fires with an empty set
+                        // when the user taps the already-selected
+                        // segment (no-op per Flutter contract);
+                        // guard so we don't write the same value
+                        // back and trigger an unnecessary
+                        // notifyListeners.
+                        if (selection.isEmpty) return;
+                        context
+                            .read<LocaleProvider>()
+                            .setLocale(selection.first);
+                      },
                     ),
-                    ButtonSegment(
-                      value: AppLocale.ka,
-                      label: Text(l10n.languageGeorgian),
-                    ),
-                    ButtonSegment(
-                      value: AppLocale.ru,
-                      label: Text(l10n.languageRussian),
-                    ),
-                  ],
-                  selected: {currentLocale},
-                  onSelectionChanged: (selection) {
-                    // SegmentedButton fires with an empty set
-                    // when the user taps the already-selected
-                    // segment (no-op per Flutter contract);
-                    // guard so we don't write the same value
-                    // back and trigger an unnecessary
-                    // notifyListeners.
-                    if (selection.isEmpty) return;
-                    context
-                        .read<LocaleProvider>()
-                        .setLocale(selection.first);
-                  },
-                ),
-              ),
+                  ),
+                );
+              },
             ),
 
             // ---------------------------------------------------------------
@@ -530,13 +575,17 @@ class _ThemeModeSwitcherState extends State<_ThemeModeSwitcher>
         if (_segmentWidth != segmentWidth) {
           _segmentWidth = segmentWidth;
         }
-        final t = Curves.easeOutCubic.transform(_ctrl.value);
-        // The pill's left edge animates from `_fromIndex`'s
-        // segment to `_toIndex`'s segment.
-        final pillLeft = (_fromIndex + (_toIndex - _fromIndex) * t) *
-            segmentWidth;
 
         return GlassSurface(
+          // Built ONCE (the LayoutBuilder only re-runs this
+          // outer builder when the parent constraints change,
+          // e.g. on a window resize). The `BackdropFilter` in
+          // here blurs the page background once per layout pass,
+          // not per animation frame. The animated parts (the
+          // sliding pill + the per-segment highlight colour
+          // tracking the pill) live inside the inner
+          // `AnimatedBuilder`, which is what re-runs on every
+          // animation tick.
           borderRadius: BorderRadius.circular(14),
           padding: const EdgeInsets.all(4),
           // Slight surface tint to differentiate the track
@@ -545,60 +594,71 @@ class _ThemeModeSwitcherState extends State<_ThemeModeSwitcher>
           emphasized: true,
           child: SizedBox(
             height: 44,
-            child: Stack(
-              children: [
-                // Sliding pill indicator — sits BEHIND the
-                // segment buttons via the Stack order. The
-                // colour matches the theme's primary so the
-                // active mode reads as the same accent the
-                // user sees on every CTA.
-                Positioned(
-                  left: pillLeft + 2,
-                  top: 2,
-                  bottom: 2,
-                  width: segmentWidth - 4,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary
-                          .withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: theme.colorScheme.primary
-                            .withValues(alpha: 0.35),
-                        width: 1,
+            child: AnimatedBuilder(
+              animation: _ctrl,
+              builder: (context, _) {
+                final t = Curves.easeOutCubic.transform(_ctrl.value);
+                // The pill's left edge animates from `_fromIndex`'s
+                // segment to `_toIndex`'s segment.
+                final pillLeft =
+                    (_fromIndex + (_toIndex - _fromIndex) * t) *
+                        segmentWidth;
+                return Stack(
+                  children: [
+                    // Sliding pill indicator — sits BEHIND the
+                    // segment buttons via the Stack order. The
+                    // colour matches the theme's primary so the
+                    // active mode reads as the same accent the
+                    // user sees on every CTA.
+                    Positioned(
+                      left: pillLeft + 2,
+                      top: 2,
+                      bottom: 2,
+                      width: segmentWidth - 4,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary
+                              .withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: theme.colorScheme.primary
+                                .withValues(alpha: 0.35),
+                            width: 1,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    _segment(
-                      theme,
-                      l10n.themeLight,
-                      Icons.light_mode_outlined,
-                      AppThemeMode.light,
-                      pillLeft,
-                      segmentWidth,
-                    ),
-                    _segment(
-                      theme,
-                      l10n.themeDark,
-                      Icons.dark_mode_outlined,
-                      AppThemeMode.dark,
-                      pillLeft,
-                      segmentWidth,
-                    ),
-                    _segment(
-                      theme,
-                      l10n.themeSystem,
-                      Icons.brightness_auto_outlined,
-                      AppThemeMode.system,
-                      pillLeft,
-                      segmentWidth,
+                    Row(
+                      children: [
+                        _segment(
+                          theme,
+                          l10n.themeLight,
+                          Icons.light_mode_outlined,
+                          AppThemeMode.light,
+                          pillLeft,
+                          segmentWidth,
+                        ),
+                        _segment(
+                          theme,
+                          l10n.themeDark,
+                          Icons.dark_mode_outlined,
+                          AppThemeMode.dark,
+                          pillLeft,
+                          segmentWidth,
+                        ),
+                        _segment(
+                          theme,
+                          l10n.themeSystem,
+                          Icons.brightness_auto_outlined,
+                          AppThemeMode.system,
+                          pillLeft,
+                          segmentWidth,
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
         );
@@ -669,19 +729,31 @@ class _ThemeModeSwitcherState extends State<_ThemeModeSwitcher>
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurfaceVariant,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      icon,
-                      size: 16,
-                      color: active
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(label),
-                  ],
+                // The segment's width is fixed at
+                // `constraints.maxWidth / 3` (one third of the
+                // track), which on narrow phones leaves very
+                // little room for the label — especially for the
+                // longer Georgian translations like
+                // "სისტემმური" (System). Without this FittedBox
+                // the text would wrap to a second line and break
+                // the segment's fixed 44px height. `scaleDown`
+                // shrinks the text to fit, never enlarges it.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        icon,
+                        size: 16,
+                        color: active
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(label, maxLines: 1),
+                    ],
+                  ),
                 ),
               ),
             ),

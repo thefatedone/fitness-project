@@ -130,6 +130,15 @@ class AppTheme {
       useMaterial3: true,
       brightness: scheme.brightness,
       colorScheme: scheme,
+      // Comfortaa is the app's primary UI font — Latin + Cyrillic
+      // (EN/RU) coverage. The 5 static weights registered in
+      // `pubspec.yaml` (Light/Regular/Medium/SemiBold/Bold) match
+      // the w300/w400/w500/w600/w700 weights used in the
+      // [TextTheme] below, so Flutter can pick the right outline
+      // for every `FontWeight` in the scale. The `monospace`
+      // overrides on a handful of screens (API URLs, reset codes)
+      // intentionally bypass this and stay on the OS monospace.
+      fontFamily: 'Comfortaa',
       // Material 3's default scaffold background can drift from
       // `colorScheme.surface` depending on the version. Pin it
       // explicitly to our token so the AppBar / body / SafeArea
@@ -280,70 +289,94 @@ class AppTheme {
 
   /// Explicit text-scale overrides so the app's type ramp is
   /// consistent regardless of which Material 3 version we're locked
-  /// to. The web uses `Noto Sans` for its body text; we keep Flutter's
-  /// default system font for now (no new font package) — the
-  /// authority on `fontFamily` is left unchanged, only the size /
-  /// weight / colour scaffolding is set here.
+  /// to. The web uses `Noto Sans` for its body text; the Flutter
+  /// app uses `Comfortaa` (registered in `pubspec.yaml`) with
+  /// `NotoSansGeorgian` as a per-glyph fallback so the Georgian
+  /// (KA) translations — which Comfortaa has NO glyphs for — render
+  /// in Noto Sans Georgian without any locale-detection logic.
+  /// Mixed-script strings (e.g. a Georgian label next to a Latin
+  /// number) also work because Flutter falls back per-character,
+  /// not per-string.
   static TextTheme _buildTextTheme(Color foreground, Color foregroundMuted) {
+    const String primaryFamily = 'Comfortaa';
+    const List<String> fallbacks = ['NotoSansGeorgian'];
+    TextStyle base({
+      required double fontSize,
+      required FontWeight weight,
+      required Color color,
+      double height = 1.0,
+      double letterSpacing = 0,
+    }) {
+      return TextStyle(
+        fontFamily: primaryFamily,
+        fontFamilyFallback: fallbacks,
+        fontSize: fontSize,
+        fontWeight: weight,
+        color: color,
+        height: height,
+        letterSpacing: letterSpacing,
+      );
+    }
+
     return TextTheme(
-      headlineLarge: TextStyle(
+      headlineLarge: base(
         fontSize: 32,
-        fontWeight: FontWeight.w700,
+        weight: FontWeight.w700,
         color: foreground,
         height: 1.2,
         letterSpacing: -0.5,
       ),
-      headlineSmall: TextStyle(
+      headlineSmall: base(
         fontSize: 24,
-        fontWeight: FontWeight.w600,
+        weight: FontWeight.w600,
         color: foreground,
         height: 1.2,
       ),
-      titleLarge: TextStyle(
+      titleLarge: base(
         fontSize: 20,
-        fontWeight: FontWeight.w600,
+        weight: FontWeight.w600,
         color: foreground,
         height: 1.25,
       ),
-      titleMedium: TextStyle(
+      titleMedium: base(
         fontSize: 16,
-        fontWeight: FontWeight.w600,
+        weight: FontWeight.w600,
         color: foreground,
         height: 1.25,
       ),
-      bodyLarge: TextStyle(
+      bodyLarge: base(
         fontSize: 16,
-        fontWeight: FontWeight.w400,
+        weight: FontWeight.w400,
         color: foreground,
         height: 1.4,
       ),
-      bodyMedium: TextStyle(
+      bodyMedium: base(
         fontSize: 14,
-        fontWeight: FontWeight.w400,
+        weight: FontWeight.w400,
         color: foreground,
         height: 1.4,
       ),
-      bodySmall: TextStyle(
+      bodySmall: base(
         fontSize: 12,
-        fontWeight: FontWeight.w400,
+        weight: FontWeight.w400,
         color: foregroundMuted,
         height: 1.4,
       ),
-      labelLarge: TextStyle(
+      labelLarge: base(
         fontSize: 14,
-        fontWeight: FontWeight.w600,
+        weight: FontWeight.w600,
         color: foreground,
         letterSpacing: 0.2,
       ),
-      labelMedium: TextStyle(
+      labelMedium: base(
         fontSize: 12,
-        fontWeight: FontWeight.w500,
+        weight: FontWeight.w500,
         color: foregroundMuted,
         letterSpacing: 0.2,
       ),
-      labelSmall: TextStyle(
+      labelSmall: base(
         fontSize: 11,
-        fontWeight: FontWeight.w500,
+        weight: FontWeight.w500,
         color: foregroundMuted,
         letterSpacing: 0.2,
       ),

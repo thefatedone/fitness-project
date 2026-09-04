@@ -73,8 +73,12 @@ class AppColorsLight {
   /// Page background. Slate-50 in Tailwind terms.
   static const Color background = Color(0xFFF8FAFC);
 
-  /// Primary card / surface fill. Pure white.
-  static const Color backgroundSecondary = Color(0xFFFFFFFF);
+  /// Primary card / surface fill. Off-white (#FAFBFC) — one
+  /// tonal step above the page so cards are visibly distinct
+  /// from the canvas. The previous value (pure white) made
+  /// glass surfaces disappear into the page background on
+  /// light theme.
+  static const Color backgroundSecondary = Color(0xFFFAFBFC);
 
   /// Subtle inset / nested surface (e.g. inside a card).
   static const Color backgroundTertiary = Color(0xFFF1F5F9);
@@ -94,6 +98,8 @@ class AppColorsLight {
   /// Hover/active border — slate-300.
   static const Color borderHover = Color(0xFFCBD5E1);
 
-  /// Card background. Same as `backgroundSecondary` — pure white.
-  static const Color card = Color(0xFFFFFFFF);
+  /// Card background. Off-white (#F9FAFB) — distinct from the
+  /// page background and from `backgroundSecondary`, so cards
+  /// remain visibly layered.
+  static const Color card = Color(0xFFF9FAFB);
 }

@@ -6,10 +6,12 @@ import Testimonials from "@/components/landing/Testimonials";
 import Pricing from "@/components/landing/Pricing";
 import ContactSection from "@/components/landing/ContactSection";
 import Footer from "@/components/landing/Footer";
+import ScrollProgressBar from "@/components/ui/ScrollProgressBar";
 
 export default function Home() {
   return (
     <main className="min-h-screen ln-section">
+      <ScrollProgressBar />
       <Navbar />
       <Hero />
       <Features />

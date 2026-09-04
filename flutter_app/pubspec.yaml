@@ -79,6 +79,24 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Comfortaa — primary UI font for Latin + Cyrillic (EN/RU).
+  # The web client uses Noto Sans; Comfortaa is the visual
+  # counterpart with rounded geometric forms that match the
+  # rest of the NutriMind typography. Registered as a single
+  # variable-weight asset so Flutter can pick the right glyph
+  # outline for any `FontWeight` (300–700) at runtime.
+  # Pairs with `NotoSansGeorgian` as a fontFamilyFallback (see
+  # `_buildTextTheme` in `app_theme.dart`) so Georgian (KA)
+  # text renders correctly even though Comfortaa has no
+  # Georgian glyphs in its cmap table.
+  fonts:
+    - family: Comfortaa
+      fonts:
+        - asset: assets/fonts/Comfortaa-VariableFont.ttf
+    - family: NotoSansGeorgian
+      fonts:
+        - asset: assets/fonts/NotoSansGeorgian.ttf
+
   # Localisation via `flutter: gen-l10n` (Flutter's built-in ARB
   # code generator). The `gen-l10n` tool reads ARB files from
   # `lib/l10n/` (per `l10n.yaml` at the project root) and generates

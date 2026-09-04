@@ -1,6 +1,7 @@
 "use client";
-import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useTheme } from "@/context/ThemeContext";
 import Button from "@/components/ui/Button";
@@ -11,6 +12,37 @@ const FOOD_IMAGE_LIGHT = "/food-light.png";
 export default function Hero() {
   const { t } = useTranslations("hero");
   const { theme } = useTheme();
+  const sectionRef = useRef<HTMLElement>(null);
+  const spotlightRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+  const parallaxY = useTransform(scrollYProgress, [0, 1], [0, 140]);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const spotlight = spotlightRef.current;
+    if (!section || !spotlight) return;
+
+    let frame: number;
+    const handleMove = (e: MouseEvent) => {
+      const rect = section.getBoundingClientRect();
+      const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+      const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        spotlight.style.setProperty("--spot-x", `${xPct}%`);
+        spotlight.style.setProperty("--spot-y", `${yPct}%`);
+      });
+    };
+
+    section.addEventListener("mousemove", handleMove);
+    return () => {
+      section.removeEventListener("mousemove", handleMove);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
 
   const stats = [
     { val: "10M+", label: t("mealsTracked") },
@@ -19,27 +51,22 @@ export default function Hero() {
   ];
 
   return (
-    <section className="w-full min-h-[100dvh] flex items-center relative overflow-hidden pt-16 ln-section-tint">
+    <section ref={sectionRef} className="w-full min-h-[100dvh] flex items-center relative overflow-hidden pt-16 ln-section-tint ln-mesh-bg">
+      <div
+        ref={spotlightRef}
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none hidden lg:block"
+        style={{
+          background:
+            "radial-gradient(circle 320px at var(--spot-x, 50%) var(--spot-y, 30%), rgba(34,197,94,0.10), transparent 70%)",
+        }}
+      />
       <style>{`
         @keyframes scan {
           0%   { top: 0%; transform: translateY(0); }
           100% { top: 100%; transform: translateY(-100%); }
         }
       `}</style>
-
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          className="ln-glow absolute rounded-full"
-          style={{
-            top: "25%",
-            left: "25%",
-            width: "24rem",
-            height: "24rem",
-            background: "radial-gradient(ellipse at 20% 50%, rgba(34,197,94,0.08) 0%, transparent 60%)",
-            filter: "blur(120px)",
-          }}
-        />
-      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
@@ -54,10 +81,10 @@ export default function Hero() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22c55e]" />
               </span>
-              <span className="text-sm font-medium">{t("badge")}</span>
+              <span className="ln-display text-sm font-medium">{t("badge")}</span>
             </div>
 
-            <h1 className="ln-heading text-5xl md:text-6xl lg:text-7xl leading-tight mb-6">
+            <h1 className="ln-heading text-5xl md:text-6xl lg:text-7xl 2xl:text-8xl leading-[0.95] tracking-tight mb-6">
               <span className="block">{t("headline1")}</span>
               <span className="block">{t("headline2")}</span>
               <span className="block ln-eyebrow" style={{ textShadow: theme === "dark" ? "0 0 40px rgba(34,197,94,0.4)" : "none" }}>
@@ -70,7 +97,7 @@ export default function Hero() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button href="/register" variant="primary">
+              <Button href="/register" variant="primary" magnetic>
                 {t("cta")} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button href="#how-it-works" variant="secondary">
@@ -81,7 +108,7 @@ export default function Hero() {
             <div className="flex flex-wrap gap-8 mt-12 justify-center lg:justify-start">
               {stats.map(({ val, label }) => (
                 <div key={label}>
-                  <div className="ln-text text-2xl font-bold">{val}</div>
+                  <div className="ln-text ln-display text-2xl font-bold">{val}</div>
                   <div className="ln-text-muted text-sm">{label}</div>
                 </div>
               ))}
@@ -92,10 +119,24 @@ export default function Hero() {
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: [0.32, 0.72, 0, 1] }}
-            className="flex justify-end"
+            style={{ y: parallaxY }}
+            className="flex justify-end relative"
           >
-            <div className="relative flex items-center translate-x-12" style={{ height: "520px", marginLeft: "64px" }}>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none -z-10">
               <div
+                style={{
+                  width: "420px",
+                  height: "420px",
+                  background: "radial-gradient(circle, rgba(34,197,94,0.22) 0%, transparent 70%)",
+                  filter: "blur(70px)",
+                }}
+              />
+            </div>
+
+            <div className="relative flex items-center translate-x-12" style={{ height: "520px", marginLeft: "64px" }}>
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 className="relative overflow-hidden flex-shrink-0 bg-black border border-[#1a1a1a]"
                 style={{
                   width: "360px",
@@ -122,17 +163,20 @@ export default function Hero() {
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                   AI Analyzing...
                 </div>
-                <div className="absolute bottom-4 left-4 flex items-center gap-1.5 bg-black/80 backdrop-blur-sm border border-white/10 text-white text-sm font-medium px-3 py-1.5 rounded-full">
+                <div className="ln-display absolute bottom-4 left-4 flex items-center gap-1.5 bg-black/80 backdrop-blur-sm border border-white/10 text-white text-sm font-medium px-3 py-1.5 rounded-full">
                   🔥 403 {t("calorieUnit")}
                 </div>
-                <div className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-black/80 backdrop-blur-sm border border-white/10 text-white text-sm font-medium px-3 py-1.5 rounded-full">
+                <div className="ln-display absolute bottom-4 right-4 flex items-center gap-1.5 bg-black/80 backdrop-blur-sm border border-white/10 text-white text-sm font-medium px-3 py-1.5 rounded-full">
                   💪 30g {t("protein")}
                 </div>
-              </div>
+              </motion.div>
 
               <div style={{ width: "80px", flexShrink: 0 }} />
 
-              <div className="ln-card-solid relative rounded-3xl p-6 flex-shrink-0 border border-[var(--border)]" style={{ width: "260px", height: "520px" }}>
+              <motion.div
+                animate={{ y: [0, -14, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                className="ln-card-solid relative rounded-3xl p-6 flex-shrink-0 border border-[var(--border)]" style={{ width: "260px", height: "520px" }}>
                 {(() => {
                   const today = new Date().toLocaleDateString("en-US", {
                     month: "long",
@@ -199,11 +243,25 @@ export default function Hero() {
                     </>
                   );
                 })()}
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         </div>
       </div>
+
+      <a
+        href="#features"
+        aria-label="Scroll to features"
+        className="hidden md:flex absolute bottom-8 left-1/2 -translate-x-1/2 items-center justify-center"
+      >
+        <motion.div
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          className="ln-text-subtle"
+        >
+          <ChevronDown className="w-6 h-6" />
+        </motion.div>
+      </a>
     </section>
   );
 }

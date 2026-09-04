@@ -98,7 +98,7 @@ class _GlowShapes extends StatelessWidget {
     return ImageFiltered(
       imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
       child: CustomPaint(
-        painter: _GlowPainter(),
+        painter: _GlowPainter(brightness: Theme.of(context).brightness),
         child: const SizedBox.expand(),
       ),
     );
@@ -106,9 +106,25 @@ class _GlowShapes extends StatelessWidget {
 }
 
 class _GlowPainter extends CustomPainter {
+  _GlowPainter({required this.brightness});
+
+  /// Captured at build time so `paint` stays a single method
+  /// (CustomPaint only repaints when `shouldRepaint` says so).
+  final Brightness brightness;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final opacity = GlassTokens.glowOpacity;
+    // Light theme: a softer, smaller glow. The dark-theme green
+    // wash reads well against a near-black canvas; on a white
+    // canvas the same alpha reads as a dirty patch. Halve the
+    // opacity AND shrink the radii so the page background reads
+    // as a clean slate with a subtle accent instead of a sea of
+    // pastel blobs.
+    final isDark = brightness == Brightness.dark;
+    final opacityScale = isDark ? 1.0 : 0.45;
+    final radiusScale = isDark ? 1.0 : 0.75;
+
+    final baseOpacity = GlassTokens.glowOpacity * opacityScale;
 
     // Muted complementary colour — a low-saturation lavender
     // that picks up glass cards without competing with the
@@ -122,16 +138,16 @@ class _GlowPainter extends CustomPainter {
       canvas,
       size,
       center: Offset(size.width * 0.10, size.height * 0.12),
-      radius: size.shortestSide * 0.55,
-      color: AppColors.brand.withValues(alpha: opacity),
+      radius: size.shortestSide * 0.55 * radiusScale,
+      color: AppColors.brand.withValues(alpha: baseOpacity),
     );
     // Shape 2 — bottom-right, smaller soft muted-purple.
     _paintGlow(
       canvas,
       size,
       center: Offset(size.width * 0.95, size.height * 0.92),
-      radius: size.shortestSide * 0.40,
-      color: mutedPurple.withValues(alpha: opacity * 0.7),
+      radius: size.shortestSide * 0.40 * radiusScale,
+      color: mutedPurple.withValues(alpha: baseOpacity * 0.7),
     );
     // Shape 3 — mid-left, small focused brand-green so the
     // dock's glass has something to reflect at the bottom of
@@ -140,8 +156,8 @@ class _GlowPainter extends CustomPainter {
       canvas,
       size,
       center: Offset(size.width * 0.05, size.height * 0.65),
-      radius: size.shortestSide * 0.30,
-      color: AppColors.brand.withValues(alpha: opacity * 0.6),
+      radius: size.shortestSide * 0.30 * radiusScale,
+      color: AppColors.brand.withValues(alpha: baseOpacity * 0.6),
     );
   }
 

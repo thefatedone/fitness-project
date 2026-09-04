@@ -58,9 +58,11 @@ class GlassTokens {
   /// behind them for the BackdropFilter to actually blur.)
   static const double darkTintOpacity = 0.05;
 
-  /// Default tint opacity for light-theme glass. 2.5% black
-  /// wash — light surfaces don't need much.
-  static const double lightTintOpacity = 0.025;
+  /// Default tint opacity for light-theme glass. 4% black
+  /// wash — light surfaces don't need much, but at 2.5% the
+  /// card disappeared into the page background. 4% is enough to
+  /// read as "frosted" without looking dirty.
+  static const double lightTintOpacity = 0.04;
 
   /// Brand accent bleed ratio. Reduced from 0.07 → 0.04 —
   /// the previous value combined with the 8% tint was tinting

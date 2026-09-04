@@ -188,7 +188,10 @@ class _ApiEnvironmentCardState extends State<ApiEnvironmentCard> {
             children: [
               Text(
                 l10n.apiEnvCardBaseUrlApplied(after),
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4),
               Text(

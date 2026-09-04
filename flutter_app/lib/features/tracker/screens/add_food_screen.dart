@@ -25,11 +25,20 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   // Controllers — kept here so we don't fight Flutter over managed state.
   final _nameCtrl = TextEditingController();
   final _quantityCtrl = TextEditingController(text: '100');
-  // The unit field defaults to the Russian "г" because the value is sent
-  // to the backend verbatim and "г" matches the backend's expected
-  // default unit. The visible chip labels for the user ARE localised
-  // (see _unitChips below).
-  final _unitCtrl = TextEditingController(text: 'г');
+  // The unit field defaults to the *localised* "g" (RU: "г", KA: "გ"),
+  // matching the chip-label text rendered by `_unitChips` below. This
+  // The unit field is also the wire-protocol default sent to
+  // the backend in `_onSubmit` if the user leaves the field
+  // empty — so the value that ships on the wire matches the
+  // active UI locale (EN: "g", RU: "г", KA: "გ"). The default
+  // text is seeded in `didChangeDependencies()` below (NOT in
+  // the field initializer or in `initState()`) because
+  // `AppLocalizations.of(context)` does an
+  // `InheritedWidget` lookup, which throws if called before the
+  // widget's `BuildContext` is attached to the tree — that's
+  // exactly the case during field initialization and during
+  // `initState()`.
+  final TextEditingController _unitCtrl = TextEditingController();
   final _caloriesCtrl = TextEditingController();
   final _proteinCtrl = TextEditingController();
   final _carbsCtrl = TextEditingController();
@@ -37,6 +46,30 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   final _fiberCtrl = TextEditingController();
 
   String _mealType = 'breakfast';
+
+  /// Latches `true` the first time we seed `_unitCtrl.text` from
+  /// `AppLocalizations.of(context).addFoodUnitG`. `didChangeDependencies`
+  /// can run more than once over the lifetime of this State
+  /// (locale changes, theme changes, MediaQuery changes), and the
+  /// `_unitCtrl.text.isEmpty` guard plus this latch together make
+  /// sure we only overwrite the field with the locale default
+  /// while the user hasn't typed anything — a locale change while
+  /// the user has selected a non-default unit (e.g. "ml") must
+  /// not silently revert the field to "g".
+  bool _unitDefaultApplied = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_unitDefaultApplied && _unitCtrl.text.isEmpty) {
+      // Safe to call here — `didChangeDependencies` is the
+      // first lifecycle hook where the State.context is
+      // attached to the inherited-widget tree, so
+      // `AppLocalizations.of(context)` works without throwing.
+      _unitCtrl.text = AppLocalizations.of(context).addFoodUnitG;
+      _unitDefaultApplied = true;
+    }
+  }
 
   @override
   void dispose() {
@@ -109,7 +142,9 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       fat: _parseDouble(_fatCtrl) ?? 0,
       fiber: _parseDouble(_fiberCtrl),
       quantity: _parseDouble(_quantityCtrl) ?? 100,
-      unit: _unitCtrl.text.trim().isEmpty ? 'г' : _unitCtrl.text.trim(),
+      unit: _unitCtrl.text.trim().isEmpty
+          ? AppLocalizations.of(context).addFoodUnitG
+          : _unitCtrl.text.trim(),
       photoUrl: null,
       aiGenerated: false,
       createdAt: now,

@@ -76,7 +76,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
 
     String latestText = latest == null
         ? l10n.weightHistoryLatestMissing
-        : '${_fmt(latest)} кг';
+        : '${_fmt(latest)} ${l10n.unitKgShort}';
     String? targetText = target == null
         ? null
         : l10n.weightHistoryTarget(_fmt(target));
@@ -488,7 +488,7 @@ class _ChartTooltip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '${formatKg(entry.weight)} кг',
+            '${formatKg(entry.weight)} ${AppLocalizations.of(context).unitKgShort}',
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),

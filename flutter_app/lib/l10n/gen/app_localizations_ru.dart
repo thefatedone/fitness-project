@@ -869,6 +869,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get addFoodUnitMl => 'мл';
 
   @override
+  String get addFoodUnitL => 'л';
+
+  @override
   String get addFoodUnitPcs => 'шт';
 
   @override
@@ -1308,6 +1311,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get unitGramsShort => 'г';
+
+  @override
+  String get unitKgShort => 'кг';
 
   @override
   String get unitKcalShort => 'ккал';

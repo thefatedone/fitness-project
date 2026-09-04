@@ -213,12 +213,27 @@ class _GlassPainter extends CustomPainter {
       //    edge with a soft blur. We use a Path of the rect,
       //    expanded slightly, so the shadow sits *outside* the
       //    visible glass.
+      //
+      // Shadow opacity is *theme-aware*: a heavy shadow on light
+      // theme makes every glass card look like it's sitting on a
+      // dirty cloth — the page reads as a sea of grey halos. Light
+      // theme wants a much subtler shadow so the card itself
+      // (tinted slightly above the page) reads as the focal
+      // element rather than its shadow. Dark theme keeps the
+      // original strong shadow — the dark surface needs a clear
+      // dark halo to feel like it's floating.
+      final softShadowOpacity = brightness == Brightness.dark
+          ? 0.12
+          : 0.04;
+      final edgeShadowOpacity = brightness == Brightness.dark
+          ? 0.18
+          : 0.06;
       _paintShadow(
         canvas,
         size,
         blur: GlassTokens.shadowBlur,
         offsetY: GlassTokens.shadowOffsetY,
-        opacity: 0.12,
+        opacity: softShadowOpacity,
       );
       // 3. Tight dark edge shadow for visual "weight".
       _paintShadow(
@@ -226,17 +241,27 @@ class _GlassPainter extends CustomPainter {
         size,
         blur: GlassTokens.edgeShadowBlur,
         offsetY: GlassTokens.edgeShadowOffsetY,
-        opacity: 0.18,
+        opacity: edgeShadowOpacity,
       );
     }
 
     // 4. Gradient border — bright at the top, fading toward the
-    //    bottom. The previous top alpha (0.55) was so high it
-    //    read as a tinted band rather than a 1px stroke. The
-    //    new value (0.14) is "actually visible against a flat
-    //    dark background" without being a hard outline.
+    //    bottom.
+    //
+    // Border alpha is *theme-aware*: the previous fixed top/bottom
+    // alphas (0.14 / 0.04) read correctly against the dark
+    // surface, but on light theme the soft dark border vanishes
+    // against the page. Bumping the alphas on light theme makes
+    // the card edge read clearly without becoming a hard outline.
+    final isDark = brightness == Brightness.dark;
+    final borderTop = isDark
+        ? GlassTokens.borderTopAlpha
+        : GlassTokens.borderTopAlpha + 0.06;
+    final borderBottom = isDark
+        ? GlassTokens.borderBottomAlpha
+        : GlassTokens.borderBottomAlpha + 0.04;
     final baseBorderColor = borderColorOverride ??
-        (brightness == Brightness.dark ? Colors.white : Colors.black);
+        (isDark ? Colors.white : Colors.black);
     final borderPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = GlassTokens.borderWidth
@@ -244,8 +269,8 @@ class _GlassPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          baseBorderColor.withValues(alpha: GlassTokens.borderTopAlpha),
-          baseBorderColor.withValues(alpha: GlassTokens.borderBottomAlpha),
+          baseBorderColor.withValues(alpha: borderTop),
+          baseBorderColor.withValues(alpha: borderBottom),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRRect(rrect, borderPaint);

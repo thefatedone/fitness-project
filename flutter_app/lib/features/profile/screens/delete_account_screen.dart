@@ -100,9 +100,8 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                                   const EdgeInsets.only(left: 16, top: 4),
                               child: Text(
                                 state.errorText!,
-                                style: TextStyle(
+                                style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.error,
-                                  fontSize: 12,
                                 ),
                               ),
                             ),
