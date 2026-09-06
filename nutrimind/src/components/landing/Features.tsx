@@ -63,7 +63,7 @@ export default function Features() {
             transition={{ duration: 0.6, delay: index * 0.1, ease: [0.32, 0.72, 0, 1] }}
             className={featured ? "md:col-span-2 lg:col-span-1" : ""}
           >
-            <Card hover className="group relative overflow-hidden p-6 h-full">
+            <Card hover className="group relative overflow-hidden p-6 h-full flex flex-col">
               <div
                 className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-[#22c55e] opacity-0 group-hover:opacity-[0.08] blur-2xl transition-opacity duration-500 pointer-events-none"
               />
@@ -76,10 +76,12 @@ export default function Features() {
                 <Icon className={featured ? "w-7 h-7 text-[#22c55e]" : "w-6 h-6 text-[#22c55e]"} strokeWidth={1.5} />
               </div>
               <h3 className={`ln-text font-semibold mb-2 ${featured ? "text-xl" : "text-lg"}`}>{t(key)}</h3>
-              <p className="ln-text-muted text-sm leading-relaxed">{t(`${key}Desc`)}</p>
+              <div className="flex-1 flex flex-col">
+                <p className="ln-text-muted text-sm leading-relaxed">{t(`${key}Desc`)}</p>
 
-              {key === "progressAnalytics" && <MiniSparkline />}
-              {key === "aiCoach247" && <MiniChatBubbles />}
+                {key === "progressAnalytics" && <MiniSparkline />}
+                {key === "aiCoach247" && <MiniChatBubbles />}
+              </div>
             </Card>
           </motion.div>
         ))}

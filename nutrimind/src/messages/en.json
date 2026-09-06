@@ -24,7 +24,9 @@
     "breakfast": "Breakfast",
     "lunch": "Lunch",
     "items": "items",
-    "calorieUnit": "kcal"
+    "calorieUnit": "kcal",
+    "gramUnit": "g",
+    "analyzingBadge": "AI Analyzing..."
   },
   "Features": {
     "title": "Everything You Need to Transform",
@@ -140,5 +142,13 @@
     "madeWith": "Made with",
     "byTeam": "by the NutriMind team",
     "copyright": "© 2026 NutriMind. All rights reserved."
+  },
+  "Dock": {
+    "home": "Home",
+    "language": "Language",
+    "theme": "Theme",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "profile": "Profile"
   }
 }

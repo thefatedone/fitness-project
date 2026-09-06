@@ -5,6 +5,8 @@ import HowItWorks from "@/components/landing/HowItWorks";
 import Testimonials from "@/components/landing/Testimonials";
 import Pricing from "@/components/landing/Pricing";
 import ContactSection from "@/components/landing/ContactSection";
+import BrandParticleSection from "@/components/landing/BrandParticleSection";
+import LandingDock from "@/components/landing/LandingDock";
 import Footer from "@/components/landing/Footer";
 import ScrollProgressBar from "@/components/ui/ScrollProgressBar";
 
@@ -19,7 +21,9 @@ export default function Home() {
       <Testimonials />
       <Pricing />
       <ContactSection />
+      <BrandParticleSection />
       <Footer />
+      <LandingDock />
     </main>
   );
 }

@@ -24,7 +24,9 @@
     "breakfast": "საუზმე",
     "lunch": "სადილი",
     "items": "პროდუქტი",
-    "calorieUnit": "კკალ"
+    "calorieUnit": "კკალ",
+    "gramUnit": "გ",
+    "analyzingBadge": "AI ანალიზებს..."
   },
   "Features": {
     "title": "ყველაფერი, რაც ტრანსფორმაციისთვის გჭირდება",
@@ -140,5 +142,13 @@
     "madeWith": "შექმნილია სიყვარულით",
     "byTeam": "NutriMind-ის გუნდის მიერ",
     "copyright": "© 2026 NutriMind. ყველა უფლება დაცულია."
+  },
+  "Dock": {
+    "home": "მთავარი",
+    "language": "ენა",
+    "theme": "თემა",
+    "lightMode": "ნათელი თემა",
+    "darkMode": "მუქი თემა",
+    "profile": "პროფილი"
   }
 }

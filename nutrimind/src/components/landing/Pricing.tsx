@@ -54,7 +54,7 @@ export default function Pricing() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: index * 0.1, ease: [0.32, 0.72, 0, 1] }}
           >
-            <Card variant={plan.highlighted ? "highlighted" : "default"} className="relative p-6 h-full">
+            <Card variant={plan.highlighted ? "highlighted" : "default"} className="relative p-6 h-full flex flex-col">
               {plan.badgeKey && (
                 <div
                   className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold"
@@ -78,11 +78,11 @@ export default function Pricing() {
                   {t(plan.periodKey)}
                 </span>
               </div>
-              <p className={`text-sm mb-6 ${plan.highlighted ? "text-[#f0fdf4]" : "ln-text-muted"}`}>
+              <p className={`text-sm mb-6 min-h-[3rem] ${plan.highlighted ? "text-[#f0fdf4]" : "ln-text-muted"}`}>
                 {t(plan.descKey)}
               </p>
 
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-3 mb-8 flex-1">
                 {plan.featuresKeys.map((featureKey) => {
                   const isUpcoming = featureKey === "aiTrainerComingSoon";
                   const Icon = isUpcoming ? Clock : Check;
@@ -121,7 +121,7 @@ export default function Pricing() {
 
               <Button
                 variant={plan.highlighted ? "onBrand" : "dark"}
-                className="w-full !px-0 !py-3 text-sm"
+                className="w-full !px-0 !py-3 text-sm mt-auto"
               >
                 {t(plan.ctaKey)}
               </Button>

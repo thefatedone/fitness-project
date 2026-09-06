@@ -1,24 +1,81 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Web fonts — split between local + CDN.
+
+   • Comfortaa (Light / Regular / Medium / SemiBold / Bold) — primary UI
+     font for Latin + Cyrillic; matches the mobile app's
+     `fontFamily: 'Comfortaa'` (see flutter_app/lib/core/theme/app_theme.dart).
+     Served locally from /public/fonts/Comfortaa/.
+
+   • Noto Sans Georgian — used for the Mkhedruli (Georgian script) glyphs.
+     Comfortaa has zero Mkhedruli glyphs, so without this fallback every
+     KA character would fall through to the OS default — unreliable across
+     platforms. Loaded from Google Fonts CDN via layout.tsx (the only CDN
+     dep remaining).
+   ========================================================================== */
+@font-face {
+  font-family: 'Comfortaa';
+  src: url('/fonts/Comfortaa/Comfortaa-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Comfortaa';
+  src: url('/fonts/Comfortaa/Comfortaa-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Comfortaa';
+  src: url('/fonts/Comfortaa/Comfortaa-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Comfortaa';
+  src: url('/fonts/Comfortaa/Comfortaa-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Comfortaa';
+  src: url('/fonts/Comfortaa/Comfortaa-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme inline {
   --color-brand: #22c55e;
   --color-brand-dark: #16a34a;
   --color-brand-light: #4ade80;
-  --font-display: 'Space Grotesk', 'Noto Sans', Arial, sans-serif;
+  --font-display: 'Comfortaa', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 :root,
 [data-theme="dark"] {
-  --background: #0a0a0a;
-  --background-secondary: #111111;
+  --background: #0e1013;
+  --background-secondary: #14171c;
   --background-tertiary: #0d0d0d;
   --foreground: #ededed;
   --foreground-muted: #6b6b6b;
   --foreground-subtle: #3f3f3f;
   --border: #1a1a1a;
   --border-hover: #2a2a2a;
-  --card: #111111;
-  --nav: rgba(10, 10, 10, 0.95);
+  --card: #111418;
+  --nav: rgba(14, 16, 19, 0.85);
+  /* Closing "Nutrimind" particle window — premium canvas behind the brand glyphs. */
+  --particle-bg: #0e1013;
+  --particle-border: #1f232a;
+  /* Floating landing-page dock — glass panel at the bottom of the viewport. */
+  --dock-bg: rgba(18, 15, 23, 0.78);
+  --dock-item-bg: rgba(255, 255, 255, 0.04);
+  --dock-item-bg-hover: rgba(34, 197, 94, 0.18);
 }
 
 [data-theme="light"] {
@@ -32,6 +89,16 @@
   --border-hover: #cbd5e1;
   --card: #ffffff;
   --nav: rgba(248, 250, 252, 0.95);
+  /* Closing "Nutrimind" particle window — white surface in light mode so the
+     particle window flips in sync with the rest of the page when the user
+     toggles the theme. The slightly stronger --particle-border (slate-200)
+     keeps the frame readable against the white surface. */
+  --particle-bg: #ffffff;
+  --particle-border: #e2e8f0;
+  /* Floating landing-page dock — frosted white glass panel. */
+  --dock-bg: rgba(255, 255, 255, 0.72);
+  --dock-item-bg: rgba(15, 23, 42, 0.04);
+  --dock-item-bg-hover: rgba(34, 197, 94, 0.18);
 }
 
 * {
@@ -46,17 +113,28 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Noto Sans Georgian', 'Noto Sans', Arial, sans-serif;
+  font-family: 'Comfortaa', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   transition: background-color 0.5s ease-in-out, color 0.5s ease-in-out;
 }
 
-/* Georgian script — use Noto Sans Georgian when lang is "ka" */
+/* KA: Comfortaa first so Latin (incl. the brand "NutriMind", "AI", numerals,
+   punctuation) renders in the brand's Latin sans — NOT in some multi-script
+   serif that happens to have Latin glyphs. Comfortaa has no Mkhedruli, so
+   "ი კ ვ ე ბ ე..." falls through to Noto Sans Georgian (full Mkhedruli
+   coverage, loaded from Google Fonts CDN via layout.tsx). Mixed-script
+   strings ("AI 60 ფოტო-სკანირება") route per-glyph: "AI 60 " in Comfortaa,
+   "ფოტო-სკანირება" in Noto Sans Georgian. Mirrors the Flutter app's
+   `fontFamily: 'Comfortaa', fontFamilyFallback: ['NotoSansGeorgian']`. */
 html[lang="ka"] body {
-  font-family: 'Noto Sans Georgian', 'Noto Sans', Arial, sans-serif;
+  font-family: 'Comfortaa', 'Noto Sans Georgian', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 html[lang="en"] body {
-  font-family: 'Noto Sans', Arial, sans-serif;
+  font-family: 'Comfortaa', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html[lang="ru"] body {
+  font-family: 'Comfortaa', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 ::selection {
@@ -172,7 +250,7 @@ button, [role="button"], a, select, [onClick], .clickable {
   background-color: var(--background);
 }
 [data-theme="light"] .ln-section-tint {
-  background-color: #f0fdf4;
+  background-color: #ffffff;
 }
 .ln-section-alt {
   background-color: var(--background-secondary);
@@ -181,8 +259,8 @@ button, [role="button"], a, select, [onClick], .clickable {
 /* Typography */
 .ln-heading {
   color: var(--foreground);
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 .ln-subheading {
   color: var(--foreground-muted);
@@ -371,12 +449,16 @@ button, [role="button"], a, select, [onClick], .clickable {
 body {
   position: relative;
 }
+/* Layer 1 — procedural SVG film grain (fractalNoise, no external assets).
+   baseFrequency 0.9 + 2 octaves gives a tight, organic, film-like texture;
+   overflow: overlay/mix-blend-mode makes the grain interact with the underlying
+   color instead of sitting flat on top. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 1;
   pointer-events: none;
+  z-index: 0;
   opacity: 0.035;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -385,29 +467,23 @@ body::before {
   opacity: 0.02;
   mix-blend-mode: multiply;
 }
-
-/* Mesh gradient background — replaces a flat single radial glow with a
-   soft multi-point wash. Theme-aware; brand-green tinted in both themes
-   but calmer/lighter in light mode. */
-.ln-mesh-bg {
-  position: relative;
-  isolation: isolate;
-}
-.ln-mesh-bg::before {
+/* Layer 2 — engineering dot-grid (CAD/linear feel). 1px white dots on a 32px
+   square lattice, painted ABOVE the noise grain so the structure reads as
+   foreground and the grain reads as background depth. White at 0.08 × parent
+   opacity 0.6 = 0.048 effective — visible blueprint pattern in dark mode,
+   fades cleanly into white in light mode via the dark-coloured override. */
+body::after {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(34,197,94,0.16) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 85% 15%, rgba(34,197,94,0.08) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(34,197,94,0.06) 0%, transparent 60%);
-  filter: blur(40px);
+  z-index: 1;
+  opacity: 0.6;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
-[data-theme="light"] .ln-mesh-bg::before {
-  background:
-    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(34,197,94,0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 85% 15%, rgba(34,197,94,0.06) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(34,197,94,0.05) 0%, transparent 60%);
+[data-theme="light"] body::after {
+  opacity: 0.35;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px);
 }
+

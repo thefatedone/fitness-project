@@ -17,11 +17,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;500;600;700;900&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full flex flex-col antialiased" style={{ fontFamily: "'Noto Sans Georgian', 'Noto Sans', Arial, sans-serif" }}>
+      <body className="min-h-full flex flex-col antialiased">
         <LanguageProvider>
           <ThemeProvider>
             {children}

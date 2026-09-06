@@ -28,13 +28,13 @@ export default function Testimonials() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: index * 0.1, ease: [0.32, 0.72, 0, 1] }}
           >
-            <Card hover className="p-6 cursor-default">
+            <Card hover className="p-6 h-full cursor-default flex flex-col">
               <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="w-4 h-4 fill-[#facc15] text-[#facc15]" strokeWidth={0} />
                 ))}
               </div>
-              <p className="ln-text-muted text-sm leading-relaxed mb-6 italic">
+              <p className="ln-text-muted text-sm leading-relaxed mb-6 italic flex-1">
                 &ldquo;{t(`person${index + 1}Quote`)}&rdquo;
               </p>
               <div className="flex items-center gap-3">
