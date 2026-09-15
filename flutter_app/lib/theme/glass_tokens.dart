@@ -187,30 +187,6 @@ class GlassTokens {
     }
   }
 
-  // Second specular layer — a 1-px-equivalent bright line
-  // exactly along the top inner edge of the surface, blended
-  // with `BlendMode.plus`. Combined with the soft diffuse
-  // specular streak above, this gives the glass a refractive
-  // top edge (real glass) instead of just a soft glow.
-  // Tier-aware alphas; in dark theme we brighten with white, in
-  // light theme we darken with black (BlendMode.plus darkens
-  // a white surface — see [_GlassPainter] for the blend logic).
-  static const double _edgeLineHeroAlpha = 0.32;
-  static const double _edgeLineSurfaceAlpha = 0.20;
-  static const double _edgeLineInlineAlpha = 0.10;
-
-  /// Edge-line alpha for a given elevation tier.
-  static double edgeLineAlphaFor(GlassElevation elevation) {
-    switch (elevation) {
-      case GlassElevation.hero:
-        return _edgeLineHeroAlpha;
-      case GlassElevation.surface:
-        return _edgeLineSurfaceAlpha;
-      case GlassElevation.inline:
-        return _edgeLineInlineAlpha;
-    }
-  }
-
   // ---- Shadow -------------------------------------------------------------
 
   /// Soft, diffused "lift" shadow — the depth cue.

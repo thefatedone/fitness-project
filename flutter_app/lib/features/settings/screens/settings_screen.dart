@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/locale/locale_provider.dart';
@@ -9,7 +8,6 @@ import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/api_environment_card.dart';
 import '../../../widgets/glass/glass_card.dart';
 import '../../../widgets/glass/glass_background_glow.dart';
-import '../../../widgets/glass/glass_surface.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../profile/screens/change_password_screen.dart';
 import '../../profile/screens/delete_account_screen.dart';
@@ -131,9 +129,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       SizedBox(
                         width: double.infinity,
-                        child: _ThemeModeSwitcher(
-                          currentMode: currentMode,
-                          onChanged: _setThemeMode,
+                        child: SegmentedButton<AppThemeMode>(
+                          segments: [
+                            // Each label is wrapped in a `FittedBox`
+                            // with `BoxFit.scaleDown` so the M3
+                            // SegmentedButton — which is a fixed-height
+                            // widget — doesn't wrap the label to a
+                            // second line on narrow phones (e.g.
+                            // "სისტემური" at 14pt doesn't fit in a
+                            // ~110dp segment on a 360dp screen without
+                            // shrinking slightly). The stock M3
+                            // widget handles its own segment
+                            // padding internally (the custom
+                            // `_ThemeModeSwitcher` previously used
+                            // here only had 4dp horizontal padding
+                            // per segment, which was the root cause
+                            // of the recurring clipping bug).
+                            ButtonSegment(
+                              value: AppThemeMode.light,
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  l10n.themeLight,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ),
+                            ButtonSegment(
+                              value: AppThemeMode.dark,
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  l10n.themeDark,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ),
+                            ButtonSegment(
+                              value: AppThemeMode.system,
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  l10n.themeSystem,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ),
+                          ],
+                          selected: {currentMode},
+                          onSelectionChanged: (selection) {
+                            // SegmentedButton fires with an empty set
+                            // when the user taps the already-selected
+                            // segment (no-op per Flutter contract);
+                            // guard so we don't write the same value
+                            // back and trigger an unnecessary
+                            // notifyListeners.
+                            if (selection.isEmpty) return;
+                            _setThemeMode(selection.first);
+                          },
                         ),
                       ),
                       Padding(
@@ -472,276 +525,6 @@ class _SettingsListTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 20,
         vertical: 4,
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Theme switcher (segmented control with sliding indicator on GlassSurface)
-// ---------------------------------------------------------------------------
-
-/// Three-segment theme switcher (light / dark / system). Renders on
-/// a [GlassSurface] track and animates a sliding-pill indicator
-/// behind the active segment as the user taps between modes.
-///
-/// The visual model mirrors iOS's theme picker: a soft highlight
-/// rides behind whichever segment is currently selected, sliding
-/// to the new segment on tap. The pill's colour uses the theme's
-/// primary so the active mode reads as the same accent as the rest
-/// of the app's CTAs.
-class _ThemeModeSwitcher extends StatefulWidget {
-  const _ThemeModeSwitcher({
-    required this.currentMode,
-    required this.onChanged,
-  });
-
-  final AppThemeMode currentMode;
-  final ValueChanged<AppThemeMode> onChanged;
-
-  @override
-  State<_ThemeModeSwitcher> createState() => _ThemeModeSwitcherState();
-}
-
-class _ThemeModeSwitcherState extends State<_ThemeModeSwitcher>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-
-  /// Index of the segment that the indicator is currently
-  /// animating TO. We capture both the start and target so the
-  /// pill slides smoothly between them rather than snapping.
-  int _fromIndex = 0;
-  int _toIndex = 0;
-
-  /// Width of one segment, computed via [LayoutBuilder] in
-  /// [build]. Stored as a field so the animation listener can
-  /// keep tracking the target.
-  double _segmentWidth = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    );
-    _toIndex = _segmentIndex(widget.currentMode);
-    _fromIndex = _toIndex;
-  }
-
-  @override
-  void didUpdateWidget(covariant _ThemeModeSwitcher oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentMode != widget.currentMode) {
-      _fromIndex = _toIndex;
-      _toIndex = _segmentIndex(widget.currentMode);
-      _ctrl
-        ..reset()
-        ..forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  /// Three-segment lookup — order matches the visible segments
-  /// (light / dark / system).
-  int _segmentIndex(AppThemeMode mode) {
-    switch (mode) {
-      case AppThemeMode.light:
-        return 0;
-      case AppThemeMode.dark:
-        return 1;
-      case AppThemeMode.system:
-        return 2;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final segmentWidth = constraints.maxWidth / 3;
-        // Cache the segment width so the animation listener
-        // can read it without rebuilding the whole tree.
-        if (_segmentWidth != segmentWidth) {
-          _segmentWidth = segmentWidth;
-        }
-
-        return GlassSurface(
-          // Built ONCE (the LayoutBuilder only re-runs this
-          // outer builder when the parent constraints change,
-          // e.g. on a window resize). The `BackdropFilter` in
-          // here blurs the page background once per layout pass,
-          // not per animation frame. The animated parts (the
-          // sliding pill + the per-segment highlight colour
-          // tracking the pill) live inside the inner
-          // `AnimatedBuilder`, which is what re-runs on every
-          // animation tick.
-          borderRadius: BorderRadius.circular(14),
-          padding: const EdgeInsets.all(4),
-          // Slight surface tint to differentiate the track
-          // from the parent (otherwise the segmented control
-          // looks like it's floating without a container).
-          emphasized: true,
-          child: SizedBox(
-            height: 44,
-            child: AnimatedBuilder(
-              animation: _ctrl,
-              builder: (context, _) {
-                final t = Curves.easeOutCubic.transform(_ctrl.value);
-                // The pill's left edge animates from `_fromIndex`'s
-                // segment to `_toIndex`'s segment.
-                final pillLeft =
-                    (_fromIndex + (_toIndex - _fromIndex) * t) *
-                        segmentWidth;
-                return Stack(
-                  children: [
-                    // Sliding pill indicator — sits BEHIND the
-                    // segment buttons via the Stack order. The
-                    // colour matches the theme's primary so the
-                    // active mode reads as the same accent the
-                    // user sees on every CTA.
-                    Positioned(
-                      left: pillLeft + 2,
-                      top: 2,
-                      bottom: 2,
-                      width: segmentWidth - 4,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary
-                              .withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.35),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        _segment(
-                          theme,
-                          l10n.themeLight,
-                          AppThemeMode.light,
-                          pillLeft,
-                          segmentWidth,
-                        ),
-                        _segment(
-                          theme,
-                          l10n.themeDark,
-                          AppThemeMode.dark,
-                          pillLeft,
-                          segmentWidth,
-                        ),
-                        _segment(
-                          theme,
-                          l10n.themeSystem,
-                          AppThemeMode.system,
-                          pillLeft,
-                          segmentWidth,
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _segment(
-    ThemeData theme,
-    String label,
-    AppThemeMode value,
-    double pillLeft,
-    double segmentWidth,
-  ) {
-    // Highlight the segment if the indicator is currently
-    // sitting on top of it (or settling onto it). We use the
-    // animation value so the colour tracks the sliding pill,
-    // not the discrete index — the leading edge of the pill
-    // catches the destination segment before the trailing
-    // edge leaves the source.
-    final t = Curves.easeOutCubic.transform(_ctrl.value);
-    final pillCenter = (_fromIndex + (_toIndex - _fromIndex) * t) *
-            segmentWidth +
-        segmentWidth / 2;
-    final myCenter = _segmentIndex(value) * segmentWidth +
-        segmentWidth / 2;
-    final dist = (pillCenter - myCenter).abs();
-    final active = dist < segmentWidth / 2;
-    return Expanded(
-      child: DecoratedBox(
-        // Soft border on UNSELECTED segments so they read as
-        // distinct tappable regions, not empty space. The active
-        // segment doesn't draw a border — the sliding-pill
-        // indicator behind it is already a strong visual cue, and
-        // a second border on top would muddy the active state.
-        // Uses the same top→bottom alpha fade as the global
-        // [GlassTokens] border so the segments feel like a
-        // continuation of the surrounding glass surface.
-        decoration: active
-            ? const BoxDecoration()
-            : BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: theme.colorScheme.outlineVariant
-                      .withValues(alpha: 0.18),
-                  width: 1,
-                ),
-              ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-          child: InkResponse(
-            onTap: () {
-              // Selection tick (not confirmation haptic) — the
-              // theme switcher is a state selector, and `selectionClick`
-              // is the iOS-picker tick that signals "this option
-              // became active". `lightImpact` would over-cue the action.
-              HapticFeedback.selectionClick();
-              widget.onChanged(value);
-            },
-            radius: 14,
-            child: Center(
-              child: AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 180),
-                style: theme.textTheme.labelMedium!.copyWith(
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                  color: active
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-                // Text-only segment: the per-segment icon was
-                // dropped to free ~22 dp of horizontal space,
-                // which was crowding the label on narrow phones
-                // (iPhone SE: ~52 dp usable text budget per
-                // segment after the icon+gap block). The sliding
-                // pill already conveys the active state, so the
-                // icon was redundant decoration. Matches the
-                // language switcher's text-only pattern.
-                //
-                // `FittedBox(scaleDown)` shrinks the label to
-                // fit; `maxLines: 1` keeps the segment's fixed
-                // 44 dp height intact.
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(label, maxLines: 1),
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

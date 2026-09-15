@@ -491,10 +491,24 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     return Scaffold(
       // Minimal AppBar — the title text and the three trailing icon
       // buttons (settings, profile, chat) have moved into the
-      // bottom-floating Dock below. The AppBar is still here purely
+      // bottom-floating Dock below. The AppBar stays here purely
       // for status-bar color/height consistency and the OS-conventional
       // top-padding for the date-nav row that sits just under it.
-      appBar: AppBar(),
+      //
+      // The default AppBar paints an opaque (surface-colored)
+      // background that breaks the Liquid Glass continuity — the
+      // top of the screen reads as a flat band, then the
+      // `GlassBackgroundGlow` (which only wraps `body`) starts
+      // further down. Making the AppBar transparent + extending
+      // the body behind it lets the glow continue uninterrupted
+      // from under the status bar down to the bottom, so the
+      // page reads as one continuous glass surface.
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
+      extendBodyBehindAppBar: true,
       body: GlassBackgroundGlow(
         child: Stack(
         children: [

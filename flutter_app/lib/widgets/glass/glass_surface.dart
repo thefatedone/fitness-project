@@ -354,35 +354,6 @@ class _GlassPainter extends CustomPainter {
         specularPaint,
       );
     }
-
-    // 6. Refractive top-edge line — a 1-px-equivalent bright
-    //    line exactly along the top inner edge of the surface,
-    //    blended with `BlendMode.plus`. Combined with the soft
-    //    diffuse specular streak above, this gives the glass a
-    //    refractive top edge (real glass) instead of just a soft
-    //    glow.
-    //
-    // In light theme the line is dark, not light: `BlendMode.plus`
-    // on a near-white surface would just brighten with white and
-    // wash out, so we blend with the theme-aware inverse —
-    // white in dark, black in light.
-    if (enableSpecular) {
-      final edgeLineAlpha =
-          GlassTokens.edgeLineAlphaFor(elevation);
-      final edgeLineColor = isDark ? Colors.white : Colors.black;
-      // Slight Y offset so the line sits *inside* the 1-px
-      // border stroke at the top rather than overlapping it.
-      final edgePaint = Paint()
-        ..blendMode = BlendMode.plus
-        ..strokeWidth = 1.0
-        ..color = edgeLineColor.withValues(alpha: edgeLineAlpha)
-        ..style = PaintingStyle.stroke;
-      canvas.drawLine(
-        const Offset(0, 0.5),
-        Offset(size.width, 0.5),
-        edgePaint,
-      );
-    }
   }/// Paints an outer shadow for the rounded rect.
   void _paintShadow(
     Canvas canvas,
