@@ -280,7 +280,7 @@ class _GlassPainter extends CustomPainter {
         canvas,
         size,
         blur: GlassTokens.edgeShadowBlur,
-        offsetY: GlassTokens.edgeShadowBlur,
+        offsetY: GlassTokens.edgeShadowOffsetY,
         opacity: baseEdge,
       );
     }

@@ -44,6 +44,8 @@ class GlassCard extends StatefulWidget {
     this.hapticOnPress = true,
     this.borderColorOverride,
     this.suppressBlur,
+    this.elevation,
+    this.enableSpecular = false,
   });
 
   /// Inner content of the card.
@@ -82,6 +84,26 @@ class GlassCard extends StatefulWidget {
   /// frame. A `true` value forces the solid fallback path even
   /// when Reduce Transparency is off.
   final ValueListenable<bool>? suppressBlur;
+
+  /// Forwarded to [GlassSurface] for tier-aware blur sigma,
+  /// specular alpha, border alpha, and the hero shadow bump.
+  /// When `null`, [GlassSurface] falls back to a tier derived
+  /// from its `surfaceClass` (chip → `inline`, card/modal →
+  /// `surface`) so existing call sites stay working.
+  ///
+  /// The hero tier — currently the calorie summary card — gets
+  /// the deepest blur (25 px), the strongest specular gleam, and
+  /// a visibly deeper shadow so the most important surface on
+  /// screen reads as clearly floating above everything else.
+  final GlassElevation? elevation;
+
+  /// Forwarded to [GlassSurface]. When `true` the painter draws
+  /// the soft diffuse specular highlight + the refractive
+  /// top-edge line on top of the surface. The default for cards
+  /// is `false` so subtle / inline glass stays understated; the
+  /// hero tier on the calories ring card sets this to `true` so
+  /// the card reads as the most prominent surface on screen.
+  final bool enableSpecular;
 
   @override
   State<GlassCard> createState() => _GlassCardState();
@@ -182,6 +204,8 @@ class _GlassCardState extends State<GlassCard>
             borderRadius: widget.borderRadius,
             borderColorOverride: widget.borderColorOverride,
             suppressBlur: widget.suppressBlur,
+            elevation: widget.elevation,
+            enableSpecular: widget.enableSpecular,
             child: widget.child,
           ),
         ),

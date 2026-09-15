@@ -115,111 +115,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Polished "Theme" pill badge — mirrors the
-                      // Liquid Glass eyebrow pattern used by the
-                      // Hero badge. Small brand-tinted swatch + icon
-                      // + label, all wrapped in a single rounded
-                      // rectangle so the Theme window reads as a
-                      // cohesive unit rather than a plain muted label
-                      // above a separate picker.
+                      // Label sits inside the glass card so the
+                      // Theme window reads as one cohesive unit
+                      // rather than a separate header above the
+                      // picker. Plain muted text — the picker below
+                      // is the dominant visual.
                       Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: theme.colorScheme.primary
-                                  .withValues(alpha: 0.25),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.palette_outlined,
-                                size: 13,
-                                color: theme.colorScheme.primary,
+                        padding: const EdgeInsets.only(left: 4, bottom: 8),
+                        child: Text(
+                          l10n.settingsSectionTheme,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                l10n.settingsSectionTheme,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
-                      // Picker — M3's `SegmentedButton` matches
-                      // the language switcher's visual language
-                      // exactly: same fixed-height rounded edges,
-                      // same selection-indicator style, same icon-
-                      // +label pattern. The custom `_ThemeModeSwitcher`
-                      // that lived here before had a sliding-pill
-                      // that occasionally extended slightly past the
-                      // window corners at narrow phone widths — the
-                      // M3 widget handles its own clipping correctly.
                       SizedBox(
                         width: double.infinity,
-                        child: SegmentedButton<AppThemeMode>(
-                          segments: [
-                            ButtonSegment(
-                              value: AppThemeMode.light,
-                              icon: const Icon(Icons.light_mode_outlined),
-                              label: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  l10n.themeLight,
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ),
-                            ButtonSegment(
-                              value: AppThemeMode.dark,
-                              icon: const Icon(Icons.dark_mode_outlined),
-                              label: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  l10n.themeDark,
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ),
-                            ButtonSegment(
-                              value: AppThemeMode.system,
-                              icon: const Icon(Icons.brightness_auto_outlined),
-                              label: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  l10n.themeSystem,
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ),
-                          ],
-                          selected: {currentMode},
-                          onSelectionChanged: (selection) {
-                            // SegmentedButton fires with an empty set
-                            // when the user taps the already-selected
-                            // segment (no-op per Flutter contract);
-                            // guard so we don't write the same value
-                            // back and trigger an unnecessary
-                            // notifyListeners.
-                            if (selection.isEmpty) return;
-                            _setThemeMode(selection.first);
-                          },
+                        child: _ThemeModeSwitcher(
+                          currentMode: currentMode,
+                          onChanged: _setThemeMode,
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(top: 10),
+                        padding: const EdgeInsets.only(top: 10, left: 4),
                         child: Text(
                           _themeDescription(context, currentMode),
                           style: theme.textTheme.bodySmall?.copyWith(

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../l10n/gen/app_localizations.dart';
 
+import '../../../theme/glass_tokens.dart';
 import '../../../shared/widgets/app_dock.dart';
 import '../../../shared/widgets/email_verification_banner.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -898,6 +899,8 @@ class _CaloriesSummaryCard extends StatelessWidget {
     return GlassCard(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
       borderRadius: BorderRadius.circular(20),
+      elevation: GlassElevation.hero,
+      enableSpecular: true,
       suppressBlur: suppressBlur,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
