@@ -3,6 +3,7 @@
     "features": "Features",
     "pricing": "Pricing",
     "signIn": "Sign In",
+    "signOut": "Sign Out",
     "startFree": "Start Free"
   },
   "Hero": {
@@ -145,10 +146,15 @@
   },
   "Dock": {
     "home": "Home",
+    "features": "Features",
+    "pricing": "Pricing",
     "language": "Language",
     "theme": "Theme",
     "lightMode": "Light Mode",
     "darkMode": "Dark Mode",
-    "profile": "Profile"
+    "profile": "Profile",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "startFree": "Start Free"
   }
 }

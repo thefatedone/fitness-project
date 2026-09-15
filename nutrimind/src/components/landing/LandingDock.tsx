@@ -1,6 +1,16 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Home, Sun, Moon, User, Globe } from "lucide-react";
+import {
+  Home,
+  Sun,
+  Moon,
+  Globe,
+  Sparkles,
+  Tag,
+  LogIn,
+  User,
+  Rocket,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Dock, { type DockItemData } from "@/components/ui/Dock";
 import {
@@ -8,6 +18,7 @@ import {
   type Locale,
 } from "@/context/LanguageContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 import { useTranslations } from "@/hooks/useTranslations";
 
 const LANGS: { code: Locale; label: string }[] = [
@@ -17,33 +28,38 @@ const LANGS: { code: Locale; label: string }[] = [
 ];
 
 /**
- * Floating landing-page dock. Four controls, always one tap away:
+ * Floating landing-page dock. Eight controls, always one tap away.
+ *
+ * Items inherited from the original dock:
  *   - Home       → smooth-scrolls the page back to the top
  *   - Globe      → toggles the language popover (EN / KA / RU)
  *   - Sun/Moon   → flips between dark and light themes
- *   - User       → navigates to /dashboard/profile (the dashboard itself
- *                  redirects to /login if the visitor isn't authenticated)
  *
- * The dock is the SOLE place for theme switching on the landing page —
- * the Navbar's toggle has been removed so the control surface is one tap
- * away regardless of which section the visitor is reading.
+ * Items migrated from the (now-deleted) Navbar:
+ *   - Sparkles   → smooth-scrolls to #features
+ *   - Tag        → smooth-scrolls to #pricing
+ *   - LogIn/User → explicit auth action (sign in or go to /dashboard/profile,
+ *                  depending on state — sign-out is intentionally NOT reachable
+ *                  from the landing page; the user must be in /dashboard to log out)
+ *   - Rocket     → the primary CTA — navigates to /register
+ *
+ * The dock is the SOLE place for navigation, theme switching, language,
+ * and auth on the landing page — the entire Navbar was removed and the
+ * logo was extracted into its own top-left component (see BrandLogo).
  *
  * The dock itself is the React Bits <Dock /> component (provides the
  * macOS-style magnification-on-hover). This wrapper layers the language
  * popover ABOVE the dock using `position: fixed` so it floats cleanly
- * regardless of the wrap div's layout (the inner Dock itself is
- * fixed-positioned, so an `absolute` popover inside the wrap div was
- * rendered off-screen below the dock).
+ * regardless of the wrap div's layout.
  *
  * After any button press we briefly pin the corresponding label visible
  * (via Dock's `forceVisibleIndex` prop) so the user gets a clear,
- * localised confirmation of what they just triggered — without
- * re-introducing the bfcache-focus bug that kept the tooltip pinned
- * when returning from another page.
+ * localised confirmation of what they just triggered.
  */
 export default function LandingDock() {
   const { locale, setLocale } = useLanguage();
   const { theme, toggleTheme } = useTheme();
+  const { isAuthenticated, signIn } = useAuth();
   const { t: td } = useTranslations("dock");
   const [showLangs, setShowLangs] = useState(false);
   const [pinnedIndex, setPinnedIndex] = useState<number | null>(null);
@@ -87,6 +103,17 @@ export default function LandingDock() {
     }
   };
 
+  const scrollToSection = (id: string) => {
+    if (typeof window === "undefined") return;
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      // Fallback if the section isn't mounted yet (race during first paint)
+      window.location.hash = `#${id}`;
+    }
+  };
+
   const goToProfile = () => {
     if (typeof window !== "undefined") {
       window.location.href = "/dashboard/profile";
@@ -103,11 +130,19 @@ export default function LandingDock() {
       },
     },
     {
-      icon: <Globe size={20} strokeWidth={1.8} />,
-      label: td("language"),
+      icon: <Sparkles size={20} strokeWidth={1.8} />,
+      label: td("features"),
       onClick: () => {
         pinLabel(1);
-        setShowLangs((v) => !v);
+        scrollToSection("features");
+      },
+    },
+    {
+      icon: <Tag size={20} strokeWidth={1.8} />,
+      label: td("pricing"),
+      onClick: () => {
+        pinLabel(2);
+        scrollToSection("pricing");
       },
     },
     {
@@ -119,16 +154,42 @@ export default function LandingDock() {
         ),
       label: theme === "dark" ? td("lightMode") : td("darkMode"),
       onClick: () => {
-        pinLabel(2);
+        pinLabel(3);
         toggleTheme();
       },
     },
     {
-      icon: <User size={20} strokeWidth={1.8} />,
-      label: td("profile"),
+      icon: <Globe size={20} strokeWidth={1.8} />,
+      label: td("language"),
       onClick: () => {
-        pinLabel(3);
-        goToProfile();
+        pinLabel(4);
+        setShowLangs((v) => !v);
+      },
+    },
+    {
+      icon: isAuthenticated ? (
+        <User size={20} strokeWidth={1.8} />
+      ) : (
+        <LogIn size={20} strokeWidth={1.8} />
+      ),
+      label: isAuthenticated ? td("profile") : td("signIn"),
+      onClick: () => {
+        pinLabel(5);
+        if (isAuthenticated) {
+          goToProfile();
+        } else {
+          signIn();
+        }
+      },
+    },
+    {
+      icon: <Rocket size={20} strokeWidth={1.8} />,
+      label: td("startFree"),
+      onClick: () => {
+        pinLabel(6);
+        if (typeof window !== "undefined") {
+          window.location.href = "/register";
+        }
       },
     },
   ];
@@ -179,7 +240,7 @@ export default function LandingDock() {
 
       <Dock
         items={items}
-        panelHeight={80}
+        panelHeight={68}
         baseItemSize={50}
         magnification={70}
         forceVisibleIndex={pinnedIndex}

@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { ArrowRight, Beef, ChevronDown, Droplet, Flame, Wheat } from "lucide-react";
+import { ArrowRight, Beef, ChevronDown, Droplet, Wheat } from "lucide-react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -10,89 +10,13 @@ import Button from "@/components/ui/Button";
 const FOOD_IMAGE_DARK = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80";
 const FOOD_IMAGE_LIGHT = "/food-light.png";
 
-// Animated stroke-ring chart, 64×64 viewBox, designed to fit inside a
-// ~56px slot. Track is drawn faintly with var(--border) (works on both
-// themes); the colored arc animates strokeDashoffset from full to the
-// progress value via framer-motion. Wrap a parent with `key={locale}`
-// to re-trigger the animation when the user switches languages.
+// Animated stroke-ring chart, 64×64 viewBox, sized for the macro pillars
+// (icon sits inside the ring). Track is drawn faintly with var(--border)
+// (works on both themes); the colored arc animates strokeDashoffset from
+// full to the progress value via framer-motion. The macro-pillar row uses
+// `key={locale}` to re-trigger the animation on language switches.
 const RING_RADIUS = 26;
 const RING_CIRC = 2 * Math.PI * RING_RADIUS;
-
-type RingStatProps = {
-  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  color: string;
-  percent: number;
-  label: string;
-  value: string;
-  unit: string;
-  delay: number;
-};
-
-function RingStat({ Icon, color, percent, label, value, unit, delay }: RingStatProps) {
-  const clamped = Math.max(0, Math.min(1, percent));
-  const offset = RING_CIRC * (1 - clamped);
-  return (
-    <div className="flex items-center gap-3">
-      <div className="relative w-14 h-14 flex-shrink-0">
-        <svg
-          className="absolute inset-0"
-          viewBox="0 0 64 64"
-          aria-hidden="true"
-        >
-          <circle
-            cx={32}
-            cy={32}
-            r={RING_RADIUS}
-            fill="none"
-            stroke="var(--border)"
-            strokeOpacity="0.4"
-            strokeWidth={3}
-          />
-          <motion.circle
-            cx={32}
-            cy={32}
-            r={RING_RADIUS}
-            fill="none"
-            stroke={color}
-            strokeWidth={3}
-            strokeLinecap="round"
-            strokeDasharray={RING_CIRC}
-            initial={{ strokeDashoffset: RING_CIRC }}
-            animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1.1, delay, ease: "easeOut" }}
-            style={{
-              transform: "rotate(-90deg)",
-              transformOrigin: "32px 32px",
-            }}
-          />
-        </svg>
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ color }}
-        >
-          <Icon className="w-5 h-5" strokeWidth={2} />
-        </div>
-      </div>
-      <div className="flex-1 min-w-0">
-        <div
-          className="text-[10px] uppercase tracking-wider font-semibold leading-tight truncate"
-          style={{ color: "var(--foreground-muted)" }}
-        >
-          {label}
-        </div>
-        <div className="text-lg font-bold leading-tight ln-text">
-          {value}
-          <span
-            className="text-xs font-normal ml-1"
-            style={{ color: "var(--foreground-muted)" }}
-          >
-            {unit}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function Hero() {
   const { t } = useTranslations("hero");
@@ -111,13 +35,11 @@ export default function Hero() {
     { val: "50K+", label: t("activeUsers") },
   ];
 
-  // Unified ring widget: 1 calorie ring + 3 macro rings. Each row carries
-  // a Lucide icon (colored), a label, and the consumed value; the ring
-  // visualizes consumed/goal. Defined at the top of the component so the
-  // rings can pick up the fresh `t()` values on every locale change.
-  const consumed = 403;
-  const goal = 2000;
-  const caloriesPercent = consumed / goal;
+  // Three macro pillars (Protein / Carbs / Fat) rendered below the food
+  // photo card. Each carries a Lucide icon in its own color, a consumed
+  // value, and a percent that drives the per-pillar ring's animated
+  // strokeDashoffset. Defined at the top of the component so the labels
+  // can pick up fresh `t()` values on every locale change.
   const macros = [
     {
       key: "protein",
@@ -209,7 +131,7 @@ export default function Hero() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: [0.32, 0.72, 0, 1] }}
             style={{ y: parallaxY }}
-            className="flex justify-center relative"
+            className="flex justify-center lg:justify-end lg:pr-12 xl:pr-16 relative"
           >
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none -z-10">
               <div
@@ -222,11 +144,11 @@ export default function Hero() {
               />
             </div>
 
-            <div className="relative flex flex-col gap-5 items-start">
+            <div className="relative flex flex-col gap-5 items-start w-full max-w-[400px]">
               <motion.div
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="relative overflow-hidden flex-shrink-0 bg-black border border-[#1a1a1a] w-full max-w-[360px]"
+                className="relative overflow-hidden flex-shrink-0 bg-black border border-[#1a1a1a] w-full"
                 style={{
                   height: "440px",
                   borderRadius: "1.5rem",
@@ -260,51 +182,103 @@ export default function Hero() {
                 >
                   🔥 403 {t("calorieUnit")}
                 </div>
-                <div
-                  className="ln-display absolute bottom-4 right-4 flex items-center gap-1.5 bg-black/80 backdrop-blur-sm border border-white/10 text-white text-sm font-medium px-3 py-1.5 rounded-full"
-                  style={{ fontFamily: "'Comfortaa', sans-serif", fontFeatureSettings: "normal" }}
-                >
-                  💪 30{t("gramUnit")} {t("protein")}
-                </div>
               </motion.div>
 
-              <motion.div
-                animate={{ y: [0, -14, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                className="ln-card-solid relative rounded-3xl p-5 flex-shrink-0 border border-[var(--border)] flex flex-col justify-center w-full max-w-[360px]"
-                style={{ minHeight: "260px" }}
-              >
-                {/* `key={locale}` re-mounts the rings container on every
-                    language switch, replaying framer-motion's
-                    initial → animate cycle (the circle's
-                    strokeDashoffset animates from full → progress). The
-                    outer card does NOT re-mount, so the slow opacity/translate
-                    entry stays put. The same mechanism handles the very
-                    first page-load because it's also a fresh mount. */}
-                <div key={locale} className="flex flex-col gap-3">
-                  <RingStat
-                    Icon={Flame}
-                    color="#22c55e"
-                    percent={caloriesPercent}
-                    label={t("todaysProgress")}
-                    value={String(consumed)}
-                    unit={`/ ${goal} ${t("calorieUnit")}`}
-                    delay={0}
-                  />
-                  {macros.map((macro, i) => (
-                    <RingStat
-                      key={macro.key}
-                      Icon={macro.Icon}
-                      color={macro.color}
-                      percent={macro.percent}
-                      label={macro.label}
-                      value={`${macro.consumed}${t("gramUnit")}`}
-                      unit={`/ ${macro.goal}${t("gramUnit")}`}
-                      delay={0.12 * (i + 1)}
+              {/* Three macro pillars — `key={locale}` re-mounts the row on
+                  every language switch, which replays the per-pillar ring
+                  strokeDashoffset animation. Each pillar floats on its
+                  own staggered cycle so the cluster breathes naturally
+                  instead of all three moving in lockstep. */}
+              <div key={locale} className="grid grid-cols-3 gap-3 w-full">
+                {macros.map((macro, i) => (
+                  <motion.div
+                    key={macro.key}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: [0, -6, 0] }}
+                    transition={{
+                      opacity: { duration: 0.5, delay: 0.6 + i * 0.1 },
+                      y: { duration: 3.5 + i * 0.3, repeat: Infinity, ease: "easeInOut", delay: 0.6 + i * 0.2 },
+                    }}
+                    whileHover={{ y: -4 }}
+                    className="ln-card-solid group relative rounded-2xl p-4 flex flex-col items-center text-center cursor-pointer overflow-hidden transition-colors duration-300 hover:border-[var(--color-brand)]"
+                    style={{
+                      minHeight: "190px",
+                      borderColor: "var(--border)",
+                      borderWidth: "1px",
+                      boxShadow:
+                        "inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px -12px rgba(0,0,0,0.4)",
+                    }}
+                  >
+                    {/* Subtle macro-tinted wash — sits behind the card
+                        content, only visible on hover so the resting state
+                        stays neutral. */}
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                      style={{
+                        background: `radial-gradient(circle at 50% 0%, ${macro.color}22, transparent 70%)`,
+                      }}
                     />
-                  ))}
-                </div>
-              </motion.div>
+
+                    {/* Icon ring — track + animated progress arc in the
+                        macro's own color. SVG is rotated -90deg so the
+                        dash animation starts from 12 o'clock. */}
+                    <div className="relative w-14 h-14 mb-3">
+                      <svg
+                        viewBox="0 0 64 64"
+                        className="absolute inset-0"
+                        aria-hidden="true"
+                        style={{ transform: "rotate(-90deg)" }}
+                      >
+                        <circle
+                          cx={32}
+                          cy={32}
+                          r={26}
+                          fill="none"
+                          stroke="var(--border)"
+                          strokeOpacity={0.5}
+                          strokeWidth={3}
+                        />
+                        <motion.circle
+                          cx={32}
+                          cy={32}
+                          r={26}
+                          fill="none"
+                          stroke={macro.color}
+                          strokeWidth={3}
+                          strokeLinecap="round"
+                          strokeDasharray={RING_CIRC}
+                          initial={{ strokeDashoffset: RING_CIRC }}
+                          animate={{ strokeDashoffset: RING_CIRC * (1 - macro.percent) }}
+                          transition={{ duration: 1.1, delay: 0.6 + i * 0.12, ease: "easeOut" }}
+                        />
+                      </svg>
+                      <div
+                        className="absolute inset-0 flex items-center justify-center"
+                        style={{ color: macro.color }}
+                      >
+                        <macro.Icon className="w-6 h-6" strokeWidth={2} />
+                      </div>
+                    </div>
+
+                    <div className="ln-display text-4xl font-bold leading-none ln-text mt-1">
+                      {macro.consumed}
+                      <span
+                        className="text-base font-normal ml-1 align-baseline"
+                        style={{ color: "var(--foreground-muted)" }}
+                      >
+                        {t("gramUnit")}
+                      </span>
+                    </div>
+                    <div
+                      className="text-xs font-semibold mt-3 tracking-wide"
+                      style={{ color: macro.color }}
+                    >
+                      {macro.label}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </motion.div>
         </div>

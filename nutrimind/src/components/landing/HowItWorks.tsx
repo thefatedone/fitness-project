@@ -19,10 +19,10 @@ export default function HowItWorks() {
       <SectionHeading title={t("title")} subtitle={t("subtitle")} />
 
       <div className="relative">
-        <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2/3 h-px">
+        <div className="hidden lg:block absolute top-[40px] left-1/2 -translate-x-1/2 w-2/3 h-px">
           <div className="ln-divider absolute inset-0 border-t border-dashed opacity-60" />
           <motion.div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#22c55e]"
+            className="absolute top-[0px] -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#22c55e]"
             style={{ boxShadow: "0 0 8px rgba(34,197,94,0.8)" }}
             animate={{ left: ["0%", "100%"] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}

@@ -3,6 +3,7 @@
     "features": "Функции",
     "pricing": "Цены",
     "signIn": "Войти",
+    "signOut": "Выйти",
     "startFree": "Начать бесплатно"
   },
   "Hero": {
@@ -145,10 +146,15 @@
   },
   "Dock": {
     "home": "Главная",
+    "features": "Функции",
+    "pricing": "Цены",
     "language": "Язык",
     "theme": "Тема",
     "lightMode": "Светлый режим",
     "darkMode": "Тёмный режим",
-    "profile": "Профиль"
+    "profile": "Профиль",
+    "signIn": "Войти",
+    "signOut": "Выйти",
+    "startFree": "Начать бесплатно"
   }
 }

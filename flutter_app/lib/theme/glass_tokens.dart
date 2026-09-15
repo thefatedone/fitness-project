@@ -33,6 +33,15 @@ import '../core/theme/app_colors.dart';
 /// Both bands also bleed 5–8% of [AppColors.brand] so the glass
 /// feels native to the brand palette instead of generic
 /// glassmorphism.
+
+/// Visual depth tier — three levels, from "most present" to
+/// "most recessed". Each tier picks its own blur sigma, specular
+/// alpha, border alpha, and (for `hero`) a deeper shadow so
+/// cards on the same screen read as a clear hierarchy rather
+/// than as competing flat rectangles. Lives at top-level (Dart
+/// enums cannot be declared inside classes).
+enum GlassElevation { hero, surface, inline }
+
 class GlassTokens {
   GlassTokens._();
 
@@ -47,6 +56,12 @@ class GlassTokens {
   /// Sigma used for small elements (chips, badges). Lower because
   /// heavy blur on a small surface fuzzes the contained text.
   static const double chipBlurSigma = 14;
+
+  /// Sigma used for the single hero element per screen (e.g. the
+  /// calories ring card). The deepest blur tier — strong enough
+  /// to make the surface read as clearly floating above the canvas
+  /// without smearing the icon / ring content underneath.
+  static const double heroBlurSigma = 25;
 
   // ---- Tint overlay -------------------------------------------------------
 
@@ -111,13 +126,90 @@ class GlassTokens {
   /// streak reads as a top-of-card gleam, not a band.
   static const double specularInnerFadeStop = 0.85;
 
-  /// Specular highlight peak alpha. 0.06 — the previous 0.18
-  /// combined with the full-height top-to-bottom gradient made
-  /// every card show a visible "lighter at the top" band. The
-  /// new value is a soft gleam that the eye reads as "glass"
-  /// without seeing a transition line. Confined to the top
-  /// ~22% of the surface (see [_GlassPainter]).
-  static const double specularAlpha = 0.06;
+  // Tier-aware specular peak alphas. The previous single 0.06
+  // was invisible; the previous 0.18 was the harsh band that read
+  // as a gradient artefact. These land in the middle: hero is
+  // visibly glossy, surface reads as glass without competing
+  // with the page, inline is just a hint.
+  static const double _specularHeroAlpha = 0.18;
+  static const double _specularSurfaceAlpha = 0.10;
+  static const double _specularInlineAlpha = 0.06;
+
+  /// Specular peak alpha for a given elevation tier. Resolves to
+  /// `_specularHeroAlpha` / `_specularSurfaceAlpha` /
+  /// `_specularInlineAlpha` respectively. Hero gets the strongest
+  /// "I'm glass" gleam; inline stays almost imperceptible.
+  static double specularAlphaFor(GlassElevation elevation) {
+    switch (elevation) {
+      case GlassElevation.hero:
+        return _specularHeroAlpha;
+      case GlassElevation.surface:
+        return _specularSurfaceAlpha;
+      case GlassElevation.inline:
+        return _specularInlineAlpha;
+    }
+  }
+
+  // Tier-aware top border alphas. The previous single 0.14 was
+  // hard to see at any tier; the lift here is small but visible
+  // across all three tiers.
+  static const double _borderHeroTopAlpha = 0.24;
+  static const double _borderSurfaceTopAlpha = 0.20;
+  static const double _borderInlineTopAlpha = 0.14;
+
+  /// Top-border alpha for a given elevation tier.
+  static double borderTopAlphaFor(GlassElevation elevation) {
+    switch (elevation) {
+      case GlassElevation.hero:
+        return _borderHeroTopAlpha;
+      case GlassElevation.surface:
+        return _borderSurfaceTopAlpha;
+      case GlassElevation.inline:
+        return _borderInlineTopAlpha;
+    }
+  }
+
+  // Tier-aware bottom border alphas — bottom always fades to
+  // less than the top so the border doesn't read as a hard outline.
+  static const double _borderHeroBottomAlpha = 0.08;
+  static const double _borderSurfaceBottomAlpha = 0.06;
+  static const double _borderInlineBottomAlpha = 0.04;
+
+  /// Bottom-border alpha for a given elevation tier.
+  static double borderBottomAlphaFor(GlassElevation elevation) {
+    switch (elevation) {
+      case GlassElevation.hero:
+        return _borderHeroBottomAlpha;
+      case GlassElevation.surface:
+        return _borderSurfaceBottomAlpha;
+      case GlassElevation.inline:
+        return _borderInlineBottomAlpha;
+    }
+  }
+
+  // Second specular layer — a 1-px-equivalent bright line
+  // exactly along the top inner edge of the surface, blended
+  // with `BlendMode.plus`. Combined with the soft diffuse
+  // specular streak above, this gives the glass a refractive
+  // top edge (real glass) instead of just a soft glow.
+  // Tier-aware alphas; in dark theme we brighten with white, in
+  // light theme we darken with black (BlendMode.plus darkens
+  // a white surface — see [_GlassPainter] for the blend logic).
+  static const double _edgeLineHeroAlpha = 0.32;
+  static const double _edgeLineSurfaceAlpha = 0.20;
+  static const double _edgeLineInlineAlpha = 0.10;
+
+  /// Edge-line alpha for a given elevation tier.
+  static double edgeLineAlphaFor(GlassElevation elevation) {
+    switch (elevation) {
+      case GlassElevation.hero:
+        return _edgeLineHeroAlpha;
+      case GlassElevation.surface:
+        return _edgeLineSurfaceAlpha;
+      case GlassElevation.inline:
+        return _edgeLineInlineAlpha;
+    }
+  }
 
   // ---- Shadow -------------------------------------------------------------
 
@@ -168,16 +260,34 @@ class GlassTokens {
 
   // ---- Derived helpers ----------------------------------------------------
 
-  /// Returns the blur sigma for a given surface class.
-  static double sigmaFor(GlassSurfaceClass surfaceClass) {
-    switch (surfaceClass) {
-      case GlassSurfaceClass.chip:
-        return chipBlurSigma;
-      case GlassSurfaceClass.modal:
-        return modalBlurSigma;
-      case GlassSurfaceClass.card:
-        return cardBlurSigma;
+  /// Returns the blur sigma for a given elevation tier
+  /// (preferred). Falls back to the surface-class default when
+  /// no tier is supplied, so existing callers keep working.
+  static double sigmaFor(
+    Object tierOrClass, {
+      GlassElevation? elevation,
+    }) {
+    if (elevation != null) {
+      switch (elevation) {
+        case GlassElevation.hero:
+          return heroBlurSigma;
+        case GlassElevation.surface:
+          return cardBlurSigma;
+        case GlassElevation.inline:
+          return chipBlurSigma;
+      }
     }
+    if (tierOrClass is GlassSurfaceClass) {
+      switch (tierOrClass) {
+        case GlassSurfaceClass.chip:
+          return chipBlurSigma;
+        case GlassSurfaceClass.modal:
+          return modalBlurSigma;
+        case GlassSurfaceClass.card:
+          return cardBlurSigma;
+      }
+    }
+    return cardBlurSigma;
   }
 
   /// Returns the tint opacity for a given brightness + optional

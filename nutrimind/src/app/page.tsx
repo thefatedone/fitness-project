@@ -1,4 +1,4 @@
-import Navbar from "@/components/landing/Navbar";
+import BrandLogo from "@/components/landing/BrandLogo";
 import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import HowItWorks from "@/components/landing/HowItWorks";
@@ -14,7 +14,7 @@ export default function Home() {
   return (
     <main className="min-h-screen ln-section">
       <ScrollProgressBar />
-      <Navbar />
+      <BrandLogo />
       <Hero />
       <Features />
       <HowItWorks />

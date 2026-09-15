@@ -19,13 +19,17 @@
   gap: 0.75rem;
   border-radius: 1rem;
   background-color: var(--dock-bg);
+  /* Original macOS Dock has a thicker top edge that reads as a "tray"
+     sitting under the icons — a 1px border on three sides plus a 2px
+     top edge + an inner top highlight so the base feels tangible under
+     the items. */
   border: 1px solid var(--dock-border);
+  border-top: 2px solid var(--dock-border);
   padding: 0 0.5rem 0.5rem;
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
   box-shadow:
     0 12px 32px -8px rgba(0, 0, 0, 0.35),
-    0 2px 6px -1px rgba(0, 0, 0, 0.12);
+    0 2px 6px -1px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .dock-item {

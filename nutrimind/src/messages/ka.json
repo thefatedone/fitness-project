@@ -3,6 +3,7 @@
     "features": "ფუნქციები",
     "pricing": "ფასები",
     "signIn": "შესვლა",
+    "signOut": "გასლობა",
     "startFree": "დაიწყე უფასოდ"
   },
   "Hero": {
@@ -145,10 +146,15 @@
   },
   "Dock": {
     "home": "მთავარი",
+    "features": "ფუნქციები",
+    "pricing": "ფასები",
     "language": "ენა",
     "theme": "თემა",
     "lightMode": "ნათელი თემა",
     "darkMode": "მუქი თემა",
-    "profile": "პროფილი"
+    "profile": "პროფილი",
+    "signIn": "შესვლა",
+    "signOut": "გასლობა",
+    "startFree": "დაიწყე უფასოდ"
   }
 }

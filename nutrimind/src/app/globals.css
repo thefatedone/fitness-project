@@ -59,21 +59,25 @@
 
 :root,
 [data-theme="dark"] {
-  --background: #0e1013;
-  --background-secondary: #14171c;
-  --background-tertiary: #0d0d0d;
+  /* Dark canvas tuned to feel like one continuous black surface with the
+     dock's pure-black panel (#000 / 0.78 alpha) sitting on top. The body
+     is a hair lighter than the dock so the dock reads as a raised panel
+     instead of vanishing into the page background. */
+  --background: #050507;
+  --background-secondary: #14171b;
+  --background-tertiary: #050507;
   --foreground: #ededed;
   --foreground-muted: #6b6b6b;
   --foreground-subtle: #3f3f3f;
-  --border: #1a1a1a;
+  --border: #1c1e23;
   --border-hover: #2a2a2a;
-  --card: #111418;
-  --nav: rgba(14, 16, 19, 0.85);
+  --card: #14171b;
+  --nav: rgba(5, 5, 7, 0.85);
   /* Closing "Nutrimind" particle window — premium canvas behind the brand glyphs. */
   --particle-bg: #0e1013;
   --particle-border: #1f232a;
   /* Floating landing-page dock — glass panel at the bottom of the viewport. */
-  --dock-bg: rgba(18, 15, 23, 0.78);
+  --dock-bg: rgba(0, 0, 0, 0.78);
   --dock-item-bg: rgba(255, 255, 255, 0.04);
   --dock-item-bg-hover: rgba(34, 197, 94, 0.18);
 }
@@ -311,7 +315,9 @@ button, [role="button"], a, select, [onClick], .clickable {
   box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 [data-theme="dark"] .ln-card-solid {
-  box-shadow: 0 25px 80px -20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(34, 197, 94, 0.05);
+  /* Stronger shadow against the deeper #050507 canvas so raised cards still
+     feel lifted off the new darker surface. */
+  box-shadow: 0 30px 90px -25px rgba(0, 0, 0, 0.7), 0 0 50px rgba(34, 197, 94, 0.04);
 }
 
 /* Hero stat-card date label */
@@ -327,7 +333,9 @@ button, [role="button"], a, select, [onClick], .clickable {
   background-color: #e5e7eb;
 }
 [data-theme="dark"] .ln-progress-track {
-  background-color: #1f2937;
+  /* Match the new darker borders/backgrounds so the empty track reads as
+     part of the same material as the surrounding card. */
+  background-color: #1c1e23;
 }
 
 /* Highlighted / brand-solid card (e.g. "Pro" pricing tier) */

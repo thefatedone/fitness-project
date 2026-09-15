@@ -35,6 +35,8 @@ class GlassSurface extends StatelessWidget {
     this.showShadow = true,
     this.borderColorOverride,
     this.suppressBlur,
+    this.elevation,
+    this.heroShadowMultiplier = 1.6,
   });
 
   /// Content rendered inside the glass surface.
@@ -86,11 +88,39 @@ class GlassSurface extends StatelessWidget {
   /// glass surface through a blur recompute on every frame.
   final ValueListenable<bool>? suppressBlur;
 
+  /// Visual depth tier — drives the blur sigma, specular alpha,
+  /// border alpha, and (for `hero`) the deeper shadow multiplier.
+  /// When `null` the surface falls back to a tier derived from
+  /// [surfaceClass] (chip → `inline`, card → `surface`,
+  /// modal → `surface`) so existing call sites stay working
+  /// without modification.
+  final GlassElevation? elevation;
+
+  /// Shadow multiplier applied to the soft shadow when
+  /// [elevation] is [GlassElevation.hero]. 1.6 by default so the
+  /// single most important element per screen visibly floats
+  /// highest. Other tiers ignore it.
+  final double heroShadowMultiplier;
+
   @override
   Widget build(BuildContext context) {
     final radius = borderRadius ??
         BorderRadius.circular(GlassTokens.radiusFor(surfaceClass));
-    final sigma = GlassTokens.sigmaFor(surfaceClass);
+    // Resolve the effective elevation tier — explicit `elevation`
+    // param when supplied, otherwise fall back to a tier derived
+    // from `surfaceClass` so existing call sites (cards/modal/chip)
+    // keep working without modification.
+    final effectiveElevation = elevation ??
+        () {
+          switch (surfaceClass) {
+            case GlassSurfaceClass.chip:
+              return GlassElevation.inline;
+            case GlassSurfaceClass.modal:
+            case GlassSurfaceClass.card:
+              return GlassElevation.surface;
+          }
+        }();
+    final sigma = GlassTokens.sigmaFor(effectiveElevation);
     final reduceTransparency = ReduceTransparencyScope.of(context) ||
         (suppressBlur?.value ?? false);
 
@@ -122,6 +152,8 @@ class GlassSurface extends StatelessWidget {
               enableSpecular: enableSpecular,
               showShadow: showShadow,
               borderColorOverride: borderColorOverride,
+              elevation: effectiveElevation,
+              heroShadowMultiplier: heroShadowMultiplier,
             ),
             child: Padding(
               padding: padding,
@@ -184,6 +216,8 @@ class _GlassPainter extends CustomPainter {
     required this.enableSpecular,
     required this.showShadow,
     required this.borderColorOverride,
+    required this.elevation,
+    required this.heroShadowMultiplier,
   });
 
   final BorderRadius radius;
@@ -192,10 +226,13 @@ class _GlassPainter extends CustomPainter {
   final bool enableSpecular;
   final bool showShadow;
   final Color? borderColorOverride;
+  final GlassElevation elevation;
+  final double heroShadowMultiplier;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rrect = radius.toRRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final isDark = brightness == Brightness.dark;
 
     // 1. Tint wash — uniform low-opacity fill across the whole
     //    surface. The previous design extended this as a
@@ -203,8 +240,8 @@ class _GlassPainter extends CustomPainter {
     //    background, read as a visible top-to-bottom band. A
     //    flat fill at the new opacity (4–6% white in dark theme)
     //    is what the eye reads as "frosted glass" — the
-    //    surface highlights come from the specular pass below,
-    //    not from a tinted gradient.
+    //    surface highlights come from the specular passes
+    //    below, not from a tinted gradient.
     final tintPaint = Paint()..color = tint;
     canvas.drawRRect(rrect, tintPaint);
 
@@ -222,12 +259,15 @@ class _GlassPainter extends CustomPainter {
       // element rather than its shadow. Dark theme keeps the
       // original strong shadow — the dark surface needs a clear
       // dark halo to feel like it's floating.
-      final softShadowOpacity = brightness == Brightness.dark
-          ? 0.12
-          : 0.04;
-      final edgeShadowOpacity = brightness == Brightness.dark
-          ? 0.18
-          : 0.06;
+      //
+      // The hero tier bumps the soft-shadow opacity by
+      // `heroShadowMultiplier` so the single most important
+      // element on screen visibly floats highest.
+      final baseSoft = isDark ? 0.12 : 0.04;
+      final baseEdge = isDark ? 0.18 : 0.06;
+      final heroBump =
+          elevation == GlassElevation.hero ? heroShadowMultiplier : 1.0;
+      final softShadowOpacity = baseSoft * heroBump;
       _paintShadow(
         canvas,
         size,
@@ -240,26 +280,17 @@ class _GlassPainter extends CustomPainter {
         canvas,
         size,
         blur: GlassTokens.edgeShadowBlur,
-        offsetY: GlassTokens.edgeShadowOffsetY,
-        opacity: edgeShadowOpacity,
+        offsetY: GlassTokens.edgeShadowBlur,
+        opacity: baseEdge,
       );
     }
 
     // 4. Gradient border — bright at the top, fading toward the
-    //    bottom.
-    //
-    // Border alpha is *theme-aware*: the previous fixed top/bottom
-    // alphas (0.14 / 0.04) read correctly against the dark
-    // surface, but on light theme the soft dark border vanishes
-    // against the page. Bumping the alphas on light theme makes
-    // the card edge read clearly without becoming a hard outline.
-    final isDark = brightness == Brightness.dark;
-    final borderTop = isDark
-        ? GlassTokens.borderTopAlpha
-        : GlassTokens.borderTopAlpha + 0.06;
-    final borderBottom = isDark
-        ? GlassTokens.borderBottomAlpha
-        : GlassTokens.borderBottomAlpha + 0.04;
+    //    bottom. Tier-aware top/bottom alphas so the inline
+    //    tier stays subtle while hero reads with a clearly
+    //    visible edge.
+    final borderTop = GlassTokens.borderTopAlphaFor(elevation);
+    final borderBottom = GlassTokens.borderBottomAlphaFor(elevation);
     final baseBorderColor = borderColorOverride ??
         (isDark ? Colors.white : Colors.black);
     final borderPaint = Paint()
@@ -276,19 +307,14 @@ class _GlassPainter extends CustomPainter {
     canvas.drawRRect(rrect, borderPaint);
 
     // 5. Specular highlight — a soft, low-opacity gleam that lives
-    //    ONLY in the top ~22% of the surface. The previous
-    //    design drew a diagonal gradient across the full
-    //    upper-third (size.height / 3) with a hard stop at
-    //    0.6, which combined with the high alpha to read as a
-    //    visible band where the highlight ended. The new design
-    //    uses a *radial* gradient confined to a small ellipse at
-    //    the top centre, with no horizontal-gradient component
-    //    and a soft non-linear falloff — so the highlight
-    //    dissolves into the tint wash with no visible seam.
+    //    ONLY in the top ~22% of the surface. Tier-aware peak
+    //    alpha (hero gets the strongest "I'm glass" gleam; inline
+    //    is barely there).
     if (enableSpecular) {
       final streakHeight = size.height *
           GlassTokens.specularHeightFraction;
       final fadeStop = GlassTokens.specularInnerFadeStop;
+      final peak = GlassTokens.specularAlphaFor(elevation);
       // Use a horizontal-only radial gradient: peak at the
       // top-centre, falling off to zero at the bottom of the
       // streak. There's no horizontal falloff so the highlight
@@ -316,7 +342,7 @@ class _GlassPainter extends CustomPainter {
           center: Alignment(0, -0.6),
           radius: 1.4,
           colors: [
-            Colors.white.withValues(alpha: GlassTokens.specularAlpha),
+            Colors.white.withValues(alpha: peak),
             Colors.white.withValues(alpha: 0),
           ],
           stops: [0.0, fadeStop],
@@ -328,9 +354,36 @@ class _GlassPainter extends CustomPainter {
         specularPaint,
       );
     }
-  }
 
-  /// Paints an outer shadow for the rounded rect.
+    // 6. Refractive top-edge line — a 1-px-equivalent bright
+    //    line exactly along the top inner edge of the surface,
+    //    blended with `BlendMode.plus`. Combined with the soft
+    //    diffuse specular streak above, this gives the glass a
+    //    refractive top edge (real glass) instead of just a soft
+    //    glow.
+    //
+    // In light theme the line is dark, not light: `BlendMode.plus`
+    // on a near-white surface would just brighten with white and
+    // wash out, so we blend with the theme-aware inverse —
+    // white in dark, black in light.
+    if (enableSpecular) {
+      final edgeLineAlpha =
+          GlassTokens.edgeLineAlphaFor(elevation);
+      final edgeLineColor = isDark ? Colors.white : Colors.black;
+      // Slight Y offset so the line sits *inside* the 1-px
+      // border stroke at the top rather than overlapping it.
+      final edgePaint = Paint()
+        ..blendMode = BlendMode.plus
+        ..strokeWidth = 1.0
+        ..color = edgeLineColor.withValues(alpha: edgeLineAlpha)
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(
+        const Offset(0, 0.5),
+        Offset(size.width, 0.5),
+        edgePaint,
+      );
+    }
+  }/// Paints an outer shadow for the rounded rect.
   void _paintShadow(
     Canvas canvas,
     Size size, {
