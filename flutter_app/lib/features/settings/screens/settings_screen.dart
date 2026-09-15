@@ -630,7 +630,6 @@ class _ThemeModeSwitcherState extends State<_ThemeModeSwitcher>
                         _segment(
                           theme,
                           l10n.themeLight,
-                          Icons.light_mode_outlined,
                           AppThemeMode.light,
                           pillLeft,
                           segmentWidth,
@@ -638,7 +637,6 @@ class _ThemeModeSwitcherState extends State<_ThemeModeSwitcher>
                         _segment(
                           theme,
                           l10n.themeDark,
-                          Icons.dark_mode_outlined,
                           AppThemeMode.dark,
                           pillLeft,
                           segmentWidth,
@@ -646,7 +644,6 @@ class _ThemeModeSwitcherState extends State<_ThemeModeSwitcher>
                         _segment(
                           theme,
                           l10n.themeSystem,
-                          Icons.brightness_auto_outlined,
                           AppThemeMode.system,
                           pillLeft,
                           segmentWidth,
@@ -666,7 +663,6 @@ class _ThemeModeSwitcherState extends State<_ThemeModeSwitcher>
   Widget _segment(
     ThemeData theme,
     String label,
-    IconData icon,
     AppThemeMode value,
     double pillLeft,
     double segmentWidth,
@@ -726,31 +722,21 @@ class _ThemeModeSwitcherState extends State<_ThemeModeSwitcher>
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurfaceVariant,
                 ),
-                // The segment's width is fixed at
-                // `constraints.maxWidth / 3` (one third of the
-                // track), which on narrow phones leaves very
-                // little room for the label — especially for the
-                // longer Georgian translations like
-                // "სისტემმური" (System). Without this FittedBox
-                // the text would wrap to a second line and break
-                // the segment's fixed 44px height. `scaleDown`
-                // shrinks the text to fit, never enlarges it.
+                // Text-only segment: the per-segment icon was
+                // dropped to free ~22 dp of horizontal space,
+                // which was crowding the label on narrow phones
+                // (iPhone SE: ~52 dp usable text budget per
+                // segment after the icon+gap block). The sliding
+                // pill already conveys the active state, so the
+                // icon was redundant decoration. Matches the
+                // language switcher's text-only pattern.
+                //
+                // `FittedBox(scaleDown)` shrinks the label to
+                // fit; `maxLines: 1` keeps the segment's fixed
+                // 44 dp height intact.
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        icon,
-                        size: 16,
-                        color: active
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(label, maxLines: 1),
-                    ],
-                  ),
+                  child: Text(label, maxLines: 1),
                 ),
               ),
             ),

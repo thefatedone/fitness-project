@@ -306,44 +306,44 @@ class _GlassPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRRect(rrect, borderPaint);
 
-    // 5. Specular highlight — a soft, low-opacity gleam that lives
-    //    ONLY in the top ~22% of the surface. Tier-aware peak
-    //    alpha (hero gets the strongest "I'm glass" gleam; inline
-    //    is barely there).
+    // 5. Specular highlight — a soft horizontal band that hugs
+    //    the top edge of the surface and fades down over the
+    //    top ~22% of the card. Tier-aware peak alpha (hero gets
+    //    the strongest "I'm glass" gleam; inline is barely
+    //    there). Shape is consistent across tiers — only the
+    //    peak brightness changes — so cards on the same screen
+    //    read as a coherent family rather than each producing
+    //    its own artifact shape.
+    //
+    //    A `LinearGradient` (not radial) is what produces the
+    //    "light from above" reading: the band is uniform across
+    //    the card width with no circular falloff or blob, and
+    //    alpha naturally reaches zero at the bottom of the
+    //    streak — no seam where `drawRect` cuts. The earlier
+    //    radial approach produced a circular bright spot at
+    //    hero tier's 0.18 peak alpha, which read as a misplaced
+    //    artifact rather than a deliberate light source; the
+    //    linear band is the iOS-canonical top-edge sheen.
     if (enableSpecular) {
       final streakHeight = size.height *
           GlassTokens.specularHeightFraction;
       final fadeStop = GlassTokens.specularInnerFadeStop;
       final peak = GlassTokens.specularAlphaFor(elevation);
-      // Use a horizontal-only radial gradient: peak at the
-      // top-centre, falling off to zero at the bottom of the
-      // streak. There's no horizontal falloff so the highlight
-      // doesn't taper at the sides — that gives a more
-      // "horizontal sheen" feel, which matches the way iOS
-      // renders the top edge of glass.
-      //
-      // CRITICAL: `RadialGradient.radius` is a FRACTION of the
-      // shortest side of the paint rect, NOT an absolute pixel
-      // value. The rect below is `streakHeight` tall, so an
-      // absolute radius of `streakHeight * 1.4` would resolve to
-      // 1.4 × (rect's shortest side, also `streakHeight`) =
-      // `1.4 * streakHeight * streakHeight` in equivalent pixels
-      // — dozens of times the rect itself, which is why the
-      // gradient never fell off inside the streak and `drawRect`
-      // hard-cut it at the bottom (the visible "lighter top,
-      // darker bottom with a seam" band). The correct value is
-      // a plain fraction: 1.4 means the radial falloff reaches
-      // zero at 1.4 × the rect's shortest side, comfortably
-      // past the rect's bottom edge so the alpha is already at
-      // zero by the time `drawRect` cuts off — no seam.
+      // Theme-aware additive colour: white in dark theme
+      // brightens the streak (light-on-glass), black in light
+      // theme darkens it (additive shadow on the white surface).
+      // `BlendMode.plus` of black on white actually deepens the
+      // surface, which reads as a soft top-edge inset rather
+      // than a hot specular dot — same band, opposite polarity.
+      final sheenColor = isDark ? Colors.white : Colors.black;
       final specularPaint = Paint()
         ..blendMode = BlendMode.plus
-        ..shader = RadialGradient(
-          center: Alignment(0, -0.6),
-          radius: 1.4,
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
           colors: [
-            Colors.white.withValues(alpha: peak),
-            Colors.white.withValues(alpha: 0),
+            sheenColor.withValues(alpha: peak),
+            sheenColor.withValues(alpha: 0),
           ],
           stops: [0.0, fadeStop],
         ).createShader(
