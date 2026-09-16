@@ -545,14 +545,28 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                 // ListView keep handling it.
                 return false;
               },
-              child: ListView(
-                // Bottom padding bumped to clear the floating Dock's
-                // height (~64 px) plus its 16 px margin so the last
-                // food-log tile never hides under the pill. Top stays
-                // 0 — the AppBar already reserves the status-bar gutter
-                // and the date-nav row sits flush against it.
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                children: [
+              child: SafeArea(
+                // Status-bar inset for the scrollable content only.
+                // The transparent AppBar (paired with
+                // `extendBodyBehindAppBar: true`) lets the glass
+                // background extend behind the status bar so the
+                // page reads as one continuous surface, but it no
+                // longer reserves the status-bar gutter for us.
+                // Without this SafeArea the date-nav row would
+                // slide under the status bar / notch. `bottom:
+                // false` because the floating Dock at the bottom
+                // already manages its own bottom inset.
+                top: true,
+                bottom: false,
+                child: ListView(
+                  // Bottom padding bumped to clear the floating Dock's
+                  // height (~64 px) plus its 16 px margin so the last
+                  // food-log tile never hides under the pill. Top
+                  // stays 0 — SafeArea above already reserves the
+                  // status-bar gutter and the date-nav row sits flush
+                  // against it.
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  children: [
                 // Date navigation row — anchored at the top so the user
                 // always knows what day they're looking at.
                 _DateNavRow(
@@ -640,6 +654,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                   suppressBlur: _blurSuppressed,
                 ),
               ],
+                ),
               ),
             ),
           ),

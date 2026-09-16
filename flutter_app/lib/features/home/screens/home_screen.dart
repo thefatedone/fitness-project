@@ -15,6 +15,20 @@ import '../../auth/providers/auth_provider.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  Future<void> _logout(BuildContext context) async {
+    await context.read<AuthProvider>().logout();
+    // Pop the route stack back to the root (AuthGate). The provider
+    // has already flipped to `unauthenticated`, so AuthGate rebuilds
+    // into the LoginScreen on the same frame — without this pop the
+    // user would still be looking at HomeScreen until they manually
+    // navigated back.
+    if (!context.mounted) return;
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.popUntil((route) => route.isFirst);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -28,7 +42,7 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             tooltip: AppLocalizations.of(context).homeLogout,
             icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthProvider>().logout(),
+            onPressed: () => _logout(context),
           ),
         ],
       ),

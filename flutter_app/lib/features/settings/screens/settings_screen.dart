@@ -61,6 +61,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // confirmation flow) so the visual distinction between the two
     // actions is clear.
     await context.read<AuthProvider>().logout();
+    // Pop the route stack back to the root (AuthGate). The provider
+    // has already flipped to `unauthenticated`, so AuthGate will
+    // rebuild into the LoginScreen on the same frame — without
+    // this pop the user would still be looking at the Settings
+    // screen pushed on top of TrackerHome until they manually
+    // navigated back.
+    if (!mounted) return;
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.popUntil((route) => route.isFirst);
+    }
   }
 
   void _setThemeMode(AppThemeMode mode) {
@@ -86,9 +97,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // actually depends on the value.
 
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context).settingsTitle)),
-      body: SafeArea(
-        child: GlassBackgroundGlow(
+      // Transparent AppBar so the GlassBackgroundGlow extends
+      // seamlessly behind the status bar — the page reads as one
+      // continuous glass surface rather than a flat band above the
+      // glass area. `extendBodyBehindAppBar: true` lets the body
+      // render from y=0; the inner SafeArea (around the ListView)
+      // is what reserves the status-bar gutter for the content.
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(AppLocalizations.of(context).settingsTitle),
+      ),
+      extendBodyBehindAppBar: true,
+      body: GlassBackgroundGlow(
+        child: SafeArea(
+          // Status-bar inset for the scrollable content only. The
+          // transparent AppBar (paired with
+          // `extendBodyBehindAppBar: true`) no longer reserves the
+          // status-bar gutter for us, so we add it back here.
+          // `bottom: false` because the ListView's bottom padding
+          // already accounts for any home-indicator inset.
+          top: true,
+          bottom: false,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
