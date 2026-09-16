@@ -121,44 +121,88 @@ class GlassSurface extends StatelessWidget {
           }
         }();
     final sigma = GlassTokens.sigmaFor(effectiveElevation);
-    final reduceTransparency = ReduceTransparencyScope.of(context) ||
-        (suppressBlur?.value ?? false);
+    // Read the current reduce-transparency value once. The actual
+    // subscription lives inside the [ValueListenableBuilder] below
+    // — without it the surface wouldn't repaint when the scroll-
+    // velocity notifier flips, and the blur/fallback branch would
+    // lag the notifier by however long it took for the next
+    // unrelated rebuild to come along.
+    final reduceTransparency = ReduceTransparencyScope.of(context);
+    final suppressBlurValue = suppressBlur?.value ?? false;
 
-    if (reduceTransparency) {
-      // Solid fallback — same geometry / padding / radius, but no
-      // blur and a flat opaque fill. The child sits directly on
-      // top of the tint, so the rounded corners are preserved by
-      // the Container itself (not by the BackdropFilter clip
-      // ancestor that we're skipping in this branch).
-      return _solidFallback(context, radius);
-    }
+    // Wrap the blur/fallback decision in a [ValueListenableBuilder]
+    // when a [suppressBlur] notifier was provided. The builder
+    // subscribes to the notifier, so every flip schedules a rebuild
+    // on the frame the value changes — the surface swaps between
+    // full blur and solid fallback at the right moment, instead of
+    // waiting for an unrelated Provider-driven rebuild to come
+    // along and "fix it". When [suppressBlur] is null we render
+    // the surface directly with no extra layer; the read above is
+    // already a one-shot value lookup that doesn't subscribe.
+    final ValueListenable<bool>? notifier = suppressBlur;
+    final Widget content = notifier == null
+        ? _buildContent(
+            context, radius, effectiveElevation, sigma,
+            reduceTransparency: reduceTransparency,
+            suppressBlurValue: suppressBlurValue,
+          )
+        : ValueListenableBuilder<bool>(
+            valueListenable: notifier,
+            builder: (context, suppressed, _) => _buildContent(
+              context, radius, effectiveElevation, sigma,
+              reduceTransparency: reduceTransparency,
+              suppressBlurValue: suppressed,
+            ),
+          );
 
-    final tint = GlassTokens.tintColorFor(context, emphasized: emphasized);
     return RepaintBoundary(
       // The blur + custom paint live in their own layer so the
       // parent's scroll-driven repaints (e.g. the food log list)
       // don't drag the surface through a full blur recompute. The
       // boundary pays off most on scrollable surfaces where the
       // blur would otherwise be the hottest path on the GPU.
-      child: ClipRRect(
-        borderRadius: radius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-          child: CustomPaint(
-            painter: _GlassPainter(
-              radius: radius,
-              tint: tint,
-              brightness: Theme.of(context).brightness,
-              enableSpecular: enableSpecular,
-              showShadow: showShadow,
-              borderColorOverride: borderColorOverride,
-              elevation: effectiveElevation,
-              heroShadowMultiplier: heroShadowMultiplier,
-            ),
-            child: Padding(
-              padding: padding,
-              child: child,
-            ),
+      child: content,
+    );
+  }
+
+  /// Inner render of the glass surface. Decides between the full
+  /// `BackdropFilter` + `_GlassPainter` branch and the solid
+  /// fallback once per build. Extracted so the
+  /// [ValueListenableBuilder] can wrap exactly this decision
+  /// without splitting radius/elevation computation across two
+  /// methods.
+  Widget _buildContent(
+    BuildContext context,
+    BorderRadius radius,
+    GlassElevation effectiveElevation,
+    double sigma, {
+    required bool reduceTransparency,
+    required bool suppressBlurValue,
+  }) {
+    final reduce = reduceTransparency || suppressBlurValue;
+    if (reduce) {
+      return _solidFallback(context, radius);
+    }
+
+    final tint = GlassTokens.tintColorFor(context, emphasized: emphasized);
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+        child: CustomPaint(
+          painter: _GlassPainter(
+            radius: radius,
+            tint: tint,
+            brightness: Theme.of(context).brightness,
+            enableSpecular: enableSpecular,
+            showShadow: showShadow,
+            borderColorOverride: borderColorOverride,
+            elevation: effectiveElevation,
+            heroShadowMultiplier: heroShadowMultiplier,
+          ),
+          child: Padding(
+            padding: padding,
+            child: child,
           ),
         ),
       ),
@@ -373,11 +417,18 @@ class _GlassPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GlassPainter oldDelegate) {
+    // Compare every field the painter reads in `paint()`. Missing a
+    // field here means a tier flip (e.g. `surface` → `hero`) or a
+    // shadow-multiplier tweak would be silently dropped because the
+    // surrounding [RepaintBoundary] holds onto the old layer until
+    // something else invalidates it.
     return oldDelegate.radius != radius ||
         oldDelegate.tint != tint ||
         oldDelegate.brightness != brightness ||
         oldDelegate.enableSpecular != enableSpecular ||
         oldDelegate.showShadow != showShadow ||
-        oldDelegate.borderColorOverride != borderColorOverride;
+        oldDelegate.borderColorOverride != borderColorOverride ||
+        oldDelegate.elevation != elevation ||
+        oldDelegate.heroShadowMultiplier != heroShadowMultiplier;
   }
 }
