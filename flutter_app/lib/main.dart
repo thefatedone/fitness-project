@@ -11,6 +11,7 @@ import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/providers/password_reset_provider.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/chat/providers/chat_provider.dart';
+import 'features/splash/screens/splash_gate.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'features/tracker/providers/beverage_provider.dart';
 import 'features/tracker/providers/food_recognition_provider.dart';
@@ -297,7 +298,7 @@ class _NutriMindAppShell extends StatelessWidget {
         Locale('ka'),
         Locale('ru'),
       ],
-      home: const AuthGate(),
+      home: const SplashGate(child: AuthGate()),
     );
   }
 }

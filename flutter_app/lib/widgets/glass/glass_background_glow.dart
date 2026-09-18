@@ -83,6 +83,21 @@ class _GlowShapes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The top band of the screen (status-bar inset + the height
+    // of the old opaque AppBar) used to be hidden behind an
+    // opaque AppBar; now that `extendBodyBehindAppBar: true` on
+    // the consumer Scaffold exposes the glow layer all the way
+    // up to y=0, Shape 1's bright core (top-left, bright peak
+    // around y = 0.12 × height) would render directly behind
+    // the clock and status icons. Mask it out by passing the
+    // band height down to the painter, which uses it as a
+    // canvas-clip cutoff so nothing draws in the band itself.
+    // Shape 2 (bottom-right) and Shape 3 (mid-left) don't reach
+    // the top — confirmed by computing their bounding circles
+    // — so they need no treatment.
+    final topMaskHeight =
+        MediaQuery.of(context).padding.top + kToolbarHeight;
+
     // Pre-soften the glow shapes via a one-time static blur. The
     // shapes are radial gradients, so without this filter they
     // have a (soft) hard edge where the gradient alpha hits
@@ -98,7 +113,10 @@ class _GlowShapes extends StatelessWidget {
     return ImageFiltered(
       imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
       child: CustomPaint(
-        painter: _GlowPainter(brightness: Theme.of(context).brightness),
+        painter: _GlowPainter(
+          brightness: Theme.of(context).brightness,
+          topMaskHeight: topMaskHeight,
+        ),
         child: const SizedBox.expand(),
       ),
     );
@@ -106,11 +124,20 @@ class _GlowShapes extends StatelessWidget {
 }
 
 class _GlowPainter extends CustomPainter {
-  _GlowPainter({required this.brightness});
+  _GlowPainter({required this.brightness, required this.topMaskHeight});
 
   /// Captured at build time so `paint` stays a single method
   /// (CustomPaint only repaints when `shouldRepaint` says so).
   final Brightness brightness;
+
+  /// Pixel-Y cutoff below which the painter draws nothing. Set
+  /// to `MediaQuery.padding.top + kToolbarHeight` by the parent
+  /// so the status-bar / notch band reads as transparent.
+  /// Captured at build so a screen rotation / keyboard show /
+  /// foldable unfold (which changes the status-bar inset and
+  /// therefore the band height) triggers a repaint via
+  /// [shouldRepaint].
+  final double topMaskHeight;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -133,7 +160,28 @@ class _GlowPainter extends CustomPainter {
     // decoration-only colour, not a brand colour.
     const mutedPurple = Color(0xFF6366F1);
 
+    // Mask the top band before drawing any shapes. The
+    // clip-rect spans the full width × (band height → page
+    // bottom), so anything whose bright core lands inside
+    // y < topMaskHeight gets clipped out cleanly. The clip is
+    // restored right after the shapes finish, so anything
+    // outside this method is unaffected.
+    //
+    // `topMaskHeight` is allowed to be larger than the screen
+    // height (e.g. when a parent pushes it past the page — see
+    // tests on tall landscape devices): clamping the cutoff at
+    // [size.height] lets the painter degrade gracefully to "no
+    // shapes drawn" instead of throwing on a negative clip
+    // rect.
+    final clipTop = topMaskHeight.clamp(0.0, size.height);
+    if (clipTop < size.height) {
+      canvas.save();
+      canvas.clipRect(Rect.fromLTRB(0, clipTop, size.width, size.height));
+    }
+
     // Shape 1 — top-left, large soft accent-green.
+    // (Was previously bleeding into the status-bar band; now
+    // masked out by the clip above.)
     _paintGlow(
       canvas,
       size,
@@ -159,6 +207,10 @@ class _GlowPainter extends CustomPainter {
       radius: size.shortestSide * 0.30 * radiusScale,
       color: AppColors.brand.withValues(alpha: baseOpacity * 0.6),
     );
+
+    if (clipTop < size.height) {
+      canvas.restore();
+    }
   }
 
   /// Paints a single radial-gradient glow. Uses [RadialGradient]
@@ -183,5 +235,16 @@ class _GlowPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_GlowPainter oldDelegate) => false;
+  bool shouldRepaint(_GlowPainter oldDelegate) {
+    // The mask cutoff depends on the OS status-bar inset
+    // (`MediaQuery.padding.top`). When that changes — screen
+    // rotation, foldable unfold, keyboard show, dynamic island
+    // resize — the parent rebuilds with a fresh `topMaskHeight`
+    // and we need to repaint to pick it up. The rest of the
+    // painter's inputs are captured at build and don't change
+    // (the shapes are static — the previous `shouldRepaint =>
+    // false` was correct for everything except the mask).
+    return oldDelegate.topMaskHeight != topMaskHeight ||
+        oldDelegate.brightness != brightness;
+  }
 }
