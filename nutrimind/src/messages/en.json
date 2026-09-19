@@ -99,6 +99,32 @@
     "proDescription": "Complete nutrition mastery",
     "familyDescription": "Share wellness with your household"
   },
+  "Faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know before you start.",
+    "diffPlansQ": "What's the difference between Free, Pro, and Family?",
+    "diffPlansA": "Free gives you unlimited manual food, water, and weight logging with no AI features. Pro adds 60 AI photo scans and 80 AI chat messages per month, plus advanced analytics and meal planning. Family includes unlimited AI photo scans and chat, sharing for up to 5 people, and early access to upcoming features like the AI workout coach.",
+    "aiAccuracyQ": "How accurate is the AI food recognition?",
+    "aiAccuracyA": "Our AI correctly identifies food and estimates calories with around 98% accuracy on clear, well-lit photos. Mixed dishes or unusual angles can reduce accuracy, so you can always edit any AI-logged meal by hand.",
+    "dataPrivacyQ": "Is my health and nutrition data private?",
+    "dataPrivacyA": "Yes. Your meals, weight, and goals are yours — we never sell your data to advertisers or third parties. You can request full deletion of your account and data at any time.",
+    "cancelAnytimeQ": "Can I cancel my subscription anytime?",
+    "cancelAnytimeA": "Yes, there's no lock-in. You can cancel your Pro or Family plan whenever you like, and you'll keep access until the end of your current billing period.",
+    "freeForeverQ": "Do I need to pay to use NutriMind?",
+    "freeForeverA": "No — the Free plan works forever with unlimited manual logging, water and weight tracking, and a daily macro summary. Upgrading is only needed if you want AI photo scanning and chat.",
+    "aiTrainerLaunchQ": "When will the AI workout coach launch?",
+    "aiTrainerLaunchA": "It's in active development and will be exclusive to the Family plan at launch. Family subscribers will be the first to get access."
+  },
+  "Privacy": {
+    "title": "Your data stays yours",
+    "subtitle": "Nutrition and health information is personal — here's how we treat it.",
+    "noSellTitle": "We never sell your data",
+    "noSellDesc": "Your meals, weight, and goals are never shared with advertisers or sold to third parties.",
+    "encryptedTitle": "Encrypted in transit and at rest",
+    "encryptedDesc": "Your data is encrypted end-to-end, protecting it from unauthorized access.",
+    "deleteAnytimeTitle": "Delete anytime",
+    "deleteAnytimeDesc": "Request full deletion of your account and all associated data whenever you want, no questions asked."
+  },
   "Contact": {
     "title": "Get in Touch",
     "subtitle": "Have a question, partnership idea, or want to integrate NutriMind into your business? We would love to hear from you.",
