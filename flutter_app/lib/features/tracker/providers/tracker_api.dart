@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 import '../../../core/api/api_client.dart';
 import '../../auth/providers/auth_api.dart';
 import '../models/food_log_model.dart';
+import '../models/streak_model.dart';
 import '../models/water_log_model.dart';
 import '../models/weight_log_model.dart';
 
@@ -146,6 +147,36 @@ class TrackerApi {
   Future<void> deleteWater(String waterId) async {
     try {
       await _dio.delete<void>('/tracker/water/$waterId');
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  // ----- Streak ----------------------------------------------------------------
+
+  /// `GET /api/v1/tracker/streak?today_str=YYYY-MM-DD`.
+  ///
+  /// [today] is normalised through the same `_formatDate` helper
+  /// [getDailyFood] / [getWaterLogs] already use, so the wire
+  /// format is consistent across every date-keyed tracker endpoint
+  /// — no second local-date-string helper needed. The server
+  /// receives the client's local YYYY-MM-DD (NOT UTC midnight),
+  /// matches the convention in `backend/app/api/v1/routes/tracker.py`.
+  ///
+  /// Return value is a single [StreakModel] (a snapshot, not a list),
+  /// so the list-mutation REGRESSION GUARD in the class doc comment
+  /// does not apply here.
+  Future<StreakModel> getStreak(DateTime today) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/tracker/streak',
+        queryParameters: {'today_str': _formatDate(today)},
+      );
+      final body = res.data;
+      if (body == null) {
+        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
+      }
+      return StreakModel.fromJson(body);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }

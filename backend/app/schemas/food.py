@@ -152,3 +152,31 @@ class WeightLogHistoryResponse(BaseModel):
             weight=wl.weight,
             note=wl.note,
         )
+
+
+class StreakResponse(BaseModel):
+    """Response shape for `GET /api/v1/tracker/streak`.
+
+    The streak is *computed* from existing `food_logs` / `water_logs`
+    rows on every request rather than persisted. Self-correcting:
+    the counter can never drift out of sync with the underlying
+    log data. The trade-off is one cheap DISTINCT-style query per
+    request, which is negligible against the API surface this
+    endpoint is called from (cold start + after every successful
+    food / water save).
+
+    `current_streak` semantics:
+      * `0` — neither today nor yesterday has any food or water
+        entry. The streak is broken.
+      * `>= 1` — counting today (or yesterday, under the grace
+        period) as the anchor and walking back, that many consecutive
+        calendar days each had at least one entry.
+
+    `logged_today` — whether today itself (per the client's local
+    date) has at least one entry. This is what the UI uses to flip
+    the streak badge from "alive today" to "still alive, log to
+    keep" — the counter is unchanged across that flip; only the
+    surface treatment moves.
+    """
+    current_streak: int
+    logged_today: bool

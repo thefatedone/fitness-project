@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ShieldCheck, Lock, Trash2 } from "lucide-react";
 import { useTranslations } from "@/hooks/useTranslations";
 import Section from "@/components/ui/Section";
+import SectionHeading from "@/components/ui/SectionHeading";
 
 /**
  * Compact 3-point trust band placed right before Pricing, where
@@ -34,13 +35,8 @@ export default function PrivacySection() {
   const { t } = useTranslations("privacy");
 
   return (
-    <Section background="alt" className="!py-16 md:!py-20">
-      <div className="text-center max-w-2xl mx-auto mb-12">
-        <h2 className="ln-heading text-2xl md:text-3xl tracking-tight mb-3">
-          {t("title")}
-        </h2>
-        <p className="ln-subheading">{t("subtitle")}</p>
-      </div>
+    <Section background="alt">
+      <SectionHeading title={t("title")} subtitle={t("subtitle")} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
         {POINTS.map(({ key, icon: Icon }, index) => (
@@ -62,10 +58,10 @@ export default function PrivacySection() {
                 strokeWidth={1.5}
               />
             </div>
-            <h3 className="ln-text font-semibold text-sm">
+            <h3 className="ln-text text-xl font-bold mb-3">
               {t(`${key}Title`)}
             </h3>
-            <p className="ln-text-muted text-xs leading-relaxed max-w-[220px]">
+            <p className="ln-text-muted text-sm leading-relaxed max-w-xs flex-1">
               {t(`${key}Desc`)}
             </p>
           </motion.div>

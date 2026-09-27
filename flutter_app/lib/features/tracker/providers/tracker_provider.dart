@@ -5,6 +5,7 @@ import '../../../l10n/gen/app_localizations_lookup.dart';
 import '../../auth/providers/auth_api.dart';
 import '../models/beverage_result.dart';
 import '../models/food_log_model.dart';
+import '../models/streak_model.dart';
 import '../models/water_log_model.dart';
 import '../models/weight_log_model.dart';
 import 'tracker_api.dart';
@@ -48,6 +49,19 @@ class TrackerProvider extends ChangeNotifier {
   /// [ApiException.messageKey] for the matching HTTP-side pattern.
   String? errorMessage;
   String? errorMessageKey;
+
+  /// Diary-streak snapshot for the user's *current* local day.
+  /// `null` until the first [loadStreak] call resolves (or if the
+  /// last call errored).
+  ///
+  /// Refresh policy: fetched once on the Today screen's first
+  /// load, then again after every successful food / water save
+  /// (including the beverage dual-write via [addBeverageEntry]).
+  /// Browsing past days via the date-nav row does NOT refetch —
+  /// the streak is a "today" concept that doesn't change meaning
+  /// when viewing history.
+  StreakModel? _streak;
+  StreakModel? get streak => _streak;
 
   /// The shared HTTP client for tracker endpoints.
   final TrackerApi _trackerApi = TrackerApi();
@@ -175,13 +189,61 @@ class TrackerProvider extends ChangeNotifier {
     }
   }
 
+  /// Loads the user's current diary streak for the device's local
+  /// "today". Failures are silent: streak fetch is non-essential
+  /// (the user can still use the app — they just won't see the
+  /// badge), so an error here should never block the UI. We swallow
+  /// the exception, log nothing, and leave [streak] unchanged (or
+  /// null on the very first call).
+  ///
+  /// Refresh policy: the Today screen calls this exactly once on
+  /// first mount; later refetches happen implicitly via
+  /// [refreshStreakAfterSave] on every successful food / water save.
+  /// Browsing past days via the date-nav row does NOT call this —
+  /// the streak is a "today" concept independent of which
+  /// historical day the user is viewing.
+  Future<void> loadStreak() async {
+    try {
+      _streak = await _trackerApi.getStreak(DateTime.now());
+    } on ApiException {
+      // Silent per the method doc above.
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  /// Internal hook fired by [addFoodEntry] / [addWaterEntry] /
+  /// [addBeverageEntry] after a successful server write. Re-reads
+  /// the streak from the server (cheap DISTINCT-style query) so
+  /// the badge in the UI reflects the just-added entry without
+  /// requiring the screen to refetch the full daily dataset.
+  ///
+  /// Failures are intentionally non-fatal: the streak badge
+  /// staying stale for one extra cycle is a strictly-better UX
+  /// than a SnackBar every time someone logs a meal.
+  Future<void> refreshStreakAfterSave() async {
+    try {
+      _streak = await _trackerApi.getStreak(DateTime.now());
+      notifyListeners();
+    } on ApiException {
+      // Silent.
+    }
+  }
+
   /// Adds a new food entry. The server-assigned row (with id +
-  /// timestamps) is appended to [foodLogs] on success.
+  /// timestamps) is appended to [foodLogs] on success. Also kicks
+  /// off a streak refresh so the date-nav badge reflects the new
+  /// entry without waiting for the next cold start.
   Future<bool> addFoodEntry(FoodLogModel food) {
     return _runTrackerAction<FoodLogModel>(
       action: () => _trackerApi.addFood(food),
       onSuccess: (saved) {
         foodLogs = [...foodLogs, saved];
+        // Fire-and-forget: refreshStreakAfterSave catches and
+        // swallows its own errors, so we don't need to await or
+        // handle the result here.
+        // ignore: discarded_futures
+        refreshStreakAfterSave();
       },
     );
   }
@@ -228,12 +290,15 @@ class TrackerProvider extends ChangeNotifier {
   }
 
   /// Adds a water entry to [selectedDate]. The returned row is appended to
-  /// [waterLogs].
+  /// [waterLogs]. Also refreshes the streak so the badge in the UI
+  /// reflects the new entry without a manual reload.
   Future<bool> addWaterEntry(int amountMl) {
     return _runTrackerAction<WaterLogModel>(
       action: () => _trackerApi.addWater(selectedDate, amountMl),
       onSuccess: (saved) {
         waterLogs = [...waterLogs, saved];
+        // ignore: discarded_futures
+        refreshStreakAfterSave();
       },
     );
   }
@@ -408,6 +473,12 @@ class TrackerProvider extends ChangeNotifier {
     foodLogs = [...foodLogs, foodLog];
     waterLogs = [...waterLogs, waterLog];
     notifyListeners();
+    // Beverage recognition is its own flow (not routed through
+    // _runTrackerAction), so the streak refresh has to be wired
+    // here directly. Silent-failure semantics match
+    // refreshStreakAfterSave's contract.
+    // ignore: discarded_futures
+    refreshStreakAfterSave();
   }
 
   /// Clears [errorMessage] without otherwise touching state — useful for

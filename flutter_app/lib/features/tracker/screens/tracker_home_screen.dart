@@ -1,9 +1,12 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../l10n/gen/app_localizations.dart';
 
+import '../../../core/theme/app_colors.dart';
 import '../../../theme/glass_tokens.dart';
 import '../../../shared/widgets/app_dock.dart';
 import '../../../shared/widgets/email_verification_banner.dart';
@@ -12,6 +15,7 @@ import '../../chat/screens/chat_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../models/food_log_model.dart';
+import '../models/streak_model.dart';
 import '../models/water_log_model.dart';
 import '../providers/food_recognition_provider.dart';
 import '../providers/tracker_provider.dart';
@@ -70,6 +74,73 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
   /// settles.
   static const double _blurOnThresholdPxPerSec = 200;
 
+  // ---------------------------------------------------------------------
+  // Smoothed-velocity tracking.
+  //
+  // The original implementation estimated velocity as
+  //     scrollDelta * 1000 / 16
+  // assuming every ScrollUpdateNotification corresponds to exactly one
+  // 60 fps frame. That assumption breaks in three real-world cases:
+  //   * 90 / 120 Hz displays (8.3 ms frames — the estimate runs ~2x
+  //     too slow, so the suppression threshold never fires for what
+  //     the user perceives as a fast fling).
+  //   * Framework coalescing — Flutter can pack multiple deltas into
+  //     one notification when the platform thread falls behind.
+  //   * Variable per-frame timing during a fling — the GPU stalls
+  //     and resumes, so deltas between consecutive notifications
+  //     jump around. Divided by a fixed 16 ms, that jitter produces
+  //     a velocity estimate that oscillates right across the
+  //     hysteresis band — the notifier flips on/off several times
+  //     per fling, which is the bug this block kills.
+  //
+  // Fix: measure the actual wall-clock gap between consecutive
+  // notifications via a monotonic Stopwatch, compute a true px/s
+  // velocity from that, and feed it into an exponential moving
+  // average. The smoothed value is what we compare against the
+  // thresholds, so single-frame spikes and coalesced deltas both
+  // stop causing toggles.
+  // ---------------------------------------------------------------------
+
+  /// Monotonic clock used to derive per-event Δt. `Stopwatch` is
+  /// preferred over `DateTime.now()` because it's unaffected by
+  /// wall-clock adjustments and is high-resolution.
+  final Stopwatch _scrollClock = Stopwatch()..start();
+
+  /// `elapsedMilliseconds` of the previous scroll notification.
+  /// `null` until the first event arrives, so the very first
+  /// notification is treated as a baseline seed rather than a
+  /// velocity sample.
+  int? _lastScrollElapsedMs;
+
+  /// Smoothed velocity, in px/s. EMA so single-frame jitter is
+  /// weighted out without making the suppression sluggish.
+  double _scrollVelocityEma = 0;
+
+  /// EMA weighting on the latest sample. 0.3 ≈ a 3-frame weighted
+  /// average: smooth enough to absorb one coalesced / stalled frame,
+  /// responsive enough that a genuine deceleration drops the EMA
+  /// below [_blurOnThresholdPxPerSec] within ~50 ms.
+  static const double _velocityEmaAlpha = 0.3;
+
+  /// Cap on Δt used in the velocity calculation. A 500 ms gap
+  /// (tab backgrounded, gesture recogniser mid-decision) would
+  /// otherwise collapse the velocity toward zero and mask a real
+  /// slowdown. Capping at 100 ms keeps each sample meaningful.
+  static const double _maxDeltaMs = 100;
+
+  // ---------------------------------------------------------------------
+  // Flip-count diagnostic.
+  //
+  // Increments every time `_blurSuppressed.value` actually changes
+  // state (NOT on every notification). Logged via `developer.log`
+  // so it shows up in `flutter logs` / `adb logcat` and can be
+  // grep'd against the pre-fix behaviour (3-6 flips per fling) to
+  // confirm the smoothed-velocity change dropped it to 0-1. The
+  // lifetime total is also emitted from `dispose()`.
+  // ---------------------------------------------------------------------
+  int _blurFlipCount = 0;
+  bool? _lastBlurStateForCount;
+
   @override
   void initState() {
     super.initState();
@@ -77,18 +148,32 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     // is safe to call and we don't trigger a setState during build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Fire both loads in parallel — weight history is independent of
-      // the day's food/water log. Awaiting sequentially would just
-      // double the perceived latency.
+      // Fire all three loads in parallel — daily data, weight
+      // history, and streak are all independent and each fires
+      // its own `notifyListeners()` when ready. Awaiting
+      // sequentially would just double the perceived latency.
+      //
+      // `loadStreak` is fired-and-forgotten here on purpose — its
+      // refresh policy is "today only, never refetch on date-nav
+      // swipe" (see the comment on [TrackerProvider.loadStreak]),
+      // so this is the single mount-time call site. Later refreshes
+      // happen implicitly through [refreshStreakAfterSave] on each
+      // food/water save.
       final tracker = context.read<TrackerProvider>();
       tracker.loadDailyData(DateTime.now());
       tracker.loadWeightHistory();
+      tracker.loadStreak();
     });
   }
 
   @override
   void dispose() {
+    developer.log(
+      'blur-suppression: dispose — total flips this lifetime: $_blurFlipCount',
+      name: 'glass.blur',
+    );
     _blurSuppressed.dispose();
+    _scrollClock.stop();
     super.dispose();
   }
 
@@ -154,6 +239,64 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     final dd = selected.day.toString().padLeft(2, '0');
     final mm = selected.month.toString().padLeft(2, '0');
     return '$dd.$mm.${selected.year}';
+  }
+
+  /// Builds the diary-streak badge shown next to the date label on
+  /// the *current* day only (the call site gates this on
+  /// `isViewingToday`).
+  ///
+  /// Three visual states:
+  ///
+  ///   * `streak == null` or `currentStreak == 0` — return `null`
+  ///     so the row renders without a badge. We deliberately *hide*
+  ///     the chip when the streak is 0 — no "you have a 0-day
+  ///     streak!" copy, no guilt, no missed-bonus messaging. A new
+  ///     user sees just the date row until their first log.
+  ///
+  ///   * `currentStreak > 0 && loggedToday` — solid brand-tinted
+  ///     chip, fire emoji + the day count. This is the "alive
+  ///     today" state.
+  ///
+  ///   * `currentStreak > 0 && !loggedToday` — outlined (unselected)
+  ///     chip at reduced opacity, same fire emoji + count. This is
+  ///     the "still alive, log something today to keep it" state.
+  ///     The visual difference vs. the alive-today state is subtle
+  ///     enough that it reads as "same thing, slightly quieter"
+  ///     rather than alarming the user with a missed-streak
+  ///     warning.
+  Widget? _buildStreakBadge(BuildContext context, StreakModel? streak) {
+    if (streak == null) return null;
+    if (streak.currentStreak <= 0) return null;
+    // `🔥 {n}` is the user's chosen copy from the spec — a single
+    // emoji + number, no surrounding text. The fire emoji reads as
+    // "streak" universally without needing localisation.
+    final label = '🔥 ${streak.currentStreak}';
+    final chip = GlassChip(
+      label: label,
+      // `selected` toggles between the solid-tinted (today) and
+      // outline-only (pending) visual treatments — both look
+      // on-brand and neither reads as alarming.
+      selected: streak.loggedToday,
+      color: AppColors.brand,
+    );
+    // The pending-logged-today state wraps the chip in a subtle
+    // opacity reduction so it reads as "quiet" without resorting
+    // to muted colours or descriptive copy. Picked 0.7 empirically
+    // — above 0.8 the difference is invisible against the page
+    // background; below 0.5 the chip starts to look broken.
+    if (!streak.loggedToday) {
+      return Opacity(
+        opacity: 0.7,
+        child: IgnorePointer(
+          // The chip itself isn't interactive, but IgnorePointer
+          // ensures the reduced-opacity visual treatment also
+          // doesn't accidentally absorb hit-tests if any
+          // surrounding layout changes in the future.
+          child: chip,
+        ),
+      );
+    }
+    return chip;
   }
 
   Future<void> _openDatePicker() async {
@@ -524,23 +667,59 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
             },
             child: NotificationListener<ScrollUpdateNotification>(
               onNotification: (notification) {
-                // Estimate velocity as scrollDelta per frame,
-                // scaled to per-second by the 16ms frame budget.
-                // A 60fps device at 800px/s gives |scrollDelta|
-                // ~= 13px per frame. The hysteresis between
-                // `_blurOffThresholdPxPerSec` (800) and
-                // `_blurOnThresholdPxPerSec` (200) prevents the
-                // glass from flickering on/off during a near-stop
-                // mid-fling.
-                final double v = (notification.scrollDelta ?? 0).abs() *
-                    1000 /
-                    16;
-                final suppress = _blurSuppressed.value;
-                if (!suppress && v > _blurOffThresholdPxPerSec) {
+                // Smoothed velocity: real px/s derived from the
+                // wall-clock gap since the previous scroll event,
+                // then fed through an EMA. See the comment block
+                // on [_scrollClock] for why the previous
+                // `scrollDelta * 1000 / 16` estimate is wrong on
+                // 90/120 Hz devices and during coalesced /
+                // stalled frames — that was the source of the
+                // flip-flop.
+                final double scrollDelta =
+                    (notification.scrollDelta ?? 0).abs();
+                final int nowMs = _scrollClock.elapsedMilliseconds;
+
+                double instantV = 0;
+                if (_lastScrollElapsedMs != null) {
+                  final double dtMs =
+                      (nowMs - _lastScrollElapsedMs!).toDouble();
+                  // Clamp dt so a long pause (backgrounded tab,
+                  // gesture-recogniser decision) doesn't collapse
+                  // instantV to ~0 and mask a real deceleration.
+                  final double safeDt = dtMs.clamp(1, _maxDeltaMs);
+                  instantV = scrollDelta * 1000 / safeDt;
+                }
+                _lastScrollElapsedMs = nowMs;
+
+                _scrollVelocityEma =
+                    (1 - _velocityEmaAlpha) * _scrollVelocityEma +
+                        _velocityEmaAlpha * instantV;
+
+                final bool suppress = _blurSuppressed.value;
+                if (!suppress &&
+                    _scrollVelocityEma > _blurOffThresholdPxPerSec) {
                   _blurSuppressed.value = true;
-                } else if (suppress && v < _blurOnThresholdPxPerSec) {
+                } else if (suppress &&
+                    _scrollVelocityEma < _blurOnThresholdPxPerSec) {
                   _blurSuppressed.value = false;
                 }
+
+                // Flip-count diagnostic. A "flip" is a real state
+                // change, not every notification — so this number
+                // is the thing to compare against pre-fix behaviour.
+                if (_lastBlurStateForCount != null &&
+                    _lastBlurStateForCount != _blurSuppressed.value) {
+                  _blurFlipCount++;
+                  developer.log(
+                    'blur-suppression: flip #$_blurFlipCount → '
+                    '${_blurSuppressed.value ? "SUPPRESS" : "RESTORE"} '
+                    '(instantV=${instantV.toStringAsFixed(0)}px/s, '
+                    'ema=${_scrollVelocityEma.toStringAsFixed(0)}px/s)',
+                    name: 'glass.blur',
+                  );
+                }
+                _lastBlurStateForCount = _blurSuppressed.value;
+
                 // Don't intercept the notification — let the
                 // ListView keep handling it.
                 return false;
@@ -579,6 +758,16 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                     tracker.selectedDate.add(const Duration(days: 1)),
                   ),
                   onPickDate: _openDatePicker,
+                  // Streak badge — only on the actual current day.
+                  // Browsing past days is a "history" experience
+                  // and the streak concept doesn't change with it,
+                  // so the badge hides when the user navigates
+                  // backwards (which also avoids the badge feeling
+                  // out of context next to a "Yesterday" / "20.09"
+                  // label).
+                  trailingBadge: isViewingToday
+                      ? _buildStreakBadge(context, tracker.streak)
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 // Soft "verify your email" reminder. Renders SizedBox.shrink()
@@ -745,6 +934,11 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
 /// Tapping the label opens the system date picker. The forward chevron
 /// disables itself at today or later so the user can't navigate into the
 /// future.
+///
+/// The optional [trailingBadge] is rendered between the centre label
+/// and the forward chevron — used by the call site to slot in the
+/// streak chip on the *current* day only. Passing `null` hides it
+/// (which is what every historical-day view does).
 class _DateNavRow extends StatelessWidget {
   const _DateNavRow({
     required this.label,
@@ -752,6 +946,7 @@ class _DateNavRow extends StatelessWidget {
     required this.onPrev,
     required this.onNext,
     required this.onPickDate,
+    this.trailingBadge,
   });
 
   final String label;
@@ -759,6 +954,10 @@ class _DateNavRow extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onPickDate;
+
+  /// Streak chip (or any other small inline widget) shown to the
+  /// right of the date label. `null` hides it.
+  final Widget? trailingBadge;
 
   @override
   Widget build(BuildContext context) {
@@ -803,6 +1002,17 @@ class _DateNavRow extends StatelessWidget {
               ),
             ),
           ),
+          // Optional trailing badge (e.g. the streak chip). Sits
+          // between the centre label and the forward chevron so
+          // it reads as an inline complement to the date label
+          // rather than fighting it for visual weight. Wrapped
+          // in a `Row` with `mainAxisSize.min` so it doesn't
+          // expand to fill the Expanded above.
+          if (trailingBadge != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: trailingBadge!,
+            ),
           IconButton(
             tooltip: AppLocalizations.of(context).trackerDateNextTooltip,
             icon: const Icon(Icons.chevron_right),

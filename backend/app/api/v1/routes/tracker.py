@@ -1,12 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from datetime import datetime
-from typing import List
+from datetime import datetime, timedelta
+from typing import List, Set
 from app.core.database import get_db
 from app.core.security import get_current_user_id
 from app.models.food_log import FoodLog, WeightLog, WaterLog
-from app.schemas.food import FoodLogCreate, FoodLogResponse, WaterLogCreate, WaterLogResponse, WeightLogCreate, WeightLogResponse, WeightLogHistoryResponse
+from app.schemas.food import (
+    FoodLogCreate,
+    FoodLogResponse,
+    WaterLogCreate,
+    WaterLogResponse,
+    WeightLogCreate,
+    WeightLogResponse,
+    WeightLogHistoryResponse,
+    StreakResponse,
+)
 
 router = APIRouter(prefix="/tracker", tags=["tracker"])
 
@@ -154,6 +163,91 @@ async def delete_water_log(
     await db.delete(water_log)
     await db.commit()
     return {"message": "Deleted"}
+
+
+@router.get("/streak", response_model=StreakResponse)
+async def get_streak(
+    today_str: str = Query(...),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """Return the user's current diary streak as of [today_str].
+
+    A day "has an entry" if at least one `FoodLog` OR `WaterLog`
+    row exists for `user_id` with a `date` falling inside that
+    local calendar day. Weight logs are intentionally excluded —
+    a user weighing in is not the same as a user engaging with
+    the diary, and conflating them would inflate the streak for
+    users who only weight-track.
+
+    Grace period: if today has no entry, the streak is still
+    considered "alive" — we anchor the walk on yesterday instead
+    of today. The counter only resets to 0 once a full calendar
+    day passes with zero entries.
+
+    `today_str` is the *client's local* YYYY-MM-DD. The server
+    uses it as the source of truth for "today" (NOT UTC midnight)
+    so a user logging at 23:30 local and re-opening the app at
+    00:30 local doesn't see their streak vanish for that 1-hour
+    DST rollover. Same convention as every other date-keyed
+    endpoint in this file.
+    """
+    # Parse to a date-only anchor (drop time-of-day; only the
+    # calendar day matters for the walk-back). Using
+    # `parse_query_date` keeps the same YYYY-MM-DD / ISO parser
+    # the rest of the file uses.
+    today_parsed = parse_query_date(today_str)
+    today_date = today_parsed.date()
+
+    # Fetch every calendar day that has at least one entry.
+    # Two DISTINCT queries + set merge (cheaper than fetching the
+    # full row bodies — we only need the day key, not the row).
+    # The query uses range scans per (user_id, date) since the
+    # existing schema indexes that column.
+    food_days = await db.execute(
+        select(FoodLog.date).where(FoodLog.user_id == user_id)
+    )
+    water_days = await db.execute(
+        select(WaterLog.date).where(WaterLog.user_id == user_id)
+    )
+
+    # Truncate each row's timestamp to its local calendar day and
+    # collect into a single set for O(1) membership checks during
+    # the walk-back. The set is bounded by total logged days
+    # (typically < 1000), so memory is a non-issue.
+    logged_days: Set = set()
+    for (dt,) in food_days.all():
+        logged_days.add(dt.date())
+    for (dt,) in water_days.all():
+        logged_days.add(dt.date())
+
+    # Grace period: anchor the walk on the most recent day with
+    # an entry. If today has an entry, we anchor on today. If
+    # today doesn't but yesterday does, we anchor on yesterday
+    # (still alive). If neither, the streak is 0 and we can
+    # return early.
+    logged_today = today_date in logged_days
+    if logged_today:
+        anchor = today_date
+    elif (today_date - timedelta(days=1)) in logged_days:
+        anchor = today_date - timedelta(days=1)
+        logged_today = False  # explicit; False is the default but
+                              # leaves no doubt at the call site.
+    else:
+        return StreakResponse(current_streak=0, logged_today=False)
+
+    # Walk backward from the anchor counting consecutive days
+    # with an entry. The first gap stops the count.
+    streak = 0
+    cursor = anchor
+    while cursor in logged_days:
+        streak += 1
+        cursor = cursor - timedelta(days=1)
+
+    return StreakResponse(
+        current_streak=streak,
+        logged_today=logged_today,
+    )
 
 
 @router.get("/weight", response_model=List[WeightLogResponse])
