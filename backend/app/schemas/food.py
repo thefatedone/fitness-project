@@ -154,6 +154,22 @@ class WeightLogHistoryResponse(BaseModel):
         )
 
 
+class StreakDayEntry(BaseModel):
+    """One cell in the 14-day streak history strip rendered in the
+    detail bottom sheet.
+
+    `date` is a YYYY-MM-DD string in the client's local timezone
+    (matching `today_str`'s contract). The schema stores it as
+    `str` rather than `datetime` because the field is consumed
+    by the Flutter UI for display + comparison against today's
+    local date; round-tripping through Python's `datetime.date`
+    would add timezone-sensitive parsing for no gain (the date
+    has no time-of-day component).
+    """
+    date: str  # yyyy-MM-dd format
+    logged: bool
+
+
 class StreakResponse(BaseModel):
     """Response shape for `GET /api/v1/tracker/streak`.
 
@@ -177,6 +193,28 @@ class StreakResponse(BaseModel):
     the streak badge from "alive today" to "still alive, log to
     keep" — the counter is unchanged across that flip; only the
     surface treatment moves.
+
+    `history` — the last 14 calendar days ending on today (always
+    inclusive of today, regardless of the grace-period anchor logic
+    that drives `current_streak`). Oldest day is index 0, today is
+    index 13. The UI renders this as a horizontal strip of cells,
+    with each `logged` cell filled and each unlogged cell outlined.
+    Today's cell gets a distinct ring in the UI so the user can
+    always locate it in the strip.
+
+    `next_milestone` — the smallest milestone strictly greater than
+    `current_streak` from a fixed product-defined set
+    (see `STREAK_MILESTONES` in `routes/tracker.py`). `None` if
+    `current_streak` has met or passed the largest milestone
+    (currently 365). The UI uses this to render a "X / Y days"
+    progress bar toward the next milestone.
+
+    `days_to_next_milestone` — `next_milestone - current_streak`
+    when there is one. `None` alongside `next_milestone = None`.
+    The UI renders this directly as the "X more days" caption.
     """
     current_streak: int
     logged_today: bool
+    history: list[StreakDayEntry]
+    next_milestone: int | None
+    days_to_next_milestone: int | None

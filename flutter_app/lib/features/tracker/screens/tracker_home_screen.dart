@@ -28,8 +28,10 @@ import 'weight_history_screen.dart';
 import '../../../widgets/glass/glass_card.dart';
 import '../../../widgets/glass/glass_chip.dart';
 import '../../../widgets/glass/glass_background_glow.dart';
+import '../../../widgets/glass/glass_bottom_sheet.dart';
 import '../../../widgets/glass/glass_progress_ring.dart';
 import '../../../widgets/glass/glass_surface.dart';
+import '../widgets/streak_detail_sheet.dart';
 
 /// Food / water log screen — the authenticated user's home base.
 ///
@@ -271,6 +273,12 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     // emoji + number, no surrounding text. The fire emoji reads as
     // "streak" universally without needing localisation.
     final label = '🔥 ${streak.currentStreak}';
+    // Capture for the onTap closure — `context` is the build-time
+    // context (above this StatefulElement), which is safe to use
+    // across the showGlassBottomSheet call: the sheet's
+    // `showModalBottomSheet` only needs the Navigator/route context,
+    // and the build-time context still points to the active element
+    // when the user taps the chip.
     final chip = GlassChip(
       label: label,
       // `selected` toggles between the solid-tinted (today) and
@@ -278,25 +286,42 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
       // on-brand and neither reads as alarming.
       selected: streak.loggedToday,
       color: AppColors.brand,
+      // Tapping the chip (in either logged-today OR
+      // not-logged-yet state — the spec calls this out explicitly)
+      // opens the detail bottom sheet with the 14-day strip +
+      // milestone progress. `GlassChip` already wraps its
+      // non-`onTap` variant in a `Padding`/no-`InkResponse` tree;
+      // passing a non-null `onTap` here is what makes it tappable.
+      onTap: () => _openStreakDetailSheet(context, streak),
     );
     // The pending-logged-today state wraps the chip in a subtle
     // opacity reduction so it reads as "quiet" without resorting
     // to muted colours or descriptive copy. Picked 0.7 empirically
     // — above 0.8 the difference is invisible against the page
     // background; below 0.5 the chip starts to look broken.
+    //
+    // No `IgnorePointer` here: the spec calls out that the tap
+    // must work in both states, and `IgnorePointer` would swallow
+    // the tap on the pending-state chip. The reduced opacity is
+    // purely visual; the underlying widget tree (and its hit-test
+    // behaviour) is unchanged.
     if (!streak.loggedToday) {
-      return Opacity(
-        opacity: 0.7,
-        child: IgnorePointer(
-          // The chip itself isn't interactive, but IgnorePointer
-          // ensures the reduced-opacity visual treatment also
-          // doesn't accidentally absorb hit-tests if any
-          // surrounding layout changes in the future.
-          child: chip,
-        ),
-      );
+      return Opacity(opacity: 0.7, child: chip);
     }
     return chip;
+  }
+
+  /// Opens the streak detail bottom sheet. Lives on the State so the
+  /// `BuildContext` passed to `showGlassBottomSheet` is rooted at this
+  /// widget's element (safe for the modal route resolution). The sheet
+  /// reads the same `StreakModel` instance the badge read — no
+  /// additional network call, no staleness between the badge count
+  /// and the sheet's headline number.
+  void _openStreakDetailSheet(BuildContext context, StreakModel streak) {
+    showGlassBottomSheet<void>(
+      context: context,
+      builder: (_) => StreakDetailSheet(streak: streak),
+    );
   }
 
   Future<void> _openDatePicker() async {
