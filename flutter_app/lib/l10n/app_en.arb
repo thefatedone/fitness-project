@@ -585,5 +585,48 @@
   },
   "weightHistoryChartGoalLabel": "Goal",
   "weightHistoryMustBePositive": "Must be > 0",
-  "weightHistoryTooLarge": "Value too large"
+  "weightHistoryTooLarge": "Value too large",
+  "streakStatusStart": "Start a new streak by logging today.",
+  "streakStatusDone": "You're set for today — see you tomorrow.",
+  "streakStatusPending": "Today isn't logged yet — it's still alive.",
+  "@streakHeroLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "streakHeroLabel": "{count, plural, one{day streak} other{day streak}}",
+  "streakSectionRules": "How to keep this going",
+  "streakSectionProgress": "Progress",
+  "streakRule1Title": "Log at least one meal or drink each day.",
+  "streakRule1Body": "A food log, a water log — either counts. As long as the day has one of them, the day is logged.",
+  "streakRule2Title": "Each day is your local calendar day.",
+  "streakRule2Body": "The streak counts in your timezone, not the server's. A log at 23:55 keeps the day green.",
+  "streakRule3Title": "Today counts until midnight.",
+  "streakRule3Body": "Haven't logged yet today? Your streak stays alive until midnight. Miss a whole day and it resets.",
+  "streakRule4Title": "Weight logs and app opens don't count.",
+  "streakRule4Body": "Only food and water entries count toward the streak. Weighing in or opening the app doesn't bump it.",
+  "@streakMilestoneProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "next": {
+        "type": "int"
+      },
+      "daysLeft": {
+        "type": "int"
+      }
+    }
+  },
+  "streakMilestoneProgress": "{current} / {next} · {daysLeft, plural, one{1 more day} other{{daysLeft} more days}}",
+  "@streakTrophyLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "streakTrophyLabel": "{count, plural, one{🏆 {count} day streak} other{🏆 {count} day streak}}"
 }

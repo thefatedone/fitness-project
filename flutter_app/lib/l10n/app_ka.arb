@@ -556,5 +556,48 @@
   },
   "weightHistoryChartGoalLabel": "მიზანი",
   "weightHistoryMustBePositive": "0-ზე მეტი უნდა იყოს",
-  "weightHistoryTooLarge": "ძალიან დიდი მნიშვნელობა"
+  "weightHistoryTooLarge": "ძალიან დიდი მნიშვნელობა",
+  "streakStatusStart": "დაიწყე ახალი სერია — დაამატე ჩანაწერი დღეს.",
+  "streakStatusDone": "დღეისთვის ყველაფერი მზადაა — ხვალამდე.",
+  "streakStatusPending": "დღეს ჯერ არაფერი გაქვს ჩაწერილი — სერია ჯერ კიდევ ძალაშია.",
+  "@streakHeroLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "streakHeroLabel": "{count, plural, one{დღე ზედიზედ} other{დღე ზედიზედ}}",
+  "streakSectionRules": "როგორ შეინარჩუნო სერია",
+  "streakSectionProgress": "პროგრესი",
+  "streakRule1Title": "დაამატე დღეში ერთი კვება ან სასმელი მაინც.",
+  "streakRule1Body": "საკმარისია საკვების ან წყლის ერთი ჩანაწერი. თუ დღეში ერთი ჩანაწერი მაინც არის, დღე ჩაითვლება.",
+  "streakRule2Title": "დღე შენი კალენდარული დღეა.",
+  "streakRule2Body": "სერია შენი დროის სარტყლით ითვლება და არა სერვერისით. 23:55-ზე გაკეთებული ჩანაწერიც დღეს ჩაგითვლის.",
+  "streakRule3Title": "დღევანდელი დღე შუაღამემდე ითვლება.",
+  "streakRule3Body": "დღეს ჯერ არაფერი ჩაგიწერია? სერია შუაღამემდე ძალაშია. მთელ დღეს თუ გამოტოვებ, განულდება.",
+  "streakRule4Title": "წონა და აპის გახსნა არ ითვლება.",
+  "streakRule4Body": "სერიაში მხოლოდ საკვებისა და წყლის ჩანაწერები ითვლება. წონის ჩაწერა ან აპის გახსნა სერიას არ ზრდის.",
+  "@streakMilestoneProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "next": {
+        "type": "int"
+      },
+      "daysLeft": {
+        "type": "int"
+      }
+    }
+  },
+  "streakMilestoneProgress": "{current} / {next} · კიდევ {daysLeft} დღე",
+  "@streakTrophyLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "streakTrophyLabel": "{count, plural, one{🏆 სერია: {count} დღე} other{🏆 სერია: {count} დღე}}"
 }

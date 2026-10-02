@@ -27,11 +27,13 @@ Future<T?> showGlassBottomSheet<T>({
   required WidgetBuilder builder,
   bool isScrollControlled = false,
   bool showDragHandle = true,
+  bool useSafeArea = false,
 }) {
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: isScrollControlled,
     showDragHandle: showDragHandle,
+    useSafeArea: useSafeArea,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     // Default `barrierColor` is `Colors.black54`; the sheet would
     // visibly float over a darkened-but-not-blurred page. We let

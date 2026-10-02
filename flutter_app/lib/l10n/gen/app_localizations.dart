@@ -2552,6 +2552,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Value too large'**
   String get weightHistoryTooLarge;
+
+  /// No description provided for @streakStatusStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a new streak by logging today.'**
+  String get streakStatusStart;
+
+  /// No description provided for @streakStatusDone.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re set for today — see you tomorrow.'**
+  String get streakStatusDone;
+
+  /// No description provided for @streakStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Today isn\'t logged yet — it\'s still alive.'**
+  String get streakStatusPending;
+
+  /// No description provided for @streakHeroLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{day streak} other{day streak}}'**
+  String streakHeroLabel(int count);
+
+  /// No description provided for @streakSectionRules.
+  ///
+  /// In en, this message translates to:
+  /// **'How to keep this going'**
+  String get streakSectionRules;
+
+  /// No description provided for @streakSectionProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get streakSectionProgress;
+
+  /// No description provided for @streakRule1Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Log at least one meal or drink each day.'**
+  String get streakRule1Title;
+
+  /// No description provided for @streakRule1Body.
+  ///
+  /// In en, this message translates to:
+  /// **'A food log, a water log — either counts. As long as the day has one of them, the day is logged.'**
+  String get streakRule1Body;
+
+  /// No description provided for @streakRule2Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Each day is your local calendar day.'**
+  String get streakRule2Title;
+
+  /// No description provided for @streakRule2Body.
+  ///
+  /// In en, this message translates to:
+  /// **'The streak counts in your timezone, not the server\'s. A log at 23:55 keeps the day green.'**
+  String get streakRule2Body;
+
+  /// No description provided for @streakRule3Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Today counts until midnight.'**
+  String get streakRule3Title;
+
+  /// No description provided for @streakRule3Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Haven\'t logged yet today? Your streak stays alive until midnight. Miss a whole day and it resets.'**
+  String get streakRule3Body;
+
+  /// No description provided for @streakRule4Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight logs and app opens don\'t count.'**
+  String get streakRule4Title;
+
+  /// No description provided for @streakRule4Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Only food and water entries count toward the streak. Weighing in or opening the app doesn\'t bump it.'**
+  String get streakRule4Body;
+
+  /// No description provided for @streakMilestoneProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} / {next} · {daysLeft, plural, one{1 more day} other{{daysLeft} more days}}'**
+  String streakMilestoneProgress(int current, int next, int daysLeft);
+
+  /// No description provided for @streakTrophyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{🏆 {count} day streak} other{🏆 {count} day streak}}'**
+  String streakTrophyLabel(int count);
 }
 
 class _AppLocalizationsDelegate

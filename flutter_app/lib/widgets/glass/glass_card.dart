@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
@@ -43,7 +42,6 @@ class GlassCard extends StatefulWidget {
     this.borderRadius,
     this.hapticOnPress = true,
     this.borderColorOverride,
-    this.suppressBlur,
     this.elevation,
     this.enableSpecular = false,
   });
@@ -83,7 +81,6 @@ class GlassCard extends StatefulWidget {
   /// drag every glass card through a blur recompute on every
   /// frame. A `true` value forces the solid fallback path even
   /// when Reduce Transparency is off.
-  final ValueListenable<bool>? suppressBlur;
 
   /// Forwarded to [GlassSurface] for tier-aware blur sigma,
   /// specular alpha, border alpha, and the hero shadow bump.
@@ -203,7 +200,6 @@ class _GlassCardState extends State<GlassCard>
             emphasized: widget.emphasized,
             borderRadius: widget.borderRadius,
             borderColorOverride: widget.borderColorOverride,
-            suppressBlur: widget.suppressBlur,
             elevation: widget.elevation,
             enableSpecular: widget.enableSpecular,
             child: widget.child,

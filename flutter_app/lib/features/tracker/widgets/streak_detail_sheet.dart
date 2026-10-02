@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../l10n/gen/app_localizations.dart';
+import '../../../widgets/glass/glass_scroll_view.dart';
 import '../models/streak_model.dart';
 
 /// Bottom-sheet body for the streak detail. Hosted via
@@ -43,29 +45,40 @@ class StreakDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     // Wrap in a scroll view so on small phone screens (or with
     // larger system text scales) the rules + progress together
     // don't overflow the available sheet height. The scroll view
     // sits inside the sheet — the drag handle on `showGlassBottomSheet`
     // still works for dismissing.
-    return SingleChildScrollView(
+    return GlassScrollBehavior(
+      // The sheet itself uses a [BackdropFilter] in
+      // [_GlassSheetBody]; if the inner scrollable bounces past
+      // its boundary on iOS, the overscroll indicator gets drawn
+      // over the backdrop blur, which looks like the glass is
+      // "shining". [ClampingScrollPhysics] + the indicator disallow
+      // keep the glass visually static through scroll. See
+      // `widgets/glass/glass_scroll_view.dart` for the rationale.
+      physics: const ClampingScrollPhysics(),
+      child: SingleChildScrollView(
       padding: _sheetPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Hero(streak: streak),
+          _Hero(streak: streak, l10n: l10n),
           const SizedBox(height: 24),
-          const _SectionLabel('How to keep this going'),
+          _SectionLabel(l10n.streakSectionRules),
           const SizedBox(height: 8),
-          const _RulesList(),
+          _RulesList(l10n: l10n),
           const SizedBox(height: 20),
-          const _SectionLabel('Progress'),
+          _SectionLabel(l10n.streakSectionProgress),
           const SizedBox(height: 12),
           _HistoryStrip(history: streak.history),
           const SizedBox(height: 16),
-          _MilestoneProgress(streak: streak),
+          _MilestoneProgress(streak: streak, l10n: l10n),
         ],
+      ),
       ),
     );
   }
@@ -75,23 +88,24 @@ class StreakDetailSheet extends StatelessWidget {
 /// right now?" — restating the badge's number so the sheet doesn't
 /// have to be opened twice to see it.
 class _Hero extends StatelessWidget {
-  const _Hero({required this.streak});
+  const _Hero({required this.streak, required this.l10n});
 
   final StreakModel streak;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final String statusText;
     if (streak.currentStreak == 0) {
-      statusText = 'Start a new streak by logging today.';
+      statusText = l10n.streakStatusStart;
     } else if (streak.loggedToday) {
-      statusText = "You're set for today — see you tomorrow.";
+      statusText = l10n.streakStatusDone;
     } else {
       // Streak alive but today not yet logged — the grace-period
       // state. Call out that today still counts toward the streak,
       // so the user doesn't feel they've already lost it.
-      statusText = "Today isn't logged yet — it's still alive.";
+      statusText = l10n.streakStatusPending;
     }
 
     return Column(
@@ -110,7 +124,7 @@ class _Hero extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'day streak',
+          l10n.streakHeroLabel(streak.currentStreak),
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -156,40 +170,39 @@ class _SectionLabel extends StatelessWidget {
 /// the streak alive. Wording stays mechanical and short on
 /// purpose: the user came here to confirm the rules, not to read
 /// a motivational essay.
+///
+/// The list is built inside [build] (not `const`) because the
+/// titles and bodies come from [AppLocalizations], which needs a
+/// [BuildContext]. The numeric prefix (1..4) stays a plain digit
+/// string — it isn't localized.
 class _RulesList extends StatelessWidget {
-  const _RulesList();
+  const _RulesList({required this.l10n});
+
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const rules = <_Rule>[
+    final rules = <_Rule>[
       _Rule(
         number: '1',
-        title: 'Log at least one meal or drink each day.',
-        body:
-            'A food log, a water log — either counts. As long as the day '
-            'has one of them, the day is logged.',
+        title: l10n.streakRule1Title,
+        body: l10n.streakRule1Body,
       ),
       _Rule(
         number: '2',
-        title: 'Each day is your local calendar day.',
-        body:
-            'The streak counts in your timezone, not the server\'s. A '
-            'log at 23:55 keeps the day green.',
+        title: l10n.streakRule2Title,
+        body: l10n.streakRule2Body,
       ),
       _Rule(
         number: '3',
-        title: "If you forget a day, it's grace — not gone.",
-        body:
-            'Until midnight, today still counts even if you haven\'t '
-            'logged yet. After one full missed day, the streak resets.',
+        title: l10n.streakRule3Title,
+        body: l10n.streakRule3Body,
       ),
       _Rule(
         number: '4',
-        title: 'Weight logs and app opens don\'t count.',
-        body:
-            'Only food and water entries count toward the streak. '
-            'Weighing in or opening the app doesn\'t bump it.',
+        title: l10n.streakRule4Title,
+        body: l10n.streakRule4Body,
       ),
     ];
 
@@ -351,11 +364,12 @@ class _DayCell extends StatelessWidget {
 /// Milestone progress. When there's a next milestone: a slim
 /// progress bar styled like the macro rows + the "X / Y days"
 /// caption. When there isn't (>= 365 days): a "🏆 N day streak"
-/// line.
+/// trophy line.
 class _MilestoneProgress extends StatelessWidget {
-  const _MilestoneProgress({required this.streak});
+  const _MilestoneProgress({required this.streak, required this.l10n});
 
   final StreakModel streak;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -366,7 +380,7 @@ class _MilestoneProgress extends StatelessWidget {
     if (next == null || daysToGo == null) {
       return Center(
         child: Text(
-          '🏆 ${streak.currentStreak} day streak',
+          l10n.streakTrophyLabel(streak.currentStreak),
           style: theme.textTheme.bodyMedium?.copyWith(
             color: AppColors.brand,
             fontWeight: FontWeight.w600,
@@ -390,9 +404,16 @@ class _MilestoneProgress extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          daysToGo == 1
-              ? '${streak.currentStreak} / $next day · 1 more day'
-              : '${streak.currentStreak} / $next days · $daysToGo more days',
+          // Pass `daysToGo` (already computed by the server) as the
+          // `daysLeft` ICU plural variable. Server returns this as the
+          // exact number of days remaining to the next milestone (e.g.
+          // 3 for streak 4 / milestone 7). The plural picks the
+          // Russian/English form automatically.
+          l10n.streakMilestoneProgress(
+            streak.currentStreak,
+            next,
+            daysToGo,
+          ),
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,

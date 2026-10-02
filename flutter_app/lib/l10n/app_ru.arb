@@ -556,5 +556,48 @@
   },
   "weightHistoryChartGoalLabel": "Цель",
   "weightHistoryMustBePositive": "Должен быть > 0",
-  "weightHistoryTooLarge": "Слишком большое значение"
+  "weightHistoryTooLarge": "Слишком большое значение",
+  "streakStatusStart": "Начни новую серию — добавь запись сегодня.",
+  "streakStatusDone": "На сегодня всё готово — увидимся завтра.",
+  "streakStatusPending": "Сегодня записей ещё нет — серия пока жива.",
+  "@streakHeroLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "streakHeroLabel": "{count, plural, one{день подряд} few{дня подряд} many{дней подряд} other{дня подряд}}",
+  "streakSectionRules": "Как сохранить серию",
+  "streakSectionProgress": "Прогресс",
+  "streakRule1Title": "Добавляй хотя бы один приём пищи или напиток в день.",
+  "streakRule1Body": "Подойдёт запись еды или воды — достаточно одной. Если за день есть хоть одна запись, день засчитан.",
+  "streakRule2Title": "День — это твои календарные сутки.",
+  "streakRule2Body": "Серия считается по твоему часовому поясу, а не по серверному. Запись в 23:55 тоже засчитает день.",
+  "streakRule3Title": "Сегодняшний день засчитывается до полуночи.",
+  "streakRule3Body": "Ещё не добавил запись сегодня? Серия жива до полуночи. Пропустишь целый день — она обнулится.",
+  "streakRule4Title": "Вес и открытие приложения не в счёт.",
+  "streakRule4Body": "В серию идут только записи еды и воды. Записать вес или просто открыть приложение — не считается.",
+  "@streakMilestoneProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "next": {
+        "type": "int"
+      },
+      "daysLeft": {
+        "type": "int"
+      }
+    }
+  },
+  "streakMilestoneProgress": "{current} / {next} · {daysLeft, plural, one{остался {daysLeft} день} few{осталось {daysLeft} дня} many{осталось {daysLeft} дней} other{осталось {daysLeft} дня}}",
+  "@streakTrophyLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "streakTrophyLabel": "{count, plural, one{🏆 Серия: {count} день} few{🏆 Серия: {count} дня} many{🏆 Серия: {count} дней} other{🏆 Серия: {count} дня}}"
 }

@@ -1334,4 +1334,75 @@ class AppLocalizationsKa extends AppLocalizations {
 
   @override
   String get weightHistoryTooLarge => 'ძალიან დიდი მნიშვნელობა';
+
+  @override
+  String get streakStatusStart => 'დაიწყე ახალი სერია — დაამატე ჩანაწერი დღეს.';
+
+  @override
+  String get streakStatusDone => 'დღეისთვის ყველაფერი მზადაა — ხვალამდე.';
+
+  @override
+  String get streakStatusPending =>
+      'დღეს ჯერ არაფერი გაქვს ჩაწერილი — სერია ჯერ კიდევ ძალაშია.';
+
+  @override
+  String streakHeroLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'დღე ზედიზედ',
+      one: 'დღე ზედიზედ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakSectionRules => 'როგორ შეინარჩუნო სერია';
+
+  @override
+  String get streakSectionProgress => 'პროგრესი';
+
+  @override
+  String get streakRule1Title => 'დაამატე დღეში ერთი კვება ან სასმელი მაინც.';
+
+  @override
+  String get streakRule1Body =>
+      'საკმარისია საკვების ან წყლის ერთი ჩანაწერი. თუ დღეში ერთი ჩანაწერი მაინც არის, დღე ჩაითვლება.';
+
+  @override
+  String get streakRule2Title => 'დღე შენი კალენდარული დღეა.';
+
+  @override
+  String get streakRule2Body =>
+      'სერია შენი დროის სარტყლით ითვლება და არა სერვერისით. 23:55-ზე გაკეთებული ჩანაწერიც დღეს ჩაგითვლის.';
+
+  @override
+  String get streakRule3Title => 'დღევანდელი დღე შუაღამემდე ითვლება.';
+
+  @override
+  String get streakRule3Body =>
+      'დღეს ჯერ არაფერი ჩაგიწერია? სერია შუაღამემდე ძალაშია. მთელ დღეს თუ გამოტოვებ, განულდება.';
+
+  @override
+  String get streakRule4Title => 'წონა და აპის გახსნა არ ითვლება.';
+
+  @override
+  String get streakRule4Body =>
+      'სერიაში მხოლოდ საკვებისა და წყლის ჩანაწერები ითვლება. წონის ჩაწერა ან აპის გახსნა სერიას არ ზრდის.';
+
+  @override
+  String streakMilestoneProgress(int current, int next, int daysLeft) {
+    return '$current / $next · კიდევ $daysLeft დღე';
+  }
+
+  @override
+  String streakTrophyLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '🏆 სერია: $count დღე',
+      one: '🏆 სერია: $count დღე',
+    );
+    return '$_temp0';
+  }
 }

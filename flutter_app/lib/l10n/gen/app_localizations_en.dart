@@ -1334,4 +1334,81 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get weightHistoryTooLarge => 'Value too large';
+
+  @override
+  String get streakStatusStart => 'Start a new streak by logging today.';
+
+  @override
+  String get streakStatusDone => 'You\'re set for today — see you tomorrow.';
+
+  @override
+  String get streakStatusPending =>
+      'Today isn\'t logged yet — it\'s still alive.';
+
+  @override
+  String streakHeroLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'day streak',
+      one: 'day streak',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakSectionRules => 'How to keep this going';
+
+  @override
+  String get streakSectionProgress => 'Progress';
+
+  @override
+  String get streakRule1Title => 'Log at least one meal or drink each day.';
+
+  @override
+  String get streakRule1Body =>
+      'A food log, a water log — either counts. As long as the day has one of them, the day is logged.';
+
+  @override
+  String get streakRule2Title => 'Each day is your local calendar day.';
+
+  @override
+  String get streakRule2Body =>
+      'The streak counts in your timezone, not the server\'s. A log at 23:55 keeps the day green.';
+
+  @override
+  String get streakRule3Title => 'Today counts until midnight.';
+
+  @override
+  String get streakRule3Body =>
+      'Haven\'t logged yet today? Your streak stays alive until midnight. Miss a whole day and it resets.';
+
+  @override
+  String get streakRule4Title => 'Weight logs and app opens don\'t count.';
+
+  @override
+  String get streakRule4Body =>
+      'Only food and water entries count toward the streak. Weighing in or opening the app doesn\'t bump it.';
+
+  @override
+  String streakMilestoneProgress(int current, int next, int daysLeft) {
+    String _temp0 = intl.Intl.pluralLogic(
+      daysLeft,
+      locale: localeName,
+      other: '$daysLeft more days',
+      one: '1 more day',
+    );
+    return '$current / $next · $_temp0';
+  }
+
+  @override
+  String streakTrophyLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '🏆 $count day streak',
+      one: '🏆 $count day streak',
+    );
+    return '$_temp0';
+  }
 }

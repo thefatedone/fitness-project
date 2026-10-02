@@ -1339,4 +1339,88 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get weightHistoryTooLarge => 'Слишком большое значение';
+
+  @override
+  String get streakStatusStart => 'Начни новую серию — добавь запись сегодня.';
+
+  @override
+  String get streakStatusDone => 'На сегодня всё готово — увидимся завтра.';
+
+  @override
+  String get streakStatusPending =>
+      'Сегодня записей ещё нет — серия пока жива.';
+
+  @override
+  String streakHeroLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'дня подряд',
+      many: 'дней подряд',
+      few: 'дня подряд',
+      one: 'день подряд',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get streakSectionRules => 'Как сохранить серию';
+
+  @override
+  String get streakSectionProgress => 'Прогресс';
+
+  @override
+  String get streakRule1Title =>
+      'Добавляй хотя бы один приём пищи или напиток в день.';
+
+  @override
+  String get streakRule1Body =>
+      'Подойдёт запись еды или воды — достаточно одной. Если за день есть хоть одна запись, день засчитан.';
+
+  @override
+  String get streakRule2Title => 'День — это твои календарные сутки.';
+
+  @override
+  String get streakRule2Body =>
+      'Серия считается по твоему часовому поясу, а не по серверному. Запись в 23:55 тоже засчитает день.';
+
+  @override
+  String get streakRule3Title => 'Сегодняшний день засчитывается до полуночи.';
+
+  @override
+  String get streakRule3Body =>
+      'Ещё не добавил запись сегодня? Серия жива до полуночи. Пропустишь целый день — она обнулится.';
+
+  @override
+  String get streakRule4Title => 'Вес и открытие приложения не в счёт.';
+
+  @override
+  String get streakRule4Body =>
+      'В серию идут только записи еды и воды. Записать вес или просто открыть приложение — не считается.';
+
+  @override
+  String streakMilestoneProgress(int current, int next, int daysLeft) {
+    String _temp0 = intl.Intl.pluralLogic(
+      daysLeft,
+      locale: localeName,
+      other: 'осталось $daysLeft дня',
+      many: 'осталось $daysLeft дней',
+      few: 'осталось $daysLeft дня',
+      one: 'остался $daysLeft день',
+    );
+    return '$current / $next · $_temp0';
+  }
+
+  @override
+  String streakTrophyLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '🏆 Серия: $count дня',
+      many: '🏆 Серия: $count дней',
+      few: '🏆 Серия: $count дня',
+      one: '🏆 Серия: $count день',
+    );
+    return '$_temp0';
+  }
 }
