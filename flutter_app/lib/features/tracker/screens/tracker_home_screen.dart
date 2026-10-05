@@ -1009,6 +1009,7 @@ class _CaloriesSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final hasTarget = target != null && target! > 0;
     final ratio = hasTarget
         ? (consumed / target!.toDouble()).clamp(0.0, 1.0)
@@ -1021,39 +1022,52 @@ class _CaloriesSummaryCard extends StatelessWidget {
     // Dock. The calorie count is rendered inside a
     // [GlassProgressRing] so the user reads both the absolute
     // number (centre) and the % of goal (ring fill) at a glance.
+    //
+    // Visual polish over the prior version:
+    //   * The kcal value uses [onSurface] at `w700` so it reads as
+    //     the primary number (not as a muted label).
+    //   * The "X%" caption uses [onSurfaceVariant] at `w600` —
+    //     visible but secondary.
+    //   * The label "Calories today" is [onSurfaceVariant] as a
+    //     muted caption; the kcal number is [onSurface] so the
+    //     contrast hierarchy reads correctly on both themes.
+    //   * The ring's tip-highlight is themed ([onSurface]) so the
+    //     leading edge reads on both light and dark themes (the
+    //     previous hard-coded white was invisible on light).
     return GlassCard(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
       borderRadius: BorderRadius.circular(20),
       elevation: GlassElevation.hero,
-      enableSpecular: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           GlassProgressRing(
             value: ratio,
-            color: theme.colorScheme.primary,
+            color: scheme.primary,
             size: 96,
             strokeWidth: 10,
+            tipHighlightColor: scheme.onSurface,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   '$consumedRounded',
                   style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700
-                  )
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 if (hasTarget)
                   Text(
                     '${(ratio * 100).round()}%',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant
-                    )
-                  )
-              ]
-            )
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1063,8 +1077,8 @@ class _CaloriesSummaryCard extends StatelessWidget {
                       ? AppLocalizations.of(context).trackerCaloriesToday
                       : AppLocalizations.of(context).trackerCaloriesEaten,
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant
-                  )
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1072,14 +1086,21 @@ class _CaloriesSummaryCard extends StatelessWidget {
                       ? AppLocalizations.of(context)
                           .trackerCaloriesKcalOf(target!.round().toString())
                       : AppLocalizations.of(context).trackerCaloriesKcalOnly,
+                  // The kcal number is the primary text on the card —
+                  // full contrast, not muted. The previous version
+                  // used [onSurfaceVariant] which read as a label
+                  // rather than a number; this version uses
+                  // [onSurface] at `w700` so it reads as the hero
+                  // value on both light and dark themes.
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant
-                  )
-                )
-              ]
-            )
-          )
-        ]
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1247,6 +1268,23 @@ class _WaterRowState extends State<_WaterRow> {
   /// provider), so the button just dismisses the snackbar.
   String? _recentlyDeletedId;
 
+  /// Tracks which quick-pick volume the user just tapped, so a
+  /// second tap on the same chip doesn't double-log the same
+  /// amount. Reset when the day's water log is reloaded.
+  int? _selectedQuickPickMl;
+
+  /// Persists [ml] as a water log via the same
+  /// [TrackerProvider.addWaterEntry] path the add-sheet's submit
+  /// button uses, so the entry appears in the day's water log
+  /// (and the streak's "today" entry) immediately. We only update
+  /// the local selection state on success so the chip's visual
+  /// feedback tracks the persisted state.
+  Future<void> _logQuickPick(int ml) async {
+    final ok = await context.read<TrackerProvider>().addWaterEntry(ml);
+    if (!ok || !mounted) return;
+    setState(() => _selectedQuickPickMl = ml);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1278,7 +1316,7 @@ class _WaterRowState extends State<_WaterRow> {
     // can tap a common volume (250ml, 500ml, 1L) and have it
     // prefilled into the add sheet's text field.
     final quickPicks = <int>[250, 500, 1000];
-    int? selectedQuickPick;
+    final selectedQuickPick = _selectedQuickPickMl;
     return GlassCard(
       padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
       borderRadius: BorderRadius.circular(20),
@@ -1368,13 +1406,14 @@ class _WaterRowState extends State<_WaterRow> {
                 )
               )
             ),
-          // Quick-pick chips — the user can tap one to (in a
-          // follow-up) prefill the add-sheet's text field. Today
-          // they just visually communicate "these are the common
-          // volumes". `selected` is a local-only flag because we
-          // don't have persistent state to remember the last pick
-          // across renders; the chip still demonstrates the
-          // `selected` styling path used by `GlassChip`.
+          // Quick-pick chips — tapping a chip logs the corresponding
+          // volume directly via the same path the add-sheet's submit
+          // button uses ([TrackerProvider.addWaterEntry]). The entry
+          // appears immediately in the day's water log below (and in
+          // the streak list, since the water row re-renders with the
+          // new total). The selected state on the chip itself is a
+          // local-only visual feedback indicator; the underlying
+          // persisted state is on the provider.
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -1384,12 +1423,16 @@ class _WaterRowState extends State<_WaterRow> {
                 GlassChip(
                   label: _formatWaterAmount(context, ml),
                   selected: ml == selectedQuickPick,
-                  onTap: () {
-                    // The selected state is a UI demo here; the
-                    // actual "prefill the add sheet" hook would
-                    // forward through `widget.onAdd` with a
-                    // pre-set value. Out of scope for this pass.
-                  }
+                  onTap: ml == selectedQuickPick
+                      // Already selected → no-op (don't double-log
+                      // the same volume; the user can tap "+ Save"
+                      // for a custom amount instead).
+                      ? null
+                      // First tap → write the volume directly to the
+                      // provider and mark the chip as the current
+                      // selection so a second tap on the same volume
+                      // doesn't double-log it.
+                      : () => _logQuickPick(ml),
                 )
             ]
           ),

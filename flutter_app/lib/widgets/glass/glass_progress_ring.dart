@@ -31,6 +31,7 @@ class GlassProgressRing extends StatelessWidget {
     this.size = 120,
     this.strokeWidth = 10,
     this.duration = const Duration(milliseconds: 600),
+    this.tipHighlightColor,
     this.child,
   });
 
@@ -49,6 +50,16 @@ class GlassProgressRing extends StatelessWidget {
   /// Animation duration when [value] changes (e.g. on day change
   /// or when a new entry is logged).
   final Duration duration;
+
+  /// Theme-aware base colour for the inner highlight drawn at
+  /// the tip of the fill arc. Pass `Theme.of(context).colorScheme.onSurface`
+  /// (or any themed color) so the highlight reads on both light
+  /// and dark pages — the painter blends this colour with
+  /// `alpha: 0.25` at draw time. If left null, the painter
+  /// falls back to a neutral light-on-dark hint that doesn't
+  /// read on light pages (preserved for callers that want the
+  /// original behaviour).
+  final Color? tipHighlightColor;
 
   /// Optional centre content (e.g. "403 / 2000 kcal").
   final Widget? child;
@@ -75,6 +86,14 @@ class GlassProgressRing extends StatelessWidget {
               trackColor: reduceTransparency
                   ? scheme.surfaceContainerHighest
                   : scheme.outlineVariant.withValues(alpha: 0.35),
+              // Theme-aware tip-highlight color so the leading edge
+              // of the fill reads on both light and dark themes
+              // (the previous hard-coded [Colors.white] was
+              // invisible on light and read as a bright dot on dark).
+              // Caller passes [scheme.onSurface] for full theming;
+              // null falls back to a neutral hint (preserved for
+              // callers that don't need theme awareness).
+              tipHighlightColor: tipHighlightColor ?? scheme.onSurface,
               strokeWidth: strokeWidth,
               size: size,
             ),
@@ -92,6 +111,7 @@ class _RingPainter extends CustomPainter {
     required this.fillColor,
     required this.trackColor,
     required this.reduceTransparency,
+    required this.tipHighlightColor,
     required this.strokeWidth,
     required this.size,
   });
@@ -100,6 +120,13 @@ class _RingPainter extends CustomPainter {
   final Color fillColor;
   final Color trackColor;
   final bool reduceTransparency;
+
+  /// Theme-aware tip-highlight base color — see
+  /// [GlassProgressRing.tipHighlightColor]. Required so callers
+  /// can't accidentally fall back to a hard-coded colour (which
+  /// was the original bug — pure white showed as a hard dot on
+  /// dark pages and was invisible on light pages).
+  final Color tipHighlightColor;
   final double strokeWidth;
   final double size;
 
@@ -132,9 +159,13 @@ class _RingPainter extends CustomPainter {
 
     if (!reduceTransparency) {
       // Subtle inner highlight at the tip of the fill — gives the
-      // ring a glassy "wet" look at the leading edge.
+      // ring a glassy "wet" look at the leading edge. The
+      // [tipHighlightColor] is theme-aware ([onSurface]) so the
+      // tip reads on both light and dark themes (the previous
+      // hard-coded `Colors.white @ 0.35` was invisible on a light
+      // page and read as a bright dot on a dark page).
       final tipPaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.35)
+        ..color = tipHighlightColor.withValues(alpha: 0.25)
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth / 2;
       final tipAngle = -math.pi / 2 + 2 * math.pi * progress;
@@ -152,6 +183,7 @@ class _RingPainter extends CustomPainter {
         old.fillColor != fillColor ||
         old.trackColor != trackColor ||
         old.reduceTransparency != reduceTransparency ||
+        old.tipHighlightColor != tipHighlightColor ||
         old.strokeWidth != strokeWidth ||
         old.size != size;
   }

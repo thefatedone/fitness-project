@@ -335,68 +335,108 @@ class _GlassPainter extends CustomPainter {
       );
     }
 
-    // 4. Gradient border — bright at the top, fading toward the
-    //    bottom. The base colour is the theme's `outlineVariant`
-    //    (low-contrast outline tone), NOT pure white/black. Earlier
-    //    revisions used `Colors.white` in dark theme + `Colors.black`
-    //    in light theme, which read as a visible white line against
-    //    a near-black page (and an equally visible black line
-    //    against a near-white page) once the glass surface sat at
-    //    full blur. Switching the base to `outlineVariant` keeps
-    //    the same bright-top / fading-bottom affordance (which the
-    //    glass system reads as "refracted light at the edge") but
-    //    blends with the page instead of standing out against it.
-    // The caller can still pin a custom colour via
-    // [borderColorOverride] (e.g. brand-green for confidence
-    // borders on AI photo-recognition cards).
-    final borderTop = GlassTokens.borderTopAlphaFor(elevation);
-    final borderBottom = GlassTokens.borderBottomAlphaFor(elevation);
-    // Default to the [borderBase] passed in by the surface (which
-    // resolves to `Theme.of(context).colorScheme.outlineVariant`),
-    // so the border blends with the page rather than standing out
-    // as a hard white/black line. Callers that want a confidence
-    // colour (e.g. brand-green for AI photo-recognition result
-    // cards) can still pin one via [borderColorOverride].
+    // 4. Inner highlight at the top edge only — a soft, themed
+    //    "sheen" rendered as a 1-px stroke inset by half its
+    //    width so the paint sits entirely INSIDE the rrect, on
+    //    the surface itself rather than straddling the edge into
+    //    the page background.
+    //
+    //    Earlier revisions stroked the rrect on its centerline
+    //    (so half the stroke was on the page, half on the
+    //    surface tint). On a near-black page, even a 0.20-alpha
+    //    `outlineVariant` half-stroke was visible as a hard line
+    //    at the top of the panel — the user's complaint. Insetting
+    //    the rrect so the stroke lives entirely on the surface
+    //    tint (which already blends with the page through the
+    //    `BackdropFilter`), the border reads as a soft inner
+    //    highlight rather than a stroke against the page. The
+    //    bottom half of the gradient is also dropped because
+    //    the bottom edge of a Liquid Glass surface has no
+    //    inherent reason to be lit (Apple's `UIVisualEffectView`
+    //    does not draw a bottom edge either).
+    //
+    //    [borderColorOverride] still wins via null-coalescing for
+    //    callers that want a confidence-coloured edge (e.g.
+    //    brand-green on AI photo-recognition result cards).
     final baseBorderColor = borderColorOverride ?? borderBase;
-    final borderPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = GlassTokens.borderWidth
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          baseBorderColor.withValues(alpha: borderTop),
-          baseBorderColor.withValues(alpha: borderBottom),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawRRect(rrect, borderPaint);
+    if (baseBorderColor.a > 0.0) {
+      // Inset the rrect by half the stroke width so the entire
+      // stroke sits inside the surface, not on the page edge.
+      // `Paint.strokeWidth = 1.0` (GlassTokens.borderWidth) is
+      // the existing default — we just don't add a second half
+      // on the page side of the edge.
+      final clampedCornerRadius =
+          (radius.topLeft.x - 0.5).clamp(0.0, double.infinity);
+      final insetRRect = RRect.fromLTRBR(
+        0.5,
+        0.5,
+        size.width - 0.5,
+        size.height - 0.5,
+        Radius.circular(clampedCornerRadius),
+      );
+      // Top-only inner highlight: alpha at the top is the tier's
+      // [borderTopAlpha] (so the surface still has the same
+      // "refracted light at the edge" affordance as before), but
+      // the alpha at the bottom is zero so the rest of the
+      // stroke is invisible — there is no bottom edge to draw on
+      // a Liquid Glass surface. The colour is still themed
+      // ([outlineVariant] by default) so it blends with the page
+      // rather than reading as a hard line.
+      final borderPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = GlassTokens.borderWidth
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            baseBorderColor.withValues(alpha: GlassTokens.borderTopAlphaFor(elevation)),
+            baseBorderColor.withValues(alpha: 0.0),
+          ],
+        ).createShader(insetRRect.outerRect);
+      canvas.drawRRect(insetRRect, borderPaint);
+    }
 
-    // 5. Specular highlight — a soft horizontal band that hugs
-    //    the top edge of the surface and fades down over the
-    //    top ~22% of the card. Tier-aware peak alpha; theme-
-    //    aware additive colour: white in dark theme brightens
-    //    the streak (light-on-glass), black in light theme
-    //    darkens it (additive shadow on the white surface).
-    //    `BlendMode.plus` of black on white actually deepens
-    //    the surface, which reads as a soft top-edge inset
-    //    rather than a hot specular dot.
+    // 5. Specular highlight — a soft horizontal band positioned
+    //    well INSIDE the surface, not at its top edge. Tier-aware
+    //    peak alpha; theme-aware colour: white in dark theme
+    //    brightens the streak (light-on-glass), black in light
+    //    theme darkens it (shadow on the white surface).
+    //
+    // Earlier revisions used `BlendMode.plus` (additive) so the
+    // peak blended with the dark page below the [BackdropFilter]
+    // — on a near-black page that produced a visible hairline at
+    // the gradient's steepest point. Switching to the default
+    // [srcOver] (normal alpha compositing) makes the sheen paint
+    // *on top of the surface tint itself* rather than adding to
+    // the page colour underneath, so it reads as a soft top-of-card
+    // sheen without any line against the page.
+    //
+    // The peak is at 25% of the streak height (not at the very
+    // top), so even at peak alpha the brightest pixel is well
+    // inside the card body — far from the page edge. Stops
+    // `[0.0, 0.25, 0.75]` mean: transparent at t=0 (top of
+    // streak), peak at t=0.25, transparent at t=0.75.
     if (enableSpecular) {
       final peak = GlassTokens.specularAlphaFor(elevation);
       if (peak > 0.001) {
         final streakHeight = size.height *
             GlassTokens.specularHeightFraction;
-        final fadeStop = GlassTokens.specularInnerFadeStop;
         final sheenColor = isDark ? Colors.white : Colors.black;
         final specularPaint = Paint()
-          ..blendMode = BlendMode.plus
+          // Normal alpha compositing — the sheen paints on top
+          // of the surface tint with the gradient's alpha. No
+          // additive blend against the page (the previous
+          // `BlendMode.plus` was what produced the visible line
+          // against the dark backdrop).
           ..shader = LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
+              sheenColor.withValues(alpha: 0),
               sheenColor.withValues(alpha: peak),
               sheenColor.withValues(alpha: 0),
             ],
-            stops: [0.0, fadeStop],
+            stops: const [0.0, 0.25, 0.75],
           ).createShader(
             Rect.fromLTWH(0, 0, size.width, streakHeight),
           );

@@ -186,24 +186,37 @@ class _GlassCardState extends State<GlassCard>
   @override
   Widget build(BuildContext context) {
     final interactive = widget.onTap != null;
-    return RepaintBoundary(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: interactive ? (_) => _onPressStart() : null,
-        onTapUp: interactive ? (_) => _onPressEnd() : null,
-        onTapCancel: interactive ? () => _onPressEnd() : null,
-        onTap: widget.onTap,
-        child: Transform.scale(
-          scale: _scaleValue,
-          child: GlassSurface(
-            padding: widget.padding,
-            emphasized: widget.emphasized,
-            borderRadius: widget.borderRadius,
-            borderColorOverride: widget.borderColorOverride,
-            elevation: widget.elevation,
-            enableSpecular: widget.enableSpecular,
-            child: widget.child,
-          ),
+    // No [RepaintBoundary] wrapper here. The previous version
+    // wrapped every card in a boundary so the parent scrollable
+    // wouldn't drag the card's blur through a full recompute on
+    // every frame. In practice this produced a hairline layer-
+    // compositing edge on dark pages — the user's "remove this
+    // white line" complaint — because the boundary creates a
+    // sublayer whose edge sits between the card's blur and the
+    // page background, and dark-mode anti-aliasing reads that
+    // edge as a faint stripe. Cards on the home screen are
+    // already cheap to re-paint (the [BackdropFilter] on a single
+    // card is dominated by the surface tint, not the blur kernel),
+    // and the [GlassScrollBehavior] wrapper on the parent
+    // ListView already prevents the scroll from triggering a
+    // backdrop re-rasterization. Dropping the boundary here is
+    // the right trade-off.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: interactive ? (_) => _onPressStart() : null,
+      onTapUp: interactive ? (_) => _onPressEnd() : null,
+      onTapCancel: interactive ? () => _onPressEnd() : null,
+      onTap: widget.onTap,
+      child: Transform.scale(
+        scale: _scaleValue,
+        child: GlassSurface(
+          padding: widget.padding,
+          emphasized: widget.emphasized,
+          borderRadius: widget.borderRadius,
+          borderColorOverride: widget.borderColorOverride,
+          elevation: widget.elevation,
+          enableSpecular: widget.enableSpecular,
+          child: widget.child,
         ),
       ),
     );
