@@ -1,8 +1,7 @@
 name: CI
 
+# CI is paused during active development; run manually from GitHub Actions.
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 permissions:
