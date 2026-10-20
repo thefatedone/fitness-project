@@ -1,0 +1,38 @@
+# Opt in with: make dev
+# Keep the base Compose project name so existing local database volumes are reused.
+services:
+  backend:
+    entrypoint:
+      - python
+      - -m
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/app
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./backend/alembic:/app/alembic:ro
+      - ./backend/alembic.ini:/app/alembic.ini:ro
+
+  frontend:
+    build:
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - ./nutrimind:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next_dev:/app/.next
+    # Refresh the dependency volume after a lockfile change without using host
+    # node_modules (macOS dependencies cannot be shared with Linux containers).
+    command: sh -c 'npm ci --legacy-peer-deps && exec npm run dev -- --hostname 0.0.0.0'
+
+volumes:
+  frontend_node_modules:
+  frontend_next_dev:

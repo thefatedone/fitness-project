@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../../l10n/gen/app_localizations.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../theme/glass_tokens.dart';
 import '../../../shared/widgets/app_dock.dart';
 import '../../../shared/widgets/email_verification_banner.dart';
@@ -14,11 +13,15 @@ import '../../profile/screens/profile_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../models/food_log_model.dart';
 import '../models/streak_model.dart';
+import '../models/daily_goal_progress.dart';
+import '../widgets/daily_goals_card.dart';
+import '../widgets/streak_badge.dart';
 import '../models/water_log_model.dart';
 import '../providers/food_recognition_provider.dart';
 import '../providers/tracker_provider.dart';
 import 'add_food_screen.dart';
 import 'edit_food_description_screen.dart';
+import 'meal_photo_screen.dart';
 import 'photo_beverage_screen.dart';
 import 'photo_food_screen.dart';
 import 'weight_history_screen.dart';
@@ -149,72 +152,12 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     return '$dd.$mm.${selected.year}';
   }
 
-  /// Builds the diary-streak badge shown next to the date label on
-  /// the *current* day only (the call site gates this on
-  /// `isViewingToday`).
-  ///
-  /// Three visual states:
-  ///
-  ///   * `streak == null` or `currentStreak == 0` — return `null`
-  ///     so the row renders without a badge. We deliberately *hide*
-  ///     the chip when the streak is 0 — no "you have a 0-day
-  ///     streak!" copy, no guilt, no missed-bonus messaging. A new
-  ///     user sees just the date row until their first log.
-  ///
-  ///   * `currentStreak > 0 && loggedToday` — solid brand-tinted
-  ///     chip, fire emoji + the day count. This is the "alive
-  ///     today" state.
-  ///
-  ///   * `currentStreak > 0 && !loggedToday` — outlined (unselected)
-  ///     chip at reduced opacity, same fire emoji + count. This is
-  ///     the "still alive, log something today to keep it" state.
-  ///     The visual difference vs. the alive-today state is subtle
-  ///     enough that it reads as "same thing, slightly quieter"
-  ///     rather than alarming the user with a missed-streak
-  ///     warning.
   Widget? _buildStreakBadge(BuildContext context, StreakModel? streak) {
-    if (streak == null) return null;
-    if (streak.currentStreak <= 0) return null;
-    // `🔥 {n}` is the user's chosen copy from the spec — a single
-    // emoji + number, no surrounding text. The fire emoji reads as
-    // "streak" universally without needing localisation.
-    final label = '🔥 ${streak.currentStreak}';
-    // Capture for the onTap closure — `context` is the build-time
-    // context (above this StatefulElement), which is safe to use
-    // across the showGlassBottomSheet call: the sheet's
-    // `showModalBottomSheet` only needs the Navigator/route context,
-    // and the build-time context still points to the active element
-    // when the user taps the chip.
-    final chip = GlassChip(
-      label: label,
-      // `selected` toggles between the solid-tinted (today) and
-      // outline-only (pending) visual treatments — both look
-      // on-brand and neither reads as alarming.
-      selected: streak.loggedToday,
-      color: AppColors.brand,
-      // Tapping the chip (in either logged-today OR
-      // not-logged-yet state — the spec calls this out explicitly)
-      // opens the detail bottom sheet with the 14-day strip +
-      // milestone progress. `GlassChip` already wraps its
-      // non-`onTap` variant in a `Padding`/no-`InkResponse` tree;
-      // passing a non-null `onTap` here is what makes it tappable.
+    if (streak == null || streak.currentStreak <= 0) return null;
+    return StreakBadge(
+      streak: streak,
       onTap: () => _openStreakDetailSheet(context, streak),
     );
-    // The pending-logged-today state wraps the chip in a subtle
-    // opacity reduction so it reads as "quiet" without resorting
-    // to muted colours or descriptive copy. Picked 0.7 empirically
-    // — above 0.8 the difference is invisible against the page
-    // background; below 0.5 the chip starts to look broken.
-    //
-    // No `IgnorePointer` here: the spec calls out that the tap
-    // must work in both states, and `IgnorePointer` would swallow
-    // the tap on the pending-state chip. The reduced opacity is
-    // purely visual; the underlying widget tree (and its hit-test
-    // behaviour) is unchanged.
-    if (!streak.loggedToday) {
-      return Opacity(opacity: 0.7, child: chip);
-    }
-    return chip;
   }
 
   /// Opens the streak detail bottom sheet. Lives on the State so the
@@ -338,9 +281,67 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
   }
 
   /// Shows a modal bottom sheet asking which meal slot the photo will be
-  /// filed under. Once the user picks, push [PhotoFoodScreen] with that
-  /// meal type — the screen is otherwise self-contained.
+  /// filed under, then prompts the user to pick between the new
+  /// multi-item "Scan meal" flow and the existing single-item flow.
+  /// Once the user picks both, push the screen with that meal type —
+  /// each screen is otherwise self-contained.
+  ///
+  /// The mode chooser is the only change vs. the prior implementation:
+  /// the meal-slot picker is reused unchanged (it already covers the
+  /// mealType wire key the new [MealPhotoScreen] needs), and the
+  /// single-item branch still calls [PhotoFoodScreen] — no refactor
+  /// of the existing flow.
   Future<void> _openPhotoFlow() async {
+    // Step 1: mode chooser (multi-item vs single item). Returning
+    // `null` means the user dismissed the sheet without picking.
+    final mode = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Text(
+                  AppLocalizations.of(context).mealPhotoModeTitle,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600
+                  )
+                )
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.restaurant_menu_outlined,
+                  color: theme.colorScheme.primary
+                ),
+                title: Text(AppLocalizations.of(context).mealPhotoScan),
+                subtitle: Text(
+                  AppLocalizations.of(context).mealPhotoScanSubtitle
+                ),
+                onTap: () => Navigator.of(ctx).pop('meal')
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: Text(AppLocalizations.of(context).mealPhotoSingleItem),
+                subtitle: Text(
+                  AppLocalizations.of(context).mealPhotoSingleItemSubtitle
+                ),
+                onTap: () => Navigator.of(ctx).pop('single')
+              ),
+              const SizedBox(height: 8)
+            ]
+          ),
+        );
+      },
+    );
+    if (mode == null || !mounted) return;
+
+    // Step 2: meal-slot picker (shared between both modes). The
+    // existing `mealType` is the wire key the backend uses for
+    // both single-item POSTs and per-item POSTs from the meal flow.
     final mealType = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -359,7 +360,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                   )
                 )
               ),
-              for (final entry in _mealLabels.entries)
+              for (final entry in _mealLabels.entries.where((e) => e.key != 'drinks'))
                 ListTile(
                   leading: Icon(_iconForMeal(entry.key)),
                   title: Text(entry.value),
@@ -373,17 +374,26 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     );
     if (mealType == null || !mounted) return;
 
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => PhotoFoodScreen(mealType: mealType)
-      ),
-    );
-    // Whatever the return value (true on "Done", null on back), do NOT
-    // reload data here — `FoodRecognitionProvider.analyzePhoto` already
-    // called `trackerProvider.addLocalFoodEntry(...)` on success, and the
-    // existing `context.watch<TrackerProvider>()` rebuild wired above
-    // would render the new row. A redundant refetch would only cause a
-    // visible UI flicker.
+    // Step 3: route to the chosen flow. The meal-photo screen
+    // handles its own per-item POSTs and refreshes the day's log
+    // through `TrackerProvider.addLocalFoodEntry`, mirroring the
+    // single-item flow's behaviour. The `await` discards the
+    // screen's return value for the same reason the prior
+    // implementation did — the provider has already merged new
+    // rows into `foodLogs`, and a refetch would only flicker.
+    if (mode == 'meal') {
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => MealPhotoScreen(mealType: mealType)
+        ),
+      );
+    } else {
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => PhotoFoodScreen(mealType: mealType)
+        ),
+      );
+    }
   }
 
   /// Shows the camera DockItem's tap dispatcher: a small modal
@@ -681,6 +691,20 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                                 ),
                 const SizedBox(height: 12),
 
+                if (isViewingToday && !showInitialLoader) ...[
+                  DailyGoalsCard(
+                    calories: DailyGoalProgress(consumed: tracker.totalCalories,
+                        target: auth.currentUser?.dailyCalTarget?.toDouble()),
+                    protein: DailyGoalProgress(consumed: tracker.totalProtein,
+                        target: auth.currentUser?.proteinTarget),
+                    carbs: DailyGoalProgress(consumed: tracker.totalCarbs,
+                        target: auth.currentUser?.carbsTarget),
+                    fat: DailyGoalProgress(consumed: tracker.totalFat,
+                        target: auth.currentUser?.fatTarget),
+                    onConfigure: _openProfile,
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 // Entry point to the weight history screen — sits between
                 // the calorie summary and the macro rows so it's the
                 // first thing visible after calories.
@@ -690,6 +714,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                                 ),
                 const SizedBox(height: 12),
 
+                if (!isViewingToday) ...[
                 _MacroRow(
                   label: AppLocalizations.of(context).addFoodProtein,
                   consumed: tracker.totalProtein,
@@ -710,6 +735,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                   target: auth.currentUser?.fatTarget,
                   color: const Color(0xFFA855F7) // purple-500
                                 ),
+                ],
                 const SizedBox(height: 16),
                 _WaterRow(
                   waterLogs: tracker.waterLogs,
@@ -1765,6 +1791,15 @@ class _FoodLogSection extends StatelessWidget {
     // inside are flat list items (no per-tile border) so the cards
     // don't end up looking like nested windows.
     void addSection(String key, List<FoodLogModel> entries) {
+      // Per-meal roll-up for the section header. Only the total
+      // calories are surfaced (the per-item tile subtitles still
+      // break down P/C/F for the foods inside the section) — a
+      // small flame-icon pill in the brand color, right-aligned,
+      // keeps the section header uncluttered while still giving
+      // the user an at-a-glance sense of how heavy the meal is.
+      final mealKcal = entries.fold<double>(0, (s, f) => s + f.calories);
+      final theme = Theme.of(context);
+
       children.add(
         Padding(
           padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
@@ -1775,18 +1810,67 @@ class _FoodLogSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 0, 8, 8),
+                  padding: const EdgeInsets.fromLTRB(4, 0, 0, 8),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
                         child: Text(
                           mealLabel(context, key),
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: theme.textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant
+                                color: theme.colorScheme.onSurfaceVariant
                               )
                         )
-                      )
+                      ),
+                      // Calorie pill — small, right-aligned, brand
+                      // tinted. The flame icon + kcal number is the
+                      // standard "calories" visual language in
+                      // fitness/nutrition apps; a 12 %-alpha
+                      // primary-tinted background + 16 %-alpha
+                      // primary border reads as a deliberate
+                      // accent without competing with the meal
+                      // name's title weight. Uses
+                      // `FontFeature.tabularFigures()` so the
+                      // number column doesn't shift width as
+                      // the user logs more food.
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary
+                              .withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: theme.colorScheme.primary
+                                .withValues(alpha: 0.18),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.local_fire_department_rounded,
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${mealKcal.round()} ${AppLocalizations.of(context).unitKcalShort}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ]
                   )
                 ),

@@ -34,6 +34,12 @@
   "authLoginButton": "Войти",
   "authForgotPassword": "Забыл пароль?",
   "authNoAccountRegister": "Нет аккаунта? Зарегистрироваться",
+  "authLoginWithGoogle": "Продолжить с Google",
+  "authLoginWithApple": "Продолжить с Apple",
+  "authLoginWithPhone": "Продолжить с номером телефона",
+  "authLoginSocialDivider": "или",
+  "authGoogleSignInFailed": "Вход через Google не удался. Попробуй ещё раз.",
+  "authGoogleSignInNotConfigured": "Вход через Google не настроен в этой сборке. Свяжись с разработчиком.",
   "authServerDebugLink": "Настройка сервера (debug)",
   "authSessionExpired": "Сессия истекла, войди снова.",
   "authRegisterTitle": "Регистрация",
@@ -140,6 +146,12 @@
   "profileSectionBasic": "Основное",
   "profileSectionBody": "Параметры тела",
   "profileSectionGoalActivity": "Цель и активность",
+  "profileSectionSignInMethods": "Способы входа",
+  "authProviderPassword": "Email и пароль",
+  "authProviderGoogle": "Google",
+  "authProviderApple": "Apple",
+  "authProviderPhone": "Номер телефона",
+  "authProviderGeneric": "Другое",
   "profileFieldName": "Имя",
   "profileFieldBirthday": "Дата рождения",
   "profileFieldGender": "Пол",
@@ -558,8 +570,8 @@
   "weightHistoryMustBePositive": "Должен быть > 0",
   "weightHistoryTooLarge": "Слишком большое значение",
   "streakStatusStart": "Начни новую серию — добавь запись сегодня.",
-  "streakStatusDone": "На сегодня всё готово — увидимся завтра.",
-  "streakStatusPending": "Сегодня записей ещё нет — серия пока жива.",
+  "streakStatusDone": "Сегодня есть запись. Серия продолжается.",
+  "streakStatusPending": "Следующий шаг — записать еду или воду сегодня.",
   "@streakHeroLabel": {
     "placeholders": {
       "count": {
@@ -599,5 +611,69 @@
       }
     }
   },
-  "streakTrophyLabel": "{count, plural, one{🏆 Серия: {count} день} few{🏆 Серия: {count} дня} many{🏆 Серия: {count} дней} other{🏆 Серия: {count} дня}}"
+  "streakTrophyLabel": "{count, plural, one{🏆 Серия: {count} день} few{🏆 Серия: {count} дня} many{🏆 Серия: {count} дней} other{🏆 Серия: {count} дня}}",
+  "mealPhotoAnalyzing": "Анализируем блюдо…",
+  "mealPhotoNoFood": "На фото не удалось распознать еду. Попробуй снять сверху и при лучшем свете.",
+  "mealPhotoSave": "Сохранить блюдо",
+  "mealPhotoItems": "{count, plural, one{{count} ингредиент} few{{count} ингредиента} many{{count} ингредиентов} other{{count} ингредиента}}",
+  "@mealPhotoItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPhotoDisclaimer": "Это оценки — сверяй с тем, что ты реально съел(а).",
+  "mealPhotoEstimates": "≈ Оценка",
+  "mealPhotoCancel": "Отмена",
+  "mealPhotoErrorTooMany": "Слишком много запросов, попробуй через минуту.",
+  "mealPhotoErrorFormat": "Формат не поддерживается. Используй JPEG, PNG или HEIC.",
+  "mealPhotoErrorUpstream": "Нейросеть сейчас недоступна, попробуй чуть позже.",
+  "mealPhotoErrorServerEmpty": "Сервер вернул пустой ответ.",
+  "mealPhotoErrorNoFood": "Еда не распознана.",
+  "mealPhotoScan": "Сканировать блюдо",
+  "mealPhotoPickerInstructions": "Сфотографируй блюдо — разберём все ингредиенты сразу",
+  "mealPhotoScanSubtitle": "Распознать все ингредиенты на фото",
+  "mealPhotoSingleItem": "Один продукт",
+  "mealPhotoSingleItemSubtitle": "Сфотографировать только одно блюдо",
+  "mealPhotoModeTitle": "Сканировать всё блюдо или один продукт?",
+  "mealPhotoGramsLabel": "{grams} г",
+  "@mealPhotoGramsLabel": {
+    "placeholders": {
+      "grams": {
+        "type": "String"
+      }
+    }
+  },
+  "mealPhotoConfidence": "{percent}%",
+  "@mealPhotoConfidence": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "balanceTitle": "Баланс дня",
+  "balanceSubtitle": "Небольшие шаги к личным целям",
+  "balanceAchieved": "Все четыре показателя в диапазоне",
+  "balanceCalories": "Калории",
+  "balanceKcal": "ккал",
+  "balanceGrams": "г",
+  "balanceSetTargets": "Укажи все четыре цели КБЖУ в профиле, чтобы видеть баланс дня.",
+  "balanceTolerance": "В диапазоне — это ±10% от цели в профиле. Серия дней считается отдельно.",
+  "balanceConfigure": "Открыть профиль",
+  "balanceNoTarget": "Цель не задана",
+  "balanceInRange": "В диапазоне",
+  "balanceAbove": "Выше диапазона",
+  "balanceInProgress": "В процессе",
+  "streakTitle": "Твоя регулярность",
+  "streakGentleSubtitle": "Немного внимания к себе — день за днём.",
+  "streakRecentDays": "Последние 14 дней",
+  "streakMilestonesTitle": "Рубежи регулярности",
+  "streakBalanceIndependence": "Серия отмечает записи еды или воды. Для неё не нужно попадать в цели КБЖУ. Пропущенный день не отменяет прошлых усилий.",
+  "streakDayLogged": "Есть запись",
+  "streakDayEmpty": "Нет записей",
+  "streakMilestoneReached": "Достигнуто",
+  "streakMilestoneAhead": "Впереди",
+  "balanceProtein": "Белки"
 }

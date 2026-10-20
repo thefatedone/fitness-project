@@ -107,6 +107,41 @@ class VerifyEmailRequest(BaseModel):
     code: str
 
 
+class SignInMethod(BaseModel):
+    """One row in the profile's "Sign-in methods" list.
+
+    `provider` is the wire name: `"password"`, `"google"`, `"apple"`,
+    or `"phone"`. Unknown providers (anything the server doesn't
+    recognise — e.g. a future `"github"`) pass through with the raw
+    string, and the client renders them with a generic icon so
+    adding a new IdP doesn't require a server-side schema bump.
+
+    `display_identifier` is the masked form of whatever contact
+    info the method is associated with — `a***@gmail.com` for
+    email-based methods, `+1*******890` for phone, ``null`` when
+    nothing useful is on file (e.g. an Apple sign-in where the user
+    opted out of sharing email). NEVER includes the provider's
+    `sub` / `provider_user_id` / access token, or the raw email /
+    phone of any identity row.
+
+    `linked_at` is the moment this method was attached to the
+    account — `users.created_at` for the synthetic password entry,
+    `auth_identities.created_at` for everything else. Used by the UI
+    to render a "Linked Jan 2025" subtitle.
+    """
+    provider: str
+    display_identifier: Optional[str] = None
+    linked_at: datetime
+
+
+# `SignInMethod` is defined above `UserResponse` so the forward
+# reference in `UserResponse.sign_in_methods: List["SignInMethod"]`
+# resolves at class-definition time without an explicit
+# `model_rebuild()` call (Pydantic v2 needs the class in scope to
+# resolve forward references during `model_rebuild()`; putting
+# the dependency first is the cheap fix).
+
+
 class UserResponse(BaseModel):
     id: str
     email: Optional[str]
@@ -138,6 +173,17 @@ class UserResponse(BaseModel):
     # comes back from a `from_attributes` read this is `bool`, never
     # `None`. We still type it as `bool` (not `Optional[bool]`) here.
     is_email_verified: bool = False
+
+    # Sign-in methods on file for this account. The list is built
+    # server-side (one entry per auth_identities row plus a
+    # synthetic "password" entry when the user has a password set),
+    # with the display identifier masked so neither the raw email,
+    # phone, nor the provider-side user id leaks through. Order:
+    # password → google → apple → phone → anything else, oldest-
+    # first within a provider. `null` / `[]` is acceptable from
+    # older backends — the mobile client hides the section
+    # entirely when the field is empty.
+    sign_in_methods: List["SignInMethod"] = []
 
     @field_validator("dietary_preferences", "food_allergies", mode="before")
     @classmethod

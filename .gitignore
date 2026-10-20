@@ -12,6 +12,16 @@ node_modules/
 !backend/.env.example
 !.env.*.example
 
+# Google sign-in platform configs. Real values live outside the
+# repo — they go in gitignored files (Android) or are baked in
+# at build time via `--dart-define` (Flutter) / Xcode build
+# settings (iOS). The `*.example.json` / `*.example` placeholders
+# ARE tracked so a fresh clone has the shape documented.
+google-services.json
+flutter_app/android/app/google-services.json
+flutter_app/lib/core/config/social_login_keys.dart
+*.example.json
+
 # Python
 __pycache__/
 *.py[cod]
@@ -33,7 +43,10 @@ out/
 
 # IDE
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
 *.swp
 *.swo
 

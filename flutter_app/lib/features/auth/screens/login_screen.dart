@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../shared/widgets/api_environment_card.dart';
 import '../../../widgets/glass/glass_button.dart';
@@ -108,6 +111,147 @@ class _LoginScreenState extends State<LoginScreen> {
     // setting (URL change, persist, SnackBar) happens inside the
     // card itself — we only show / hide it.
     await ApiEnvironmentCard.showAsModalBottomSheet(context);
+  }
+
+  /// Google sign-in entry point. The flow:
+  ///   1. **Pre-flight check**: verify the right client ID is
+  ///      configured for the current platform. If not, show a
+  ///      "not configured" SnackBar and return without touching
+  ///      the SDK. This is the single most important defensive
+  ///      guard — constructing `GoogleSignIn` with an empty
+  ///      client ID and then calling `signIn()` is a recipe for
+  ///      a native crash (the user reported exactly this on the
+  ///      first run, when the build was missing the
+  ///      `--dart-define=GOOGLE_*_CLIENT_ID=…` flags).
+  ///   2. Drive the native account chooser via `google_sign_in`.
+  ///   3. Extract the ID token from the chosen account.
+  ///   4. POST it to `POST /auth/google` via [AuthProvider].
+  ///   5. The provider's `_runAuthAction` does the rest — saving
+  ///      the issued JWT, fetching the user profile, and flipping
+  ///      `status` so `AuthGate` routes us to the home screen
+  ///      just like the email-password flow.
+  ///
+  /// Cancellation: if the user dismisses the native chooser, the
+  /// SDK throws a `PlatformException` with `code ==
+  /// 'sign_in_canceled'`. We swallow it silently — there's nothing
+  /// to show, the user chose to back out.
+  Future<void> _onGooglePressed() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    final auth = context.read<AuthProvider>();
+
+    // ----- Pre-flight: client ID check -------------------------------------
+    //
+    // `--dart-define=…` flags are baked in at build time — they do NOT
+    // read from `.env`. If the build was run without them, the
+    // `String.fromEnvironment(…)` defaults to `''` and the SDK
+    // would be constructed with empty client IDs. Calling
+    // `signIn()` in that state is a native crash on both iOS and
+    // Android (we hit this on the first end-to-end run: the button
+    // tap killed the app). Bail with a clear, localised message
+    // instead of letting the SDK take the process down.
+    //
+    // Platform conventions for the google_sign_in 6.x SDK:
+    //   * iOS — `clientId` is the iOS OAuth client ID (used as
+    //     the `client_id` query parameter on the OAuth request).
+    //     `serverClientId` is the web OAuth client ID (used as
+    //     the ID token's `audience`).
+    //   * Android — `clientId` IS the web OAuth client ID (the
+    //     SDK reads the Android client ID from `google-services.json`
+    //     and uses it for the native side). `serverClientId` is the
+    //     same web OAuth client ID, kept for parity with iOS.
+    final platform = Theme.of(context).platform;
+    final isIOS = platform == TargetPlatform.iOS;
+    final webClientId = AppConfig.googleWebClientId;
+    final iosClientId = AppConfig.googleIosClientId;
+
+    if (webClientId.isEmpty || (isIOS && iosClientId.isEmpty)) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(l10n.authGoogleSignInNotConfigured),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      return;
+    }
+
+    final googleSignIn = GoogleSignIn(
+      // On iOS, this is the iOS client ID (used as the
+      // `client_id` query param). On Android, the SDK uses this
+      // as the audience for the ID token — same value the web
+      // client ID encodes, so passing the web ID here is correct
+      // for both platforms.
+      clientId: isIOS ? iosClientId : webClientId,
+      // Web OAuth client ID — used as the ID token's `aud`
+      // across all platforms. The backend's
+      // `GOOGLE_AUTH_CLIENT_IDS` allow-list matches this value.
+      serverClientId: webClientId,
+    );
+
+    try {
+      final account = await googleSignIn.signIn();
+      if (account == null) {
+        // The SDK can return null when the user dismisses the
+        // chooser on a fresh sign-in (i.e. there was no
+        // previously-authenticated account to "re-sign-in"
+        // silently). Treat as a no-op — same outcome the
+        // user wanted.
+        return;
+      }
+      final authTokens = await account.authentication;
+      final idToken = authTokens.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        // The SDK can return a non-null account whose
+        // `idToken` is null if the user has an outdated
+        // Google Play Services or some other client-side
+        // setup issue. Surface as a generic failure.
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(l10n.authGoogleSignInFailed),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        return;
+      }
+      await auth.loginWithGoogle(idToken);
+      // The provider flips `status` to `authenticated` on
+      // success; `AuthGate` does the navigation. Nothing
+      // to do here.
+    } on PlatformException catch (e) {
+      // The SDK throws a `PlatformException` with a well-known
+      // `code` field. `sign_in_canceled` means the user
+      // dismissed the native chooser — we treat that as a
+      // no-op (silent stay on the screen) and surface any
+      // other code (including the "missing plugin" case when
+      // the user is running a stale build) as a generic
+      // user-facing failure.
+      if (e.code == GoogleSignIn.kSignInCanceledError) {
+        return;
+      }
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(l10n.authGoogleSignInFailed),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    } catch (_) {
+      // Defensive: anything else (network blip, SDK throws a
+      // non-typed exception) is treated as a generic failure.
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(l10n.authGoogleSignInFailed),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    }
   }
 
   @override
@@ -248,6 +392,46 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     const SizedBox(height: 12),
 
+                    // --------------------------------------------------------
+                    // Social-login block.
+                    //
+                    // Placed below the email-password form (rather than
+                    // above) because email is still the primary path —
+                    // the user's account from a previous install lives
+                    // there, and putting the primary path on top matches
+                    // every other NutriMind entry point. The "or"
+                    // divider makes the social buttons read as an
+                    // alternative rather than a competing requirement.
+                    //
+                    // Apple and phone buttons are intentionally NOT
+                    // rendered today — the spec says "lay it out so
+                    // Apple and phone buttons can be added below
+                    // later, but do not render them now." The
+                    // `authLoginWithApple` / `authLoginWithPhone`
+                    // l10n strings already exist so the future
+                    // additions are a one-liner per row.
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            l10n.authLoginSocialDivider,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _SocialLoginButton.google(
+                      label: l10n.authLoginWithGoogle,
+                      onPressed: auth.isLoading ? null : _onGooglePressed,
+                    ),
+
                     TextButton(
                       onPressed: auth.isLoading
                           ? null
@@ -323,3 +507,58 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
+// ============================================================================
+// Social-login button
+// ============================================================================
+//
+// Visual sibling of [GlassButton] for the social-login block. Differs
+// from the primary "Log in" button in three ways:
+//
+//   * it always uses the secondary (neutral) GlassButton variant so
+//     it doesn't compete with the primary CTA visually,
+//   * it shows the provider's brand glyph (currently just a Google
+//     "G" — the Apple and phone slots are reserved for a later step
+//     and the widget is set up to render either),
+//   * it ignores the "loading" spinner pattern from the email form
+//     — the provider is already `isLoading` while we wait for the
+//     native chooser, so the button just disables itself and the
+//     chooser provides its own visual feedback.
+//
+// Defined as a `StatelessWidget` rather than a function so it can
+// have a stable `Key` for tests, and so the layout is independently
+// reviewable from the screen's `build` method.
+
+class _SocialLoginButton extends StatelessWidget {
+  const _SocialLoginButton.google({
+    required this.label,
+    required this.onPressed,
+  }) : _kind = _SocialKind.google;
+
+  final String label;
+  final VoidCallback? onPressed;
+  final _SocialKind _kind;
+
+  @override
+  Widget build(BuildContext context) {
+    // The brand glyph: a single Material icon is enough for the
+    // Google "G" — the rest of the platform's chrome (coloured
+    // background, full wordmark) would push us into asset
+    // bundling and licensing territory that the spec explicitly
+    // asked us to avoid. The icon-by-itself convention matches
+    // every major social-login button on the web today.
+    final IconData leadingIcon = switch (_kind) {
+      _SocialKind.google => Icons.g_mobiledata_rounded,
+    };
+
+    return GlassButton(
+      label: label,
+      onPressed: onPressed,
+      icon: leadingIcon,
+      expand: true,
+      variant: GlassButtonVariant.secondary,
+    );
+  }
+}
+
+enum _SocialKind { google }

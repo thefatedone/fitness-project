@@ -105,7 +105,7 @@ Create `backend/.env`:
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/nutrimind
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=your-super-secret-key-change-in-production
-ANTHROPIC_API_KEY=your-anthropic-api-key
+GEMINI_API_KEY=your-gemini-api-key
 ```
 
 ### 2. Start with Docker
@@ -265,7 +265,7 @@ backend/
 | `DATABASE_URL` | PostgreSQL connection string | ✅ |
 | `REDIS_URL` | Redis connection string | ✅ |
 | `JWT_SECRET` | Secret for JWT signing | ✅ |
-| `ANTHROPIC_API_KEY` | Anthropic API key for AI | ✅ |
+| `GEMINI_API_KEY` | Gemini API key (meal-photo + chat) | ✅ |
 
 ---
 

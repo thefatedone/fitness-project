@@ -304,6 +304,42 @@ abstract class AppLocalizations {
   /// **'Don\'t have an account? Sign up'**
   String get authNoAccountRegister;
 
+  /// No description provided for @authLoginWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get authLoginWithGoogle;
+
+  /// No description provided for @authLoginWithApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Apple'**
+  String get authLoginWithApple;
+
+  /// No description provided for @authLoginWithPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with phone number'**
+  String get authLoginWithPhone;
+
+  /// No description provided for @authLoginSocialDivider.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get authLoginSocialDivider;
+
+  /// No description provided for @authGoogleSignInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in failed. Please try again.'**
+  String get authGoogleSignInFailed;
+
+  /// No description provided for @authGoogleSignInNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in is not configured for this build. Contact the developer.'**
+  String get authGoogleSignInNotConfigured;
+
   /// No description provided for @authServerDebugLink.
   ///
   /// In en, this message translates to:
@@ -939,6 +975,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Goal and activity'**
   String get profileSectionGoalActivity;
+
+  /// No description provided for @profileSectionSignInMethods.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in methods'**
+  String get profileSectionSignInMethods;
+
+  /// No description provided for @authProviderPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Email and password'**
+  String get authProviderPassword;
+
+  /// No description provided for @authProviderGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Google'**
+  String get authProviderGoogle;
+
+  /// No description provided for @authProviderApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple'**
+  String get authProviderApple;
+
+  /// No description provided for @authProviderPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get authProviderPhone;
+
+  /// No description provided for @authProviderGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get authProviderGeneric;
 
   /// No description provided for @profileFieldName.
   ///
@@ -2562,13 +2634,13 @@ abstract class AppLocalizations {
   /// No description provided for @streakStatusDone.
   ///
   /// In en, this message translates to:
-  /// **'You\'re set for today — see you tomorrow.'**
+  /// **'An entry is logged today. Your streak continues.'**
   String get streakStatusDone;
 
   /// No description provided for @streakStatusPending.
   ///
   /// In en, this message translates to:
-  /// **'Today isn\'t logged yet — it\'s still alive.'**
+  /// **'Your next step: log food or water today.'**
   String get streakStatusPending;
 
   /// No description provided for @streakHeroLabel.
@@ -2648,6 +2720,264 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, one{🏆 {count} day streak} other{🏆 {count} day streak}}'**
   String streakTrophyLabel(int count);
+
+  /// No description provided for @mealPhotoAnalyzing.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing your meal…'**
+  String get mealPhotoAnalyzing;
+
+  /// No description provided for @mealPhotoNoFood.
+  ///
+  /// In en, this message translates to:
+  /// **'No food detected in the photo. Try a clearer top-down view.'**
+  String get mealPhotoNoFood;
+
+  /// No description provided for @mealPhotoSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save meal'**
+  String get mealPhotoSave;
+
+  /// No description provided for @mealPhotoItems.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} item} other{{count} items}}'**
+  String mealPhotoItems(int count);
+
+  /// No description provided for @mealPhotoDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimates — verify with what you actually ate.'**
+  String get mealPhotoDisclaimer;
+
+  /// No description provided for @mealPhotoEstimates.
+  ///
+  /// In en, this message translates to:
+  /// **'≈ Estimates'**
+  String get mealPhotoEstimates;
+
+  /// No description provided for @mealPhotoCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get mealPhotoCancel;
+
+  /// No description provided for @mealPhotoErrorTooMany.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many analyses, try again in a moment.'**
+  String get mealPhotoErrorTooMany;
+
+  /// No description provided for @mealPhotoErrorFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported image format. Use JPEG, PNG, or HEIC.'**
+  String get mealPhotoErrorFormat;
+
+  /// No description provided for @mealPhotoErrorUpstream.
+  ///
+  /// In en, this message translates to:
+  /// **'The AI is having trouble, try again in a moment.'**
+  String get mealPhotoErrorUpstream;
+
+  /// No description provided for @mealPhotoErrorServerEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Server returned an empty response.'**
+  String get mealPhotoErrorServerEmpty;
+
+  /// No description provided for @mealPhotoErrorNoFood.
+  ///
+  /// In en, this message translates to:
+  /// **'No food detected.'**
+  String get mealPhotoErrorNoFood;
+
+  /// No description provided for @mealPhotoScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan meal'**
+  String get mealPhotoScan;
+
+  /// No description provided for @mealPhotoPickerInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo of your meal to analyze multiple items at once'**
+  String get mealPhotoPickerInstructions;
+
+  /// No description provided for @mealPhotoScanSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Detect multiple items in one photo'**
+  String get mealPhotoScanSubtitle;
+
+  /// No description provided for @mealPhotoSingleItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Single item'**
+  String get mealPhotoSingleItem;
+
+  /// No description provided for @mealPhotoSingleItemSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Photograph one food at a time'**
+  String get mealPhotoSingleItemSubtitle;
+
+  /// No description provided for @mealPhotoModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the whole plate or a single item?'**
+  String get mealPhotoModeTitle;
+
+  /// No description provided for @mealPhotoGramsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{grams} g'**
+  String mealPhotoGramsLabel(String grams);
+
+  /// No description provided for @mealPhotoConfidence.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}%'**
+  String mealPhotoConfidence(String percent);
+
+  /// No description provided for @balanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily balance'**
+  String get balanceTitle;
+
+  /// No description provided for @balanceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Small steps toward your personal targets'**
+  String get balanceSubtitle;
+
+  /// No description provided for @balanceAchieved.
+  ///
+  /// In en, this message translates to:
+  /// **'All four targets are in range'**
+  String get balanceAchieved;
+
+  /// No description provided for @balanceCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories'**
+  String get balanceCalories;
+
+  /// No description provided for @balanceKcal.
+  ///
+  /// In en, this message translates to:
+  /// **'kcal'**
+  String get balanceKcal;
+
+  /// No description provided for @balanceGrams.
+  ///
+  /// In en, this message translates to:
+  /// **'g'**
+  String get balanceGrams;
+
+  /// No description provided for @balanceSetTargets.
+  ///
+  /// In en, this message translates to:
+  /// **'Set all four nutrition targets in your profile to see your daily balance.'**
+  String get balanceSetTargets;
+
+  /// No description provided for @balanceTolerance.
+  ///
+  /// In en, this message translates to:
+  /// **'In range means ±10% of your profile target. Your diary streak is counted separately.'**
+  String get balanceTolerance;
+
+  /// No description provided for @balanceConfigure.
+  ///
+  /// In en, this message translates to:
+  /// **'Open profile'**
+  String get balanceConfigure;
+
+  /// No description provided for @balanceNoTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target not set'**
+  String get balanceNoTarget;
+
+  /// No description provided for @balanceInRange.
+  ///
+  /// In en, this message translates to:
+  /// **'In range'**
+  String get balanceInRange;
+
+  /// No description provided for @balanceAbove.
+  ///
+  /// In en, this message translates to:
+  /// **'Above range'**
+  String get balanceAbove;
+
+  /// No description provided for @balanceInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get balanceInProgress;
+
+  /// No description provided for @streakTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your consistency'**
+  String get streakTitle;
+
+  /// No description provided for @streakGentleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A little attention to yourself, day by day.'**
+  String get streakGentleSubtitle;
+
+  /// No description provided for @streakRecentDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Your last 14 days'**
+  String get streakRecentDays;
+
+  /// No description provided for @streakMilestonesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Consistency milestones'**
+  String get streakMilestonesTitle;
+
+  /// No description provided for @streakBalanceIndependence.
+  ///
+  /// In en, this message translates to:
+  /// **'Your streak recognises food or water logging. You do not need to meet your nutrition targets to keep it. A missed day does not erase your past effort.'**
+  String get streakBalanceIndependence;
+
+  /// No description provided for @streakDayLogged.
+  ///
+  /// In en, this message translates to:
+  /// **'Entry logged'**
+  String get streakDayLogged;
+
+  /// No description provided for @streakDayEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No entries'**
+  String get streakDayEmpty;
+
+  /// No description provided for @streakMilestoneReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached'**
+  String get streakMilestoneReached;
+
+  /// No description provided for @streakMilestoneAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'Ahead'**
+  String get streakMilestoneAhead;
+
+  /// No description provided for @balanceProtein.
+  ///
+  /// In en, this message translates to:
+  /// **'Protein'**
+  String get balanceProtein;
 }
 
 class _AppLocalizationsDelegate

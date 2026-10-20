@@ -8,7 +8,9 @@ import '../../../l10n/gen/app_localizations_lookup.dart';
 import '../../auth/providers/auth_api.dart';
 import '../models/food_log_model.dart';
 import '../models/food_recognition_result.dart';
+import '../models/meal_analysis_result.dart';
 import 'food_recognition_api.dart';
+import 'meal_photo_api.dart';
 import 'tracker_provider.dart';
 
 /// `ChangeNotifier` that owns the AI food-recognition flows —
@@ -26,7 +28,11 @@ import 'tracker_provider.dart';
 /// either flow (photo or edit) so a stale result/error doesn't bleed
 /// into the next try.
 class FoodRecognitionProvider extends ChangeNotifier {
-  /// `true` while a Gemini round-trip is in flight.
+  /// `true` while a Gemini round-trip is in flight. Shared between the
+  /// single-item photo flow ([analyzePhoto]) and the meal-photo flow
+  /// ([analyzeMealPhoto]) — the UI only ever shows one spinner at a
+  /// time, and the two flows are mutually exclusive entry points, so
+  /// a single flag is enough.
   bool isAnalyzing = false;
 
   /// Most recent successful analysis, or `null` if none / cleared.
@@ -35,6 +41,15 @@ class FoodRecognitionProvider extends ChangeNotifier {
   /// result shapes (per the backend's contract) so the UI can render
   /// them with the same widget regardless of origin.
   FoodRecognitionResult? lastResult;
+
+  /// Most recent successful meal-photo (multi-item) analysis, or
+  /// `null` if none / cleared. Distinct from [lastResult] because the
+  /// shapes are intentionally different: this one is a list of items
+  /// the user reviews and POSTs individually via
+  /// `trackerProvider.addFoodEntry(...)`, not a single already-saved
+  /// row. The single-item screen renders [lastResult]; the meal-photo
+  /// screen renders [lastMealAnalysis].
+  MealAnalysisResult? lastMealAnalysis;
 
   /// Most recent user-presentable error, or `null` if none / cleared.
   ///
@@ -78,6 +93,13 @@ class FoodRecognitionProvider extends ChangeNotifier {
   /// Underlying transport. Single shared instance — clients of this
   /// provider don't need to inject one.
   final FoodRecognitionApi _api = FoodRecognitionApi();
+
+  /// Underlying transport for the meal-photo (multi-item) flow. Kept
+  /// separate from [_api] so the two flows can evolve independently
+  /// — the meal endpoint lives under a different router and returns a
+  /// different shape, and conflating them would just complicate the
+  /// shared client's call sites for no benefit.
+  final MealPhotoApi _mealApi = MealPhotoApi();
 
   /// Sends [imageFile] to Gemini, surfaces success / failure to listeners,
   /// and (on success) prepends the freshly-written food row into the given
@@ -250,6 +272,97 @@ class FoodRecognitionProvider extends ChangeNotifier {
     final hadSomething = lastResult != null || errorMessage != null;
     lastResult = null;
     errorMessage = null;
+    if (hadSomething) notifyListeners();
+  }
+
+  /// Sends [imageFile] to the meal-photo endpoint, surfaces success
+  /// / failure to listeners, and (on success) stores the multi-item
+  /// estimate in [lastMealAnalysis]. Unlike [analyzePhoto], the
+  /// backend does NOT persist anything server-side — the user reviews
+  /// the items on the (future) screen, edits portions, and then the
+  /// screen calls `trackerProvider.addFoodEntry(model)` per accepted
+  /// item to persist them one-by-one. The provider therefore does
+  /// NOT touch [trackerProvider] itself.
+  ///
+  /// Returns `true` on success, `false` on failure ([errorMessage] /
+  /// [errorMessageKey] are set in either case for UI display). The
+  /// shared [isAnalyzing] flag is driven by this flow; the future
+  /// screen treats it as "the spinner is up".
+  Future<bool> analyzeMealPhoto({
+    required File imageFile,
+    required String mealType,
+    required TrackerProvider trackerProvider,
+  }) async {
+    isAnalyzing = true;
+    errorMessage = null;
+    errorMessageKey = null;
+    lastMealAnalysis = null;
+    notifyListeners();
+
+    try {
+      final result = await _mealApi.analyzeMealPhoto(
+        imageFile: imageFile,
+        mealType: mealType,
+      );
+
+      // Single-item screen reads [lastResult]; meal-photo screen reads
+      // [lastMealAnalysis]. Clearing [lastResult] here is defensive —
+      // if a stale single-item result was somehow still in memory
+      // (the two flows should be mutually exclusive in practice, but
+      // the screens could re-render out of order), the meal screen
+      // should never see a mixed state.
+      lastResult = null;
+      lastMealAnalysis = result;
+
+      // Empty-but-no_food_detected false is still a success — we
+      // hand the (possibly empty) result back to the UI so it can
+      // render the appropriate empty-state. The screen decides
+      // whether to show the "no food detected" copy or the
+      // "nothing to save" copy.
+
+      // Deliberately do NOT call trackerProvider.addLocalFoodEntry /
+      // addBeverageEntry here: the meal-photo endpoint is no-save
+      // by design, and pre-loading the per-item POSTs into the day's
+      // list before the user has reviewed them would put half-baked
+      // rows into the visible list. The future screen holds the
+      // reference for the eventual per-item `addFoodEntry` calls.
+      // The unused parameter triggers no lint — [trackerProvider]
+      // is in scope by virtue of being part of the public API.
+
+      isAnalyzing = false;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      // The per-status messages have already been humanised by
+      // [MealPhotoApi]; we forward them verbatim and let the matching
+      // `messageKey` drive the active-locale copy.
+      errorMessage = e.message;
+      errorMessageKey = e.messageKey;
+      isAnalyzing = false;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      // Defensive: any non-ApiException (parse error, OOM, …) shouldn't
+      // crash the UI — the user just sees a generic hint. The
+      // `errorMessageKey` lets the consumer [localizeError] render
+      // the active locale's copy.
+      errorMessage = null;
+      errorMessageKey = 'userFacingErrorPhotoProcess';
+      isAnalyzing = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Clears [lastMealAnalysis] (and [errorMessage], in case a prior
+  /// meal-photo attempt failed) and notifies. Call when leaving the
+  /// meal-photo flow so a stale "items ready" state from a previous
+  /// attempt doesn't show up on the next entry to the screen.
+  void resetMealAnalysis() {
+    final hadSomething = lastMealAnalysis != null || errorMessage != null;
+    lastMealAnalysis = null;
+    errorMessage = null;
+    errorMessageKey = null;
     if (hadSomething) notifyListeners();
   }
 }

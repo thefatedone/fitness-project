@@ -2,12 +2,22 @@ import random
 import re
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
+# Imported at module level (rather than inside the route) so the
+# test suite can monkeypatch `app.api.v1.routes.auth.google_id_token`
+# and inject fake claims without making real network calls. The
+# import is otherwise cheap and stable — `google-auth` is a
+# runtime dep, not a test-only one.
+from google.oauth2 import id_token as google_id_token  # noqa: E402
+from google.auth.exceptions import GoogleAuthError  # noqa: E402
+from google.auth.transport import requests as google_requests  # noqa: E402
+
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import (
     verify_password,
@@ -24,6 +34,9 @@ from app.models.user import User
 from app.models.password_reset import PasswordResetCode
 from app.schemas.auth import UserCreate, UserLogin, Token, UserResponse
 from app.schemas.user import VerifyEmailRequest
+from app.services.auth_identity import get_or_create_user_from_identity
+from app.services.photo_analysis import check_rate_limit
+from app.core.redis_client import redis_client
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -270,6 +283,156 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
 
     if not user or not verify_password(user_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    access_token = create_access_token(data={"sub": user.id, "role": user.role})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+# ============================================================================
+# Google sign-in — POST /auth/google
+# ============================================================================
+#
+# Verifies a Google ID token minted by the Flutter `google_sign_in`
+# SDK, looks up or creates the user via the provider-agnostic
+# `get_or_create_user_from_identity` service, and returns the
+# same `Token` shape as `/login`. Apple and 6-digit-SMS-phone
+# will plug into the same service in later PRs; the route
+# body is intentionally minimal because all the linking logic
+# lives in the service.
+#
+# Status mapping:
+#   * 400  — `id_token` field missing/empty.
+#   * 401  — token failed verification (bad signature, wrong
+#            audience, expired, or wrong issuer). Same code the
+#            email/password `/login` returns on bad credentials
+#            so the client has one "auth failed" branch.
+#   * 403  — the IdP returned an email but didn't mark it
+#            verified; we refuse to link by unverified email
+#            and surface that as a 403 (the Flutter client shows
+#            a "use a Google account with a verified email" hint).
+#   * 429  — rate limit hit. Same helper the photo-analysis
+#            endpoints use; keyed by client IP because there's
+#            no user yet at this point in the flow.
+#   * 502  — `GOOGLE_AUTH_CLIENT_IDS` is empty (server
+#            misconfiguration) OR the IdP library raised
+#            something other than a verification failure. Both
+#            read as "upstream is unreachable".
+#
+# The token's `sub` claim is what we treat as the canonical
+# `provider_user_id`. The token's `email` is used only when the
+# token also says `email_verified=true`; we ignore any email
+# the client might have sent separately (we never accept a
+# `display_name` or `email` in the request body — the route
+# doesn't even declare such fields).
+
+class GoogleAuthRequest(BaseModel):
+    """Body for `POST /auth/google`. Only the ID token from the
+    Google sign-in SDK is accepted; email / name / anything else
+    the client might supply is ignored. The IdP-asserted claims
+    inside the verified token are the only source of truth for
+    user identity."""
+
+    id_token: str
+
+
+@router.post("/google", response_model=Token)
+async def login_with_google(
+    body: GoogleAuthRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    if not body.id_token or not body.id_token.strip():
+        raise HTTPException(status_code=400, detail="id_token is required")
+
+    # Reuse the photo-analysis rate-limit helper. Keyed by client
+    # IP (the existing helper's `user_id` parameter is just the
+    # string used in the Redis key — it can be any opaque
+    # identifier). The fallback inside `check_rate_limit` for
+    # "Redis is down" is to let the request through, so an outage
+    # doesn't lock users out.
+    client_host = request.client.host if request.client else "unknown"
+    if not await check_rate_limit(redis_client, client_host):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many sign-in attempts. Please wait a minute and try again.",
+        )
+
+    allowed_audiences = settings.google_auth_client_id_list
+    if not allowed_audiences:
+        # Empty `GOOGLE_AUTH_CLIENT_IDS` means the operator hasn't
+        # configured the env. We can't have minted a token in this
+        # state, so 502 (upstream misconfig) is the honest read.
+        raise HTTPException(
+            status_code=502,
+            detail="Google sign-in is not configured on this server.",
+        )
+
+    # Verify the token. `google.oauth2.id_token.verify_oauth2_token`
+    # is the documented entry point: it fetches Google's public
+    # keys (cached), checks the signature, the `iss` (must be
+    # accounts.google.com or https://accounts.google.com), the
+    # `aud` (must be in our allow-list), and the `exp`. It
+    # returns the parsed claims dict on success and raises
+    # `GoogleAuthError` on any verification failure.
+    #
+    # The `request` arg is REQUIRED (the function calls
+    # `request(certs_url, …)` to fetch Google's JWKS). A plain
+    # `requests.Request()` is fine — the certs are cached in
+    # memory after the first fetch, so the blocking I/O happens
+    # once per process. Running it on the event loop thread is
+    # also fine for a 1-shot sign-in: the request hangs for tens
+    # of milliseconds at most, well within FastAPI's 15 s
+    # receive timeout.
+    try:
+        claims = google_id_token.verify_oauth2_token(
+            body.id_token,
+            request=google_requests.Request(),
+            audience=allowed_audiences,
+        )
+    except GoogleAuthError:
+        # Bad signature, wrong audience, expired, or wrong issuer.
+        # We don't leak the specific reason — a 401 with a generic
+        # "Invalid token" message gives an attacker no information
+        # about why their token was rejected.
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+    except Exception:
+        # Any other failure (network blip when fetching Google's
+        # public keys, for example) reads as "upstream unreachable".
+        raise HTTPException(
+            status_code=502,
+            detail="Google sign-in service is temporarily unavailable.",
+        )
+
+    provider_user_id = claims.get("sub")
+    if not provider_user_id:
+        # A verified token always has a `sub`; if not, the token
+        # is malformed in a way that the Google library didn't
+        # catch. Treat as a verification failure.
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    email = claims.get("email")
+    email_verified = bool(claims.get("email_verified", False))
+    display_name = claims.get("name")
+
+    # If the IdP returned an email but didn't mark it verified,
+    # we explicitly refuse to create OR link the account. This
+    # is the security boundary — a 403 (not 401) because the
+    # token IS valid, we just don't trust the email enough to
+    # create / link a user with it.
+    if email and not email_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="Google account email is not verified.",
+        )
+
+    user, _created = await get_or_create_user_from_identity(
+        db,
+        provider="google",
+        provider_user_id=provider_user_id,
+        email=email,
+        email_verified=email_verified,
+        display_name=display_name,
+    )
 
     access_token = create_access_token(data={"sub": user.id, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer"}

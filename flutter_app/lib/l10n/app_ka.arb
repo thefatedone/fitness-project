@@ -34,6 +34,12 @@
   "authLoginButton": "შესვლა",
   "authForgotPassword": "დაგავიწყდა პაროლი?",
   "authNoAccountRegister": "არ გაქვს ანგარიში? დარეგისტრირდი",
+  "authLoginWithGoogle": "Google-ით გაგრძელება",
+  "authLoginWithApple": "Apple-ით გაგრძელება",
+  "authLoginWithPhone": "ტელეფონის ნომრით გაგრძელება",
+  "authLoginSocialDivider": "ან",
+  "authGoogleSignInFailed": "Google-ით შესვლა ვერ მოხერხდა. სცადე თავიდან.",
+  "authGoogleSignInNotConfigured": "Google-ით შესვლა ამ აწყობში მორგებული არ არის. დაუკავშირდი დეველოპერს.",
   "authServerDebugLink": "სერვერის პარამეტტრები (debug)",
   "authSessionExpired": "სესია ამოიწურა. გთხოვ, თავიდან შედი.",
   "authRegisterTitle": "რეგისტტრაცია",
@@ -140,6 +146,12 @@
   "profileSectionBasic": "ძირითადი",
   "profileSectionBody": "სხეულის პარამეტტრები",
   "profileSectionGoalActivity": "მიზანი და აქტივობა",
+  "profileSectionSignInMethods": "შესვლის მეთოდები",
+  "authProviderPassword": "ელ.ფოსტა და პაროლი",
+  "authProviderGoogle": "Google",
+  "authProviderApple": "Apple",
+  "authProviderPhone": "ტელეფონის ნომერი",
+  "authProviderGeneric": "სხვა",
   "profileFieldName": "სახელი",
   "profileFieldBirthday": "დაბადების თარიღი",
   "profileFieldGender": "სქესი",
@@ -558,8 +570,8 @@
   "weightHistoryMustBePositive": "0-ზე მეტი უნდა იყოს",
   "weightHistoryTooLarge": "ძალიან დიდი მნიშვნელობა",
   "streakStatusStart": "დაიწყე ახალი სერია — დაამატე ჩანაწერი დღეს.",
-  "streakStatusDone": "დღეისთვის ყველაფერი მზადაა — ხვალამდე.",
-  "streakStatusPending": "დღეს ჯერ არაფერი გაქვს ჩაწერილი — სერია ჯერ კიდევ ძალაშია.",
+  "streakStatusDone": "დღეს ჩანაწერი დამატებულია. სერია გრძელდება.",
+  "streakStatusPending": "შემდეგი ნაბიჯი — დღეს საკვების ან წყლის ჩაწერა.",
   "@streakHeroLabel": {
     "placeholders": {
       "count": {
@@ -599,5 +611,69 @@
       }
     }
   },
-  "streakTrophyLabel": "{count, plural, one{🏆 სერია: {count} დღე} other{🏆 სერია: {count} დღე}}"
+  "streakTrophyLabel": "{count, plural, one{🏆 სერია: {count} დღე} other{🏆 სერია: {count} დღე}}",
+  "mealPhotoAnalyzing": "ვაანალიზებ კერძს…",
+  "mealPhotoNoFood": "ფოტოზე საკვები ვერ ამოვიცანი. სცადე ზემოდან უფრო ნათელი კადრი.",
+  "mealPhotoSave": "კერძის შენახვა",
+  "mealPhotoItems": "{count, plural, one{{count} ინგრედიენტი} other{{count} ინგრედიენტი}}",
+  "@mealPhotoItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPhotoDisclaimer": "ეს შეფასებებია — შეამოწმე იმასთან, რაც ნამდვილად მიირთვი.",
+  "mealPhotoEstimates": "≈ შეფასება",
+  "mealPhotoCancel": "გაუქმება",
+  "mealPhotoErrorTooMany": "ძალიან ბევრი მოთხოვნა, სცადე ერთ წუთში.",
+  "mealPhotoErrorFormat": "ფორმატი მხარდაუჭერელია. გამოიყენე JPEG, PNG ან HEIC.",
+  "mealPhotoErrorUpstream": "ხელოვნური ინტელექტი დროებით მიუწვდომელია, სცადე მოგვიანებით.",
+  "mealPhotoErrorServerEmpty": "სერვერმა ცარიელი პასუხი დააბრუნა.",
+  "mealPhotoErrorNoFood": "საკვები ვერ ამოვიცანი.",
+  "mealPhotoScan": "კერძის სკანირება",
+  "mealPhotoPickerInstructions": "გადაიღე კერძი — ერთდროულად ყველა ინგრედიენტს ამოვიცნობთ",
+  "mealPhotoScanSubtitle": "ამოიცანი ყველა ინგრედიენტი ერთ ფოტოზე",
+  "mealPhotoSingleItem": "ერთი პროდუქტი",
+  "mealPhotoSingleItemSubtitle": "გადაიღე მხოლოდ ერთი კერძი",
+  "mealPhotoModeTitle": "მთელი კერძი თუ ერთი პროდუქტი?",
+  "mealPhotoGramsLabel": "{grams} გ",
+  "@mealPhotoGramsLabel": {
+    "placeholders": {
+      "grams": {
+        "type": "String"
+      }
+    }
+  },
+  "mealPhotoConfidence": "{percent}%",
+  "@mealPhotoConfidence": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "balanceTitle": "დღის ბალანსი",
+  "balanceSubtitle": "პატარა ნაბიჯები პირადი მიზნებისკენ",
+  "balanceAchieved": "ოთხივე მაჩვენებელი დიაპაზონშია",
+  "balanceCalories": "კალორიები",
+  "balanceKcal": "კკალ",
+  "balanceGrams": "გ",
+  "balanceSetTargets": "დღის ბალანსის სანახავად პროფილში ოთხივე კვებითი მიზანი მიუთითე.",
+  "balanceTolerance": "დიაპაზონი პროფილის მიზნის ±10%-ია. დღეების სერია ცალკე ითვლება.",
+  "balanceConfigure": "პროფილის გახსნა",
+  "balanceNoTarget": "მიზანი არ არის მითითებული",
+  "balanceInRange": "დიაპაზონშია",
+  "balanceAbove": "დიაპაზონზე მეტია",
+  "balanceInProgress": "მიმდინარეობს",
+  "streakTitle": "შენი რეგულარულობა",
+  "streakGentleSubtitle": "ცოტა ყურადღება საკუთარ თავს — ყოველდღე.",
+  "streakRecentDays": "ბოლო 14 დღე",
+  "streakMilestonesTitle": "რეგულარულობის ეტაპები",
+  "streakBalanceIndependence": "სერია საკვების ან წყლის ჩანაწერებს აღნიშნავს. მის გასაგრძელებლად კვებითი მიზნების მიღწევა საჭირო არ არის. გამოტოვებული დღე წარსულ ძალისხმევას არ აუქმებს.",
+  "streakDayLogged": "ჩანაწერი დამატებულია",
+  "streakDayEmpty": "ჩანაწერები არ არის",
+  "streakMilestoneReached": "მიღწეულია",
+  "streakMilestoneAhead": "წინ არის",
+  "balanceProtein": "ცილები"
 }

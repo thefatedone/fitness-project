@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from datetime import datetime, timedelta
 from typing import List, Set
 from app.core.database import get_db
+from app.core.config import settings
+from app.core.redis_client import redis_client
 from app.core.security import get_current_user_id
 from app.models.food_log import FoodLog, WeightLog, WaterLog
 from app.schemas.food import (
@@ -17,6 +19,18 @@ from app.schemas.food import (
     StreakDayEntry,
     StreakResponse,
 )
+from app.services.photo_analysis import (
+    PHOTO_ANALYSIS_PROMPT,
+    PhotoAnalysisResult,
+    cache_get_cached_result,
+    cache_set_cached_result,
+    check_rate_limit,
+    hash_image_bytes,
+    validate_and_normalize,
+)
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tracker", tags=["tracker"])
 
@@ -107,6 +121,218 @@ async def add_food_log(
     await db.commit()
     await db.refresh(food_log)
     return food_log
+
+
+# ---------------------------------------------------------------------------
+# Photo-based meal analysis (analyze-only; no DB writes)
+# ---------------------------------------------------------------------------
+
+ALLOWED_IMAGE_MIME_TYPES: frozenset[str] = frozenset({
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+})
+MAX_IMAGE_BYTES: int = 10 * 1024 * 1024  # 10 MB
+MAX_IMAGE_EDGE_PX: int = 1568
+JPEG_QUALITY: int = 85
+
+
+def _normalize_upload_image(raw_bytes: bytes) -> bytes:
+    """Apply EXIF orientation, strip metadata, downscale longest edge
+    to ≤1568 px, re-encode as JPEG.
+
+    Raises `HTTPException(415)` for undecodable input so the route
+    can return a user-safe message instead of leaking a Pillow
+    traceback. Metadata removal is implicit in the re-encode (PIL
+    discards EXIF / ICC / XMP unless we re-attach them) — we never
+    set `exif=`, so output bytes carry no EXIF block at all.
+    """
+    import io
+    from PIL import Image, ImageOps, UnidentifiedImageError
+
+    try:
+        with Image.open(io.BytesIO(raw_bytes)) as img:
+            img = ImageOps.exif_transpose(img)
+            img.thumbnail((MAX_IMAGE_EDGE_PX, MAX_IMAGE_EDGE_PX), Image.LANCZOS)
+            if img.mode in ("RGBA", "LA", "P"):
+                img = img.convert("RGB")
+            buffer = io.BytesIO()
+            img.save(buffer, "JPEG", quality=JPEG_QUALITY, optimize=True)
+            return buffer.getvalue()
+    except UnidentifiedImageError as e:
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported image format. Use JPEG, PNG, WEBP, or HEIC.",
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=415,
+            detail="Could not process image. Use JPEG, PNG, WEBP, or HEIC.",
+        ) from e
+
+
+async def _call_gemini_photo(jpeg_bytes: str) -> dict:
+    """Invoke Gemini with the JSON-only prompt and a base64 JPEG.
+
+    One transient retry on top of the SDK's own retry layer — the SDK
+    retries idempotent 5xx + connection errors, so this extra attempt
+    only matters for the non-retryable transient cases the SDK
+    doesn't cover. Returns the parsed JSON dict from the model's
+    response, or raises the appropriate HTTP-mappable error:
+
+    * transient (network / 5xx / rate-limit) → `HTTPException(502)`
+    * JSON parse failure → `json.JSONDecodeError` (caller maps to
+      `HTTPException(422)` via the route's `validate_and_normalize`
+      catch)
+    * any other Gemini-side error → `HTTPException(502)`
+
+    Mirrors the per-request `genai.configure(...)` + `GenerativeModel`
+    pattern used by the single-item food-recognition flow
+    (`food_recognition.py:311-312`) so both AI endpoints share the
+    same SDK configuration shape.
+    """
+    import json
+    import google.generativeai as genai
+    from google.api_core.exceptions import GoogleAPIError
+
+    def _strip_markdown_fence(text: str) -> str:
+        text = text.strip()
+        if text.startswith("```"):
+            parts = text.split("```")
+            text = parts[1] if len(parts) > 1 else parts[0]
+            if text.startswith("json"):
+                text = text[4:]
+        return text.strip()
+
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        try:
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            model = genai.GenerativeModel(settings.MEAL_PHOTO_GEMINI_MODEL)
+            image_part = {"mime_type": "image/jpeg", "data": jpeg_bytes}
+            response = model.generate_content(
+                [PHOTO_ANALYSIS_PROMPT, image_part]
+            )
+            return json.loads(_strip_markdown_fence(response.text))
+        except json.JSONDecodeError:
+            # Propagate parse failure so the route's
+            # `validate_and_normalize` catch turns it into a 422 with
+            # the user-facing "try a clearer photo" message.
+            raise
+        except GoogleAPIError as e:
+            last_exc = e
+            status = getattr(e, "code", None)
+            if attempt == 1 or (status is not None and status < 500):
+                raise HTTPException(
+                    status_code=502,
+                    detail="Photo analysis service is temporarily unavailable.",
+                ) from e
+            continue
+        except Exception as e:
+            # Defensive: the SDK can raise a variety of non-GoogleAPIError
+            # exceptions (e.g. ValueError when `response.text` is missing
+            # because the model returned no text content). Treat as
+            # transient and let the retry loop handle it.
+            last_exc = e
+            if attempt == 1:
+                raise HTTPException(
+                    status_code=502,
+                    detail="Photo analysis service is temporarily unavailable.",
+                ) from e
+            continue
+    raise HTTPException(
+        status_code=502,
+        detail="Photo analysis service is temporarily unavailable.",
+    ) from last_exc
+
+
+@router.post("/food/analyze-photo", response_model=PhotoAnalysisResult)
+async def analyze_food_photo(
+    file: UploadFile = File(...),
+    meal_type: str = Form("snack"),
+    user_id: str = Depends(get_current_user_id),
+):
+    """Analyze a meal photo with Gemini and return a per-item
+    breakdown. Does NOT write to the database — the Flutter client
+    shows the breakdown, lets the user pick which items to save,
+    then POSTs each accepted item to `/food` with the selected
+    `meal_type` (which we accept here purely for client-side
+    affordance / future use; it does not affect the analysis).
+
+    Pipeline:
+      1. Validate MIME (415) and size (413).
+      2. Run the per-user rate limit (429) via Redis. Skip silently
+         when Redis is unavailable.
+      3. EXIF-rotate, strip metadata, downscale longest edge to
+         ≤1568 px, re-encode JPEG. Hash the normalized bytes to
+         short-circuit repeat uploads via the Redis cache (TTL
+         settings.CACHE_TTL).
+      4. Call Gemini with the JSON-only prompt, one transient-error
+         retry. JSON parse failure propagates to the caller, which
+         maps to 422 via the `validate_and_normalize` catch.
+      5. Hand the parsed dict to `validate_and_normalize` for
+         clamps, sanity-correction, rounding.
+      6. Cache the validated result, return it.
+
+    Status mapping:
+      * 415 — MIME not image/jpeg|jpg|png|webp|heic|heif
+      * 413 — image > 10 MB
+      * 422 — model output unparseable
+      * 429 — per-user rate limit exceeded
+      * 502 — upstream transient failure after retry
+    """
+    if not file.content_type or not file.content_type.lower() in ALLOWED_IMAGE_MIME_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported image type. Use JPEG, PNG, WEBP, or HEIC.",
+        )
+
+    raw_bytes = await file.read()
+    if len(raw_bytes) > MAX_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Image is too large. Maximum size is 10 MB.",
+        )
+
+    if not await check_rate_limit(redis_client, user_id):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many photo analysis requests. Please wait a minute and try again.",
+        )
+
+    normalized_jpeg = _normalize_upload_image(raw_bytes)
+    image_hash = hash_image_bytes(normalized_jpeg)
+
+    cached = await cache_get_cached_result(redis_client, image_hash)
+    if cached is not None:
+        try:
+            return PhotoAnalysisResult.model_validate(cached)
+        except Exception:
+            pass
+
+    import base64
+    jpeg_b64 = base64.b64encode(normalized_jpeg).decode("ascii")
+    raw_result = await _call_gemini_photo(jpeg_b64)
+
+    try:
+        result = validate_and_normalize(raw_result)
+    except ValueError as e:
+        logger.exception("Photo analysis output could not be parsed: %s", e)
+        raise HTTPException(
+            status_code=422,
+            detail="Photo analysis result could not be parsed. Please try a clearer photo.",
+        ) from e
+
+    await cache_set_cached_result(redis_client, image_hash, result, settings.CACHE_TTL)
+
+    logger.info(
+        "Photo analysis: user=%s meal_type=%s items=%d no_food=%s",
+        user_id, meal_type, len(result.items), result.no_food_detected,
+    )
+    return result
 
 
 @router.delete("/food/{food_id}")

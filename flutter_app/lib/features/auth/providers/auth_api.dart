@@ -296,6 +296,32 @@ class AuthApi {
     }
   }
 
+  /// Sends a Google ID token to `POST /auth/google` and returns the
+  /// issued access token.
+  ///
+  /// The Google sign-in SDK is responsible for the user-facing
+  /// flow (the native account chooser, the OAuth consent screen,
+  /// minting the ID token). This method is just the wire — the
+  /// token it gets is the same JWT the SDK returns; we POST it
+  /// as a single field and read back the standard `Token` envelope.
+  ///
+  /// 401 / 403 / 502 from the server are surfaced as
+  /// [ApiException] (the server is the source of the localised
+  /// error message; we don't try to re-translate here).
+  /// Network-layer failures are caught by
+  /// [ApiException.fromDioError] with the standard key.
+  Future<String> loginWithGoogle(String idToken) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/auth/google',
+        data: {'id_token': idToken},
+      );
+      return _extractAccessToken(res.data);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   /// Pulls the `access_token` out of the standard `{access_token, token_type}`
   /// response envelope. Throws [ApiException] if the shape is unexpected so
   /// the user never sees a confusing `null` token downstream.

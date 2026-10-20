@@ -114,6 +114,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String get authNoAccountRegister => 'Нет аккаунта? Зарегистрироваться';
 
   @override
+  String get authLoginWithGoogle => 'Продолжить с Google';
+
+  @override
+  String get authLoginWithApple => 'Продолжить с Apple';
+
+  @override
+  String get authLoginWithPhone => 'Продолжить с номером телефона';
+
+  @override
+  String get authLoginSocialDivider => 'или';
+
+  @override
+  String get authGoogleSignInFailed =>
+      'Вход через Google не удался. Попробуй ещё раз.';
+
+  @override
+  String get authGoogleSignInNotConfigured =>
+      'Вход через Google не настроен в этой сборке. Свяжись с разработчиком.';
+
+  @override
   String get authServerDebugLink => 'Настройка сервера (debug)';
 
   @override
@@ -456,6 +476,24 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get profileSectionGoalActivity => 'Цель и активность';
+
+  @override
+  String get profileSectionSignInMethods => 'Способы входа';
+
+  @override
+  String get authProviderPassword => 'Email и пароль';
+
+  @override
+  String get authProviderGoogle => 'Google';
+
+  @override
+  String get authProviderApple => 'Apple';
+
+  @override
+  String get authProviderPhone => 'Номер телефона';
+
+  @override
+  String get authProviderGeneric => 'Другое';
 
   @override
   String get profileFieldName => 'Имя';
@@ -1344,11 +1382,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get streakStatusStart => 'Начни новую серию — добавь запись сегодня.';
 
   @override
-  String get streakStatusDone => 'На сегодня всё готово — увидимся завтра.';
+  String get streakStatusDone => 'Сегодня есть запись. Серия продолжается.';
 
   @override
   String get streakStatusPending =>
-      'Сегодня записей ещё нет — серия пока жива.';
+      'Следующий шаг — записать еду или воду сегодня.';
 
   @override
   String streakHeroLabel(int count) {
@@ -1423,4 +1461,157 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get mealPhotoAnalyzing => 'Анализируем блюдо…';
+
+  @override
+  String get mealPhotoNoFood =>
+      'На фото не удалось распознать еду. Попробуй снять сверху и при лучшем свете.';
+
+  @override
+  String get mealPhotoSave => 'Сохранить блюдо';
+
+  @override
+  String mealPhotoItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ингредиента',
+      many: '$count ингредиентов',
+      few: '$count ингредиента',
+      one: '$count ингредиент',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mealPhotoDisclaimer =>
+      'Это оценки — сверяй с тем, что ты реально съел(а).';
+
+  @override
+  String get mealPhotoEstimates => '≈ Оценка';
+
+  @override
+  String get mealPhotoCancel => 'Отмена';
+
+  @override
+  String get mealPhotoErrorTooMany =>
+      'Слишком много запросов, попробуй через минуту.';
+
+  @override
+  String get mealPhotoErrorFormat =>
+      'Формат не поддерживается. Используй JPEG, PNG или HEIC.';
+
+  @override
+  String get mealPhotoErrorUpstream =>
+      'Нейросеть сейчас недоступна, попробуй чуть позже.';
+
+  @override
+  String get mealPhotoErrorServerEmpty => 'Сервер вернул пустой ответ.';
+
+  @override
+  String get mealPhotoErrorNoFood => 'Еда не распознана.';
+
+  @override
+  String get mealPhotoScan => 'Сканировать блюдо';
+
+  @override
+  String get mealPhotoPickerInstructions =>
+      'Сфотографируй блюдо — разберём все ингредиенты сразу';
+
+  @override
+  String get mealPhotoScanSubtitle => 'Распознать все ингредиенты на фото';
+
+  @override
+  String get mealPhotoSingleItem => 'Один продукт';
+
+  @override
+  String get mealPhotoSingleItemSubtitle =>
+      'Сфотографировать только одно блюдо';
+
+  @override
+  String get mealPhotoModeTitle => 'Сканировать всё блюдо или один продукт?';
+
+  @override
+  String mealPhotoGramsLabel(String grams) {
+    return '$grams г';
+  }
+
+  @override
+  String mealPhotoConfidence(String percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get balanceTitle => 'Баланс дня';
+
+  @override
+  String get balanceSubtitle => 'Небольшие шаги к личным целям';
+
+  @override
+  String get balanceAchieved => 'Все четыре показателя в диапазоне';
+
+  @override
+  String get balanceCalories => 'Калории';
+
+  @override
+  String get balanceKcal => 'ккал';
+
+  @override
+  String get balanceGrams => 'г';
+
+  @override
+  String get balanceSetTargets =>
+      'Укажи все четыре цели КБЖУ в профиле, чтобы видеть баланс дня.';
+
+  @override
+  String get balanceTolerance =>
+      'В диапазоне — это ±10% от цели в профиле. Серия дней считается отдельно.';
+
+  @override
+  String get balanceConfigure => 'Открыть профиль';
+
+  @override
+  String get balanceNoTarget => 'Цель не задана';
+
+  @override
+  String get balanceInRange => 'В диапазоне';
+
+  @override
+  String get balanceAbove => 'Выше диапазона';
+
+  @override
+  String get balanceInProgress => 'В процессе';
+
+  @override
+  String get streakTitle => 'Твоя регулярность';
+
+  @override
+  String get streakGentleSubtitle => 'Немного внимания к себе — день за днём.';
+
+  @override
+  String get streakRecentDays => 'Последние 14 дней';
+
+  @override
+  String get streakMilestonesTitle => 'Рубежи регулярности';
+
+  @override
+  String get streakBalanceIndependence =>
+      'Серия отмечает записи еды или воды. Для неё не нужно попадать в цели КБЖУ. Пропущенный день не отменяет прошлых усилий.';
+
+  @override
+  String get streakDayLogged => 'Есть запись';
+
+  @override
+  String get streakDayEmpty => 'Нет записей';
+
+  @override
+  String get streakMilestoneReached => 'Достигнуто';
+
+  @override
+  String get streakMilestoneAhead => 'Впереди';
+
+  @override
+  String get balanceProtein => 'Белки';
 }

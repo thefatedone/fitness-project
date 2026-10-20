@@ -23,6 +23,7 @@ async def lifespan(app: FastAPI):
         from app.models.user import User
         from app.models.food_log import FoodLog, WeightLog, WaterLog
         from app.models.chat import ChatMessage
+        from app.models.auth_identity import AuthIdentity
         print("=== CREATING TABLES NOW ===", flush=True)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)

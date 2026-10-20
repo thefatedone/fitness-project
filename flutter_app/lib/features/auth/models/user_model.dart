@@ -100,6 +100,27 @@ class UserModel {
   /// banner so the user notices and can verify on their own schedule.
   final bool isEmailVerified;
 
+  /// Sign-in methods on file for this account. `null` (or empty)
+  /// means the backend doesn't include the field — older server
+  /// builds, or a cached response from before the field landed.
+  /// The profile screen treats both as "no methods to show" and
+  /// hides the section rather than showing an empty card.
+  ///
+  /// Items are returned in the backend's fixed display order
+  /// (password → google → apple → phone → anything else, oldest-
+  /// first within a provider), and each `displayIdentifier` is
+  /// already masked server-side (`a***@gmail.com` for email,
+  /// `+1******7890` for phone, ``null`` when nothing is on file).
+  /// The list is read-only — there's no client-side action to
+  /// link or unlink a method from this screen.
+  ///
+  /// Non-nullable: `fromJson` always returns at least an empty
+  /// list (a missing / non-list JSON value, or a per-item parse
+  /// failure, all collapse to `[]`). The constructor default is
+  /// also `const <SignInMethod>[]` so callers that build a
+  /// `UserModel` from scratch don't need to supply the field.
+  final List<SignInMethod> signInMethods;
+
   const UserModel({
     required this.id,
     required this.fullName,
@@ -126,6 +147,7 @@ class UserModel {
     this.carbsTarget,
     this.fatTarget,
     this.profilePhoto,
+    this.signInMethods = const <SignInMethod>[],
   });
 
   /// Builds a [UserModel] from the JSON payload returned by
@@ -165,6 +187,13 @@ class UserModel {
       carbsTarget: _asDouble(json['carbs_target']),
       fatTarget: _asDouble(json['fat_target']),
       profilePhoto: json['profile_photo'] as String?,
+      // Defensive: older backends (or a cached response from before
+      // the field landed) won't include `sign_in_methods`. Treat
+      // missing / null / a non-list as "no methods" — the profile
+      // screen hides the section rather than rendering an empty
+      // card. Each entry is parsed in isolation so one malformed
+      // row doesn't poison the whole list.
+      signInMethods: _parseSignInMethods(json['sign_in_methods']),
     );
   }
 
@@ -244,5 +273,72 @@ class UserModel {
     if (v is num) return v.toInt();
     if (v is String) return int.tryParse(v);
     return null;
+  }
+
+  /// Parses the `sign_in_methods` list defensively. Anything that
+  /// isn't a list (null, an object, a string) yields an empty
+  /// list — the profile screen treats that as "no methods to
+  /// show". Each item is parsed independently; one malformed
+  /// row doesn't poison the whole list (we drop it and keep the
+  /// rest, so a server-side bug on one entry doesn't blank the
+  /// whole UI for the user).
+  static List<SignInMethod> _parseSignInMethods(dynamic raw) {
+    if (raw is! List) return const <SignInMethod>[];
+    final result = <SignInMethod>[];
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final m = SignInMethod.fromJson(
+        (item as Map).cast<String, dynamic>(),
+      );
+      if (m != null) result.add(m);
+    }
+    return result;
+  }
+}
+
+
+/// One sign-in method on file for the current user. Mirrors the
+/// backend's `SignInMethod` Pydantic model.
+///
+/// `provider` is the wire name from the IdP — known values today
+/// are `password`, `google`, `apple`, `phone`; unknown values
+/// (anything the server doesn't recognise — e.g. a future
+/// `github`) pass through with the raw string so adding a new IdP
+/// doesn't require a Dart rebuild. The profile screen renders
+/// unknown providers with a generic icon and the raw name.
+///
+/// `displayIdentifier` is already masked server-side
+/// (`a***@gmail.com` for email-based, `+1******7890` for phone, or
+/// `null` when nothing useful is on file). NEVER mutate or un-mask
+/// it client-side.
+///
+/// `linkedAt` is the moment the method was attached to the
+/// account. Used by the profile screen to render a "Linked
+/// 2025-01-15" subtitle.
+class SignInMethod {
+  final String provider;
+  final String? displayIdentifier;
+  final DateTime linkedAt;
+
+  const SignInMethod({
+    required this.provider,
+    required this.linkedAt,
+    this.displayIdentifier,
+  });
+
+  /// Parses a single `sign_in_methods` entry. Returns `null` on
+  /// malformed input so the caller can drop just that entry
+  /// without losing the whole list.
+  static SignInMethod? fromJson(Map<String, dynamic> json) {
+    final provider = json['provider'];
+    final linkedAtRaw = json['linked_at'];
+    if (provider is! String || linkedAtRaw is! String) return null;
+    final linkedAt = DateTime.tryParse(linkedAtRaw);
+    if (linkedAt == null) return null;
+    return SignInMethod(
+      provider: provider,
+      linkedAt: linkedAt,
+      displayIdentifier: json['display_identifier'] as String?,
+    );
   }
 }

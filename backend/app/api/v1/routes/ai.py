@@ -207,31 +207,31 @@ async def chat(
         ai_text = ""
         try:
             from app.core.config import settings
-            import anthropic
-            client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+            import google.generativeai as genai
 
             logger.info(
                 "AI chat request: model=%s user=%s msg_len=%d prompt_len=%d",
-                settings.ANTHROPIC_MODEL, user_id, len(request.message), len(system_prompt),
+                settings.GEMINI_MODEL, user_id, len(request.message), len(system_prompt),
             )
 
-            with client.messages.stream(
-                model=settings.ANTHROPIC_MODEL,
-                max_tokens=2048,
-                system=system_prompt,
-                messages=[{"role": "user", "content": request.message}]
-            ) as stream:
-                for event in stream:
-                    # content_block_delta fires for every delta in a streaming
-                    # message, including non-text blocks (thinking, tool_use,
-                    # input_json). Only forward + accumulate when `text` is
-                    # actually present and not None.
-                    if getattr(event, 'type', None) == "content_block_delta":
-                        delta = getattr(event, 'delta', None)
-                        chunk = getattr(delta, 'text', None) if delta is not None else None
-                        if chunk:
-                            ai_text += chunk
-                            yield f"data: {json.dumps({'text': chunk})}\n\n"
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            model = genai.GenerativeModel(
+                model_name=settings.GEMINI_MODEL,
+                system_instruction=system_prompt,
+            )
+            response = await model.generate_content_async(
+                request.message,
+                stream=True,
+            )
+            async for chunk in response:
+                # Chunks can carry no text (e.g. a safety block) — skip
+                # them silently. The wire format stays the same as
+                # before: `data: {"text": "..."}\n\n` per text delta,
+                # terminated by `data: [DONE]\n\n`.
+                text = getattr(chunk, "text", None)
+                if text:
+                    ai_text += text
+                    yield f"data: {json.dumps({'text': text})}\n\n"
 
             # Store messages in DB after streaming completes
             try:
@@ -260,7 +260,7 @@ async def chat(
             # Surface the actual upstream error in server logs so we can debug
             # model-not-found / auth / rate-limit issues, while still telling
             # the user something friendly on the wire.
-            logger.exception("AI chat failed (model=%s): %s", settings.ANTHROPIC_MODEL, e)
+            logger.exception("AI chat failed (model=%s): %s", settings.GEMINI_MODEL, e)
             yield f"data: {json.dumps({'text': 'I am having trouble connecting to my AI brain right now. Please try again.'})}\n\n"
             yield "data: [DONE]\n\n"
 

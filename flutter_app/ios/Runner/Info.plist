@@ -25,13 +25,30 @@
 <key>CFBundleVersion</key>
 <string>$(FLUTTER_BUILD_NUMBER)</string>
 <key>NSCameraUsageDescription</key>
-<string>Used to take a profile picture.</string>
+<string>Used to take a photo of your meal for calorie analysis.</string>
 <key>NSPhotoLibraryUsageDescription</key>
-<string>Used to pick a profile picture from your photo library.</string>
+<string>Used to pick a photo of your meal for calorie analysis.</string>
 <key>NSPhotoLibraryAddUsageDescription</key>
 <string>Used to save the cropped profile picture.</string>
 <key>LSRequiresIPhoneOS</key>
 <true/>
+<!--
+  Google sign-in URL scheme: the reversed iOS client ID from Google Cloud
+  Console. The matching iOS client ID is passed to the Flutter build via
+  --dart-define=GOOGLE_IOS_CLIENT_ID=... (see lib/core/config/app_config.dart).
+  The two values must correspond to the same iOS client.
+-->
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLName</key>
+    <string>com.nutrimind.nutrimind.google</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>com.googleusercontent.apps.198217538409-t7vjbhvnmgvk3qjr00hiotbs7edelp1f</string>
+    </array>
+  </dict>
+</array>
 <key>UIApplicationSceneManifest</key>
 <dict>
 <key>UIApplicationSupportsMultipleScenes</key>

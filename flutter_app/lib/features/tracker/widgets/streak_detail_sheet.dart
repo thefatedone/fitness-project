@@ -1,425 +1,385 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../l10n/gen/app_localizations.dart';
-import '../../../widgets/glass/glass_scroll_view.dart';
 import '../models/streak_model.dart';
 
-/// Bottom-sheet body for the streak detail. Hosted via
-/// `showGlassBottomSheet(...)` from `widgets/glass/glass_bottom_sheet.dart`,
-/// which gives it the Liquid Glass backdrop-blur + drag handle + spring
-/// slide-in — this widget contributes only the content.
-///
-/// Layout, top to bottom:
-///
-///   1. Hero — current streak + fire emoji + today's status (logged
-///      today / not yet / grace). Anchors the sheet in the same number
-///      the badge showed, so the user doesn't re-discover it.
-///
-///   2. "How to keep this going" — the actionable rules section.
-///      This is the part the user actually came for when they tapped
-///      the badge: what does it take to bump the streak by one each
-///      day, what happens if they forget, and what's excluded.
-///      Renders as a numbered list of short, plain sentences so the
-///      copy is skimmable and the rules feel mechanical rather than
-///      preachy.
-///
-///   3. Progress — slim 14-day strip + milestone bar, demoted below
-///      the rules so the diagnostic context sits behind the
-///      actionable guidance. The strip still answers "where am I
-///      in the window?", the milestone still answers "what's the
-///      next reward?", but neither one is the reason the user
-///      opened the sheet.
-///
-/// No confetti, no achievement-unlocked moment, no notifications —
-/// the spec explicitly bounds scope to the sheet.
+/// The server remains authoritative for diary activity and streak milestones.
 class StreakDetailSheet extends StatelessWidget {
   const StreakDetailSheet({super.key, required this.streak});
-
   final StreakModel streak;
-
-  /// Vertical padding inside the sheet body. The drag handle is
-  /// rendered by `showGlassBottomSheet` itself; we leave a comfortable
-  /// top gap below it so the hero number has breathing room.
-  static const EdgeInsets _sheetPadding = EdgeInsets.fromLTRB(24, 12, 24, 24);
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    // Wrap in a scroll view so on small phone screens (or with
-    // larger system text scales) the rules + progress together
-    // don't overflow the available sheet height. The scroll view
-    // sits inside the sheet — the drag handle on `showGlassBottomSheet`
-    // still works for dismissing.
-    return GlassScrollBehavior(
-      // The sheet itself uses a [BackdropFilter] in
-      // [_GlassSheetBody]; if the inner scrollable bounces past
-      // its boundary on iOS, the overscroll indicator gets drawn
-      // over the backdrop blur, which looks like the glass is
-      // "shining". [ClampingScrollPhysics] + the indicator disallow
-      // keep the glass visually static through scroll. See
-      // `widgets/glass/glass_scroll_view.dart` for the rationale.
-      physics: const ClampingScrollPhysics(),
-      child: SingleChildScrollView(
-      padding: _sheetPadding,
+    final theme = Theme.of(context);
+    final primary = theme.brightness == Brightness.light
+        ? Color.lerp(theme.colorScheme.primary, Colors.black, .32)!
+        : theme.colorScheme.primary;
+    final quiet = theme.colorScheme.onSurfaceVariant;
+    final status = streak.loggedToday
+        ? l10n.streakStatusDone
+        : streak.currentStreak == 0
+        ? l10n.streakStatusStart
+        : l10n.streakStatusPending;
+    final next = streak.nextMilestone;
+    final daysLeft = streak.daysToNextMilestone;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Hero(streak: streak, l10n: l10n),
-          const SizedBox(height: 24),
-          _SectionLabel(l10n.streakSectionRules),
-          const SizedBox(height: 8),
-          _RulesList(l10n: l10n),
-          const SizedBox(height: 20),
-          _SectionLabel(l10n.streakSectionProgress),
-          const SizedBox(height: 12),
-          _HistoryStrip(history: streak.history),
-          const SizedBox(height: 16),
-          _MilestoneProgress(streak: streak, l10n: l10n),
-        ],
-      ),
-      ),
-    );
-  }
-}
-
-/// "🔥 N" + today's status. The hero answers "what is my streak
-/// right now?" — restating the badge's number so the sheet doesn't
-/// have to be opened twice to see it.
-class _Hero extends StatelessWidget {
-  const _Hero({required this.streak, required this.l10n});
-
-  final StreakModel streak;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final String statusText;
-    if (streak.currentStreak == 0) {
-      statusText = l10n.streakStatusStart;
-    } else if (streak.loggedToday) {
-      statusText = l10n.streakStatusDone;
-    } else {
-      // Streak alive but today not yet logged — the grace-period
-      // state. Call out that today still counts toward the streak,
-      // so the user doesn't feel they've already lost it.
-      statusText = l10n.streakStatusPending;
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '🔥 ${streak.currentStreak}',
-          // Match the calorie-ring number style (titleLarge + w700)
-          // so the two "hero" reads across the app feel like a
-          // coherent pair.
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: AppColors.brand,
-            fontSize: 32,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          l10n.streakHeroLabel(streak.currentStreak),
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 8),
-        // Today's status — sits under the number so the user can
-        // tell at a glance whether they need to do something today.
-        Text(
-          statusText,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Tiny uppercase section heading — used to introduce the rules
-/// block and the progress block separately. Same muted-onSurface
-/// register the rest of the app uses for in-card labels.
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      text,
-      style: theme.textTheme.labelSmall?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.6,
-      ),
-    );
-  }
-}
-
-/// The actionable content. Numbered list of short rules — each
-/// covers one specific behaviour the user has to know to keep
-/// the streak alive. Wording stays mechanical and short on
-/// purpose: the user came here to confirm the rules, not to read
-/// a motivational essay.
-///
-/// The list is built inside [build] (not `const`) because the
-/// titles and bodies come from [AppLocalizations], which needs a
-/// [BuildContext]. The numeric prefix (1..4) stays a plain digit
-/// string — it isn't localized.
-class _RulesList extends StatelessWidget {
-  const _RulesList({required this.l10n});
-
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final rules = <_Rule>[
-      _Rule(
-        number: '1',
-        title: l10n.streakRule1Title,
-        body: l10n.streakRule1Body,
-      ),
-      _Rule(
-        number: '2',
-        title: l10n.streakRule2Title,
-        body: l10n.streakRule2Body,
-      ),
-      _Rule(
-        number: '3',
-        title: l10n.streakRule3Title,
-        body: l10n.streakRule3Body,
-      ),
-      _Rule(
-        number: '4',
-        title: l10n.streakRule4Title,
-        body: l10n.streakRule4Body,
-      ),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var i = 0; i < rules.length; i++) ...[
-          if (i > 0) const SizedBox(height: 12),
-          _RuleTile(rule: rules[i], theme: theme),
-        ],
-      ],
-    );
-  }
-}
-
-/// One rule — a numbered prefix + title (bold) + body (muted). The
-/// numbered prefix gives the list a scannable mechanical feel that
-/// fits the "rules" framing; bullets felt too promotional.
-class _RuleTile extends StatelessWidget {
-  const _RuleTile({required this.rule, required this.theme});
-  final _Rule rule;
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // The number lives in its own circle so it visually anchors
-        // to a known x-position regardless of the title's length.
-        Container(
-          width: 22,
-          height: 22,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.brand.withValues(alpha: 0.15),
-          ),
-          child: Text(
-            rule.number,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: AppColors.brand,
+          Text(
+            l10n.streakTitle,
+            style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 6),
+          Text(
+            l10n.streakGentleSubtitle,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: quiet,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: primary.withValues(alpha: .07),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: primary.withValues(alpha: .12)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${streak.currentStreak}',
+                            style: theme.textTheme.displayMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -2,
+                              color: primary,
+                            ),
+                          ),
+                          Text(
+                            l10n.streakHeroLabel(streak.currentStreak),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: quiet,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: primary.withValues(alpha: .09),
+                      ),
+                      child: Icon(
+                        Icons.local_fire_department_outlined,
+                        size: 36,
+                        color: primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      streak.loggedToday
+                          ? Icons.check_circle_outline
+                          : Icons.radio_button_unchecked,
+                      color: primary,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        status,
+                        style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            l10n.streakRecentDays,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _HistoryCalendar(history: streak.history),
+          const SizedBox(height: 24),
+          Text(
+            l10n.streakMilestonesTitle,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Text(
-                rule.title,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
+              for (final milestone in [3, 7, 14, 30, 60, 100, 365])
+                _MilestoneChip(
+                  days: milestone,
+                  reached: streak.currentStreak >= milestone,
+                  next: next == milestone,
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                rule.body,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  height: 1.4,
-                ),
-              ),
             ],
           ),
-        ),
-      ],
+          if (next != null && next > 0 && daysLeft != null) ...[
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: (streak.currentStreak / next).clamp(0.0, 1.0),
+                minHeight: 5,
+                color: primary,
+                backgroundColor: primary.withValues(alpha: .10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              l10n.streakMilestoneProgress(
+                streak.currentStreak,
+                next,
+                daysLeft,
+              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: quiet),
+            ),
+          ],
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: theme.colorScheme.onSurface.withValues(alpha: .035),
+            ),
+            child: Text(
+              l10n.streakBalanceIndependence,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: quiet,
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: const EdgeInsets.only(bottom: 8),
+            shape: const Border(),
+            collapsedShape: const Border(),
+            title: Text(
+              l10n.streakSectionRules,
+              style: theme.textTheme.bodyMedium,
+            ),
+            children: [
+              for (final rule in [
+                (l10n.streakRule1Title, l10n.streakRule1Body),
+                (l10n.streakRule2Title, l10n.streakRule2Body),
+                (l10n.streakRule3Title, l10n.streakRule3Body),
+                (l10n.streakRule4Title, l10n.streakRule4Body),
+              ])
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(rule.$1, style: theme.textTheme.labelLarge),
+                      const SizedBox(height: 4),
+                      Text(
+                        rule.$2,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: quiet,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Data class for the rules table — kept as a value object so the
-/// list literal above reads as documentation rather than nested
-/// positional arguments.
-class _Rule {
-  const _Rule({required this.number, required this.title, required this.body});
-  final String number;
-  final String title;
-  final String body;
-}
-
-/// 14-cell horizontal strip — kept as a quick diagnostic. The
-/// action-focused rules above the strip are the reason the user
-/// tapped; this answers "where am I in the window?" at a glance.
-class _HistoryStrip extends StatelessWidget {
-  const _HistoryStrip({required this.history});
+class _HistoryCalendar extends StatelessWidget {
+  const _HistoryCalendar({required this.history});
   final List<StreakDayModel> history;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final today = DateTime.now();
-    bool isSameDay(DateTime a, DateTime b) =>
-        a.year == b.year && a.month == b.month && a.day == b.day;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final local = MaterialLocalizations.of(context);
+    final recent = history.length > 14
+        ? history.sublist(history.length - 14)
+        : history;
+    if (recent.isEmpty) {
+      return Text(
+        AppLocalizations.of(context).streakStatusStart,
+        style: theme.textTheme.bodySmall,
+      );
+    }
+    return Column(
       children: [
-        for (var i = 0; i < history.length; i++)
-          _DayCell(
-            day: history[i],
-            isToday: isSameDay(history[i].date, today),
-            mutedColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-            todayRingColor: theme.colorScheme.primary,
+        for (var row = 0; row < (recent.length / 7).ceil(); row++) ...[
+          if (row > 0) const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var col = 0; col < 7; col++)
+                Expanded(
+                  child: row * 7 + col >= recent.length
+                      ? const SizedBox.shrink()
+                      : _CalendarDay(
+                          day: recent[row * 7 + col],
+                          local: local,
+                          theme: theme,
+                        ),
+                ),
+            ],
           ),
+        ],
       ],
     );
   }
 }
 
-/// One circular cell in the 14-day strip. Filled brand circle when
-/// logged, outlined muted circle when not. Today's cell has an
-/// outer ring regardless of logged state so the user can locate
-/// it.
-class _DayCell extends StatelessWidget {
-  const _DayCell({
+class _CalendarDay extends StatelessWidget {
+  const _CalendarDay({
     required this.day,
-    required this.isToday,
-    required this.mutedColor,
-    required this.todayRingColor,
+    required this.local,
+    required this.theme,
   });
-
   final StreakDayModel day;
-  final bool isToday;
-  final Color mutedColor;
-  final Color todayRingColor;
-
-  static const double _diameter = 16;
-  static const double _todayRingPadding = 4;
+  final MaterialLocalizations local;
+  final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
-    final fill = day.logged ? AppColors.brand : null;
-    final border = day.logged ? null : mutedColor;
-    final inner = Container(
-      width: _diameter,
-      height: _diameter,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: fill,
-        border: border == null ? null : Border.all(color: border, width: 1.5),
+    final today = DateUtils.isSameDay(day.date, DateTime.now());
+    final primary = theme.brightness == Brightness.light
+        ? Color.lerp(theme.colorScheme.primary, Colors.black, .32)!
+        : theme.colorScheme.primary;
+    final quiet = theme.colorScheme.onSurfaceVariant;
+    final l10n = AppLocalizations.of(context);
+    return Semantics(
+      label:
+          '${local.formatMediumDate(day.date)}, '
+          '${day.logged ? l10n.streakDayLogged : l10n.streakDayEmpty}',
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Column(
+            children: [
+              Text(
+                local.narrowWeekdays[day.date.weekday % 7],
+                style: theme.textTheme.labelSmall?.copyWith(color: quiet),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                constraints: const BoxConstraints(minHeight: 32),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: day.logged
+                      ? primary.withValues(alpha: .12)
+                      : theme.colorScheme.onSurface.withValues(alpha: .035),
+                  borderRadius: BorderRadius.circular(10),
+                  border: today ? Border.all(color: primary, width: 1.5) : null,
+                ),
+                child: Text(
+                  '${day.date.day}',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: day.logged || today ? primary : quiet,
+                    fontWeight: day.logged || today
+                        ? FontWeight.w700
+                        : FontWeight.w400,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Icon(
+                day.logged ? Icons.check_rounded : Icons.remove_rounded,
+                size: 12,
+                color: day.logged ? primary : quiet.withValues(alpha: .5),
+              ),
+            ],
+          ),
+        ),
       ),
-    );
-    if (!isToday) return inner;
-    return Container(
-      padding: const EdgeInsets.all(_todayRingPadding),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: todayRingColor, width: 1.5),
-      ),
-      child: inner,
     );
   }
 }
 
-/// Milestone progress. When there's a next milestone: a slim
-/// progress bar styled like the macro rows + the "X / Y days"
-/// caption. When there isn't (>= 365 days): a "🏆 N day streak"
-/// trophy line.
-class _MilestoneProgress extends StatelessWidget {
-  const _MilestoneProgress({required this.streak, required this.l10n});
-
-  final StreakModel streak;
-  final AppLocalizations l10n;
+class _MilestoneChip extends StatelessWidget {
+  const _MilestoneChip({
+    required this.days,
+    required this.reached,
+    required this.next,
+  });
+  final int days;
+  final bool reached;
+  final bool next;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final next = streak.nextMilestone;
-    final daysToGo = streak.daysToNextMilestone;
-
-    if (next == null || daysToGo == null) {
-      return Center(
-        child: Text(
-          l10n.streakTrophyLabel(streak.currentStreak),
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: AppColors.brand,
-            fontWeight: FontWeight.w600,
+    final color = reached || next
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurfaceVariant;
+    return Semantics(
+      label:
+          '$days ${AppLocalizations.of(context).streakHeroLabel(days)}, '
+          '${reached ? AppLocalizations.of(context).streakMilestoneReached : AppLocalizations.of(context).streakMilestoneAhead}',
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: reached ? color.withValues(alpha: .10) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withValues(alpha: next ? .45 : .15),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (reached) ...[
+                Icon(Icons.check_rounded, size: 14, color: color),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                '$days',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: reached || next
+                      ? FontWeight.w700
+                      : FontWeight.w400,
+                ),
+              ),
+            ],
           ),
         ),
-      );
-    }
-
-    final ratio = streak.currentStreak / next;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: ratio.clamp(0.0, 1.0),
-            minHeight: 6,
-            backgroundColor: theme.colorScheme.surfaceContainerHigh,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.brand),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          // Pass `daysToGo` (already computed by the server) as the
-          // `daysLeft` ICU plural variable. Server returns this as the
-          // exact number of days remaining to the next milestone (e.g.
-          // 3 for streak 4 / milestone 7). The plural picks the
-          // Russian/English form automatically.
-          l10n.streakMilestoneProgress(
-            streak.currentStreak,
-            next,
-            daysToGo,
-          ),
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -31,6 +31,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
@@ -38,6 +39,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../l10n/gen/app_localizations.dart';
+import '../../auth/models/user_model.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../shared/widgets/tag_input.dart';
@@ -554,6 +556,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   MaterialPageRoute(builder: (_) => const WeightHistoryScreen()),
                 );
               },
+            ),
+            const SizedBox(height: 12),
+            // Sign-in methods — read-only, server-masked. Rendered
+            // below the goal/activity card so the editable fields
+            // (and their validation feedback) stay above the fold
+            // for the more frequently-touched account sections.
+            // The card self-hides when the list is null or empty
+            // (older backend, cached payload, or a user with no
+            // methods on file). `u` is `UserModel?` because the
+            // current user may not be loaded yet; fall through with
+            // an empty list in that case.
+            _SignInMethodsCard(
+              methods: u?.signInMethods ?? const <SignInMethod>[],
+              theme: theme,
             ),
             const SizedBox(height: 12),
             _GoalActivityCard(
@@ -1234,4 +1250,195 @@ class _AllergiesCard extends StatelessWidget {
         ),
     );
   }
+}
+
+
+/// Read-only "Sign-in methods" card. Shows the user's current
+/// authentication surface — password + any linked IdP (Google
+/// today, Apple / phone later). One row per method, with a
+/// provider icon, the provider's localised name, and the
+/// server-masked identifier (e.g. `a***@gmail.com`,
+/// `+1******7890`) in a quieter secondary style.
+///
+/// The list is read-only by design — adding / removing links
+/// happens in the email-verification and Google-sign-in flows,
+/// not from this screen. A future "unlink" affordance can
+/// extend the row widget without changing the data model.
+///
+/// Defensive: if `user.signInMethods` is null OR empty (older
+/// backend, cached payload, or a user with no methods at all),
+/// the entire card is hidden. The whole point of this section
+/// is informational; an empty card adds noise.
+class _SignInMethodsCard extends StatelessWidget {
+  const _SignInMethodsCard({required this.methods, required this.theme});
+
+  final List<SignInMethod> methods;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    if (methods.isEmpty) {
+      // Older backend, missing field, or genuinely empty list.
+      // Hide the card rather than render a hollow section.
+      return const SizedBox.shrink();
+    }
+
+    final l10n = AppLocalizations.of(context);
+
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.profileSectionSignInMethods,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final m in methods)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _SignInMethodRow(method: m, theme: theme),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+
+/// One row inside [_SignInMethodsCard] — the provider icon, the
+/// localised provider name, and the server-masked identifier in
+/// a quieter style. The icon uses Material's built-in set so we
+/// don't pull in any new asset files; unknown providers get a
+/// neutral "key" icon so a future "github" / "facebook" entry
+/// renders out-of-the-box.
+class _SignInMethodRow extends StatelessWidget {
+  const _SignInMethodRow({required this.method, required this.theme});
+
+  final SignInMethod method;
+  final ThemeData theme;
+
+  /// Wire name → display name + icon. New providers land here
+  /// without touching any layout code; everything else is the
+  /// generic fallback.
+  static const Map<String, _ProviderPresentation> _known = {
+    "password": _ProviderPresentation(
+      icon: Icons.lock_outline,
+      displayNameKey: "authProviderPassword",
+    ),
+    "google": _ProviderPresentation(
+      icon: Icons.g_mobiledata_rounded,
+      displayNameKey: "authProviderGoogle",
+    ),
+    "apple": _ProviderPresentation(
+      icon: Icons.apple,
+      displayNameKey: "authProviderApple",
+    ),
+    "phone": _ProviderPresentation(
+      icon: Icons.phone_outlined,
+      displayNameKey: "authProviderPhone",
+    ),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final presentation = _known[method.provider] ??
+        const _ProviderPresentation(
+          icon: Icons.vpn_key_outlined,
+          displayNameKey: "authProviderGeneric",
+        );
+
+    return Row(
+      children: [
+        // Provider icon — small, primary-tinted.
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            presentation.icon,
+            size: 20,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Provider name — e.g. "Google", "Email + password".
+              // Unknown providers fall back to the raw wire name
+              // (so a future "github" entry renders as "github"
+              // rather than "Unknown").
+              Text(
+                _displayNameFor(method.provider, presentation, l10n),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              // Masked identifier in a quieter colour. Empty when
+              // the identity has nothing on file (e.g. an Apple
+              // sign-in where the user opted out of sharing email) —
+              // we just skip the line rather than render an
+              // empty subtitle.
+              if (method.displayIdentifier != null &&
+                  method.displayIdentifier!.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  method.displayIdentifier!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _displayNameFor(
+    String provider,
+    _ProviderPresentation presentation,
+    AppLocalizations l10n,
+  ) {
+    // Known providers → localised name via the l10n catalog.
+    // Unknown → the raw wire name (e.g. "github", "facebook")
+    // so a future IdP is at least readable on screen.
+    switch (presentation.displayNameKey) {
+      case "authProviderPassword":
+        return l10n.authProviderPassword;
+      case "authProviderGoogle":
+        return l10n.authProviderGoogle;
+      case "authProviderApple":
+        return l10n.authProviderApple;
+      case "authProviderPhone":
+        return l10n.authProviderPhone;
+      default:
+        return provider;
+    }
+  }
+}
+
+
+/// One entry in [_SignInMethodRow].`_known` table. Plain data so
+/// the const map declaration stays compact.
+class _ProviderPresentation {
+  final IconData icon;
+  final String displayNameKey;
+  const _ProviderPresentation({
+    required this.icon,
+    required this.displayNameKey,
+  });
 }

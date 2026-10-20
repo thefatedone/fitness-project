@@ -56,6 +56,13 @@ dependencies:
   flutter_markdown: ^0.7.7+1
   image_cropper: ^12.2.1
   shared_preferences: ^2.5.5
+  # Google sign-in SDK — used by `lib/features/auth/providers/auth_provider.dart`
+  # on the meal-photo / login screens. Backend posts the resulting
+  # ID token to `POST /api/v1/auth/google`; this package is the
+  # only Flutter side that knows how to drive the native Google
+  # account chooser and mint the ID token. Client IDs are passed
+  # at runtime via `--dart-define` (see `lib/core/config/app_config.dart`).
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:

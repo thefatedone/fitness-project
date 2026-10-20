@@ -45,6 +45,37 @@ class AppConfig {
   /// flag) when building for a different target.
   static const Environment environment = Environment.dev;
 
+  /// Google OAuth web client ID. The same value acts as the
+  /// "server client ID" the Flutter `google_sign_in` SDK passes
+  /// to the native account-chooser so the resulting ID token's
+  /// `aud` claim matches what the backend's allow-list expects.
+  ///
+  /// Read from `--dart-define=GOOGLE_WEB_CLIENT_ID=…` at build
+  /// time. The default `String.fromEnvironment(…)` argument is
+  /// the placeholder the dev environment uses when the flag is
+  /// missing (i.e. a `flutter run` without the define); release
+  /// builds should always pass the real value at build time —
+  /// the placeholder is intentionally non-functional so an
+  /// unconfigured release build fails loudly at first sign-in
+  /// rather than silently.
+  static const String googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue: '',
+  );
+
+  /// Google OAuth iOS client ID. Only consulted on iOS — on
+  /// Android the same SDK uses the web client ID. The iOS
+  /// `Info.plist` must also declare the reversed URL scheme
+  /// (see the README at the repo root + the documented
+  /// `CFBundleURLTypes` block).
+  ///
+  /// Read from `--dart-define=GOOGLE_IOS_CLIENT_ID=…` at build
+  /// time. Same default-empty contract as the web ID.
+  static const String googleIosClientId = String.fromEnvironment(
+    'GOOGLE_IOS_CLIENT_ID',
+    defaultValue: '',
+  );
+
   /// Runtime override of [apiBaseUrl], settable at runtime via
   /// [setRuntimeOverride] for the in-app, debug-only API-environment
   /// switcher ([ApiEnvironmentProvider]).

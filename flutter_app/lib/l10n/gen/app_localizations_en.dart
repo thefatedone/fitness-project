@@ -113,6 +113,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authNoAccountRegister => 'Don\'t have an account? Sign up';
 
   @override
+  String get authLoginWithGoogle => 'Continue with Google';
+
+  @override
+  String get authLoginWithApple => 'Continue with Apple';
+
+  @override
+  String get authLoginWithPhone => 'Continue with phone number';
+
+  @override
+  String get authLoginSocialDivider => 'or';
+
+  @override
+  String get authGoogleSignInFailed =>
+      'Google sign-in failed. Please try again.';
+
+  @override
+  String get authGoogleSignInNotConfigured =>
+      'Google sign-in is not configured for this build. Contact the developer.';
+
+  @override
   String get authServerDebugLink => 'Server settings (debug)';
 
   @override
@@ -450,6 +470,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileSectionGoalActivity => 'Goal and activity';
+
+  @override
+  String get profileSectionSignInMethods => 'Sign-in methods';
+
+  @override
+  String get authProviderPassword => 'Email and password';
+
+  @override
+  String get authProviderGoogle => 'Google';
+
+  @override
+  String get authProviderApple => 'Apple';
+
+  @override
+  String get authProviderPhone => 'Phone number';
+
+  @override
+  String get authProviderGeneric => 'Other';
 
   @override
   String get profileFieldName => 'Name';
@@ -1339,11 +1377,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get streakStatusStart => 'Start a new streak by logging today.';
 
   @override
-  String get streakStatusDone => 'You\'re set for today — see you tomorrow.';
+  String get streakStatusDone =>
+      'An entry is logged today. Your streak continues.';
 
   @override
-  String get streakStatusPending =>
-      'Today isn\'t logged yet — it\'s still alive.';
+  String get streakStatusPending => 'Your next step: log food or water today.';
 
   @override
   String streakHeroLabel(int count) {
@@ -1411,4 +1449,155 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get mealPhotoAnalyzing => 'Analyzing your meal…';
+
+  @override
+  String get mealPhotoNoFood =>
+      'No food detected in the photo. Try a clearer top-down view.';
+
+  @override
+  String get mealPhotoSave => 'Save meal';
+
+  @override
+  String mealPhotoItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '$count item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mealPhotoDisclaimer =>
+      'Estimates — verify with what you actually ate.';
+
+  @override
+  String get mealPhotoEstimates => '≈ Estimates';
+
+  @override
+  String get mealPhotoCancel => 'Cancel';
+
+  @override
+  String get mealPhotoErrorTooMany =>
+      'Too many analyses, try again in a moment.';
+
+  @override
+  String get mealPhotoErrorFormat =>
+      'Unsupported image format. Use JPEG, PNG, or HEIC.';
+
+  @override
+  String get mealPhotoErrorUpstream =>
+      'The AI is having trouble, try again in a moment.';
+
+  @override
+  String get mealPhotoErrorServerEmpty => 'Server returned an empty response.';
+
+  @override
+  String get mealPhotoErrorNoFood => 'No food detected.';
+
+  @override
+  String get mealPhotoScan => 'Scan meal';
+
+  @override
+  String get mealPhotoPickerInstructions =>
+      'Take a photo of your meal to analyze multiple items at once';
+
+  @override
+  String get mealPhotoScanSubtitle => 'Detect multiple items in one photo';
+
+  @override
+  String get mealPhotoSingleItem => 'Single item';
+
+  @override
+  String get mealPhotoSingleItemSubtitle => 'Photograph one food at a time';
+
+  @override
+  String get mealPhotoModeTitle => 'Scan the whole plate or a single item?';
+
+  @override
+  String mealPhotoGramsLabel(String grams) {
+    return '$grams g';
+  }
+
+  @override
+  String mealPhotoConfidence(String percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get balanceTitle => 'Daily balance';
+
+  @override
+  String get balanceSubtitle => 'Small steps toward your personal targets';
+
+  @override
+  String get balanceAchieved => 'All four targets are in range';
+
+  @override
+  String get balanceCalories => 'Calories';
+
+  @override
+  String get balanceKcal => 'kcal';
+
+  @override
+  String get balanceGrams => 'g';
+
+  @override
+  String get balanceSetTargets =>
+      'Set all four nutrition targets in your profile to see your daily balance.';
+
+  @override
+  String get balanceTolerance =>
+      'In range means ±10% of your profile target. Your diary streak is counted separately.';
+
+  @override
+  String get balanceConfigure => 'Open profile';
+
+  @override
+  String get balanceNoTarget => 'Target not set';
+
+  @override
+  String get balanceInRange => 'In range';
+
+  @override
+  String get balanceAbove => 'Above range';
+
+  @override
+  String get balanceInProgress => 'In progress';
+
+  @override
+  String get streakTitle => 'Your consistency';
+
+  @override
+  String get streakGentleSubtitle =>
+      'A little attention to yourself, day by day.';
+
+  @override
+  String get streakRecentDays => 'Your last 14 days';
+
+  @override
+  String get streakMilestonesTitle => 'Consistency milestones';
+
+  @override
+  String get streakBalanceIndependence =>
+      'Your streak recognises food or water logging. You do not need to meet your nutrition targets to keep it. A missed day does not erase your past effort.';
+
+  @override
+  String get streakDayLogged => 'Entry logged';
+
+  @override
+  String get streakDayEmpty => 'No entries';
+
+  @override
+  String get streakMilestoneReached => 'Reached';
+
+  @override
+  String get streakMilestoneAhead => 'Ahead';
+
+  @override
+  String get balanceProtein => 'Protein';
 }

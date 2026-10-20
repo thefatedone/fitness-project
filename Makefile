@@ -162,3 +162,18 @@ prune: ## Remove unused images, networks, and build cache
 
 .PHONY: nuke
 nuke: clean prune ## Full reset: containers, volumes, images, build cache
+# Local development uses the existing OrbStack services and database volumes.
+DEV_COMPOSE := $(COMPOSE) -f docker-compose.yml -f docker-compose.dev.yml
+
+.PHONY: dev dev-logs dev-rebuild dev-standard
+dev: ## Start backend reload and frontend Fast Refresh in OrbStack
+	$(DEV_COMPOSE) up -d --build backend frontend
+
+dev-logs: ## Follow the development backend and frontend logs
+	$(DEV_COMPOSE) logs -f --tail=100 backend frontend
+
+dev-rebuild: ## Rebuild dev services after changing dependencies or Dockerfiles
+	$(DEV_COMPOSE) up -d --build --force-recreate backend frontend
+
+dev-standard: ## Return backend/frontend to the base Compose configuration
+	$(COMPOSE) up -d --build --force-recreate backend frontend

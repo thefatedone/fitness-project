@@ -112,6 +112,26 @@ class AppLocalizationsKa extends AppLocalizations {
   String get authNoAccountRegister => 'არ გაქვს ანგარიში? დარეგისტრირდი';
 
   @override
+  String get authLoginWithGoogle => 'Google-ით გაგრძელება';
+
+  @override
+  String get authLoginWithApple => 'Apple-ით გაგრძელება';
+
+  @override
+  String get authLoginWithPhone => 'ტელეფონის ნომრით გაგრძელება';
+
+  @override
+  String get authLoginSocialDivider => 'ან';
+
+  @override
+  String get authGoogleSignInFailed =>
+      'Google-ით შესვლა ვერ მოხერხდა. სცადე თავიდან.';
+
+  @override
+  String get authGoogleSignInNotConfigured =>
+      'Google-ით შესვლა ამ აწყობში მორგებული არ არის. დაუკავშირდი დეველოპერს.';
+
+  @override
   String get authServerDebugLink => 'სერვერის პარამეტტრები (debug)';
 
   @override
@@ -452,6 +472,24 @@ class AppLocalizationsKa extends AppLocalizations {
 
   @override
   String get profileSectionGoalActivity => 'მიზანი და აქტივობა';
+
+  @override
+  String get profileSectionSignInMethods => 'შესვლის მეთოდები';
+
+  @override
+  String get authProviderPassword => 'ელ.ფოსტა და პაროლი';
+
+  @override
+  String get authProviderGoogle => 'Google';
+
+  @override
+  String get authProviderApple => 'Apple';
+
+  @override
+  String get authProviderPhone => 'ტელეფონის ნომერი';
+
+  @override
+  String get authProviderGeneric => 'სხვა';
 
   @override
   String get profileFieldName => 'სახელი';
@@ -1339,11 +1377,11 @@ class AppLocalizationsKa extends AppLocalizations {
   String get streakStatusStart => 'დაიწყე ახალი სერია — დაამატე ჩანაწერი დღეს.';
 
   @override
-  String get streakStatusDone => 'დღეისთვის ყველაფერი მზადაა — ხვალამდე.';
+  String get streakStatusDone => 'დღეს ჩანაწერი დამატებულია. სერია გრძელდება.';
 
   @override
   String get streakStatusPending =>
-      'დღეს ჯერ არაფერი გაქვს ჩაწერილი — სერია ჯერ კიდევ ძალაშია.';
+      'შემდეგი ნაბიჯი — დღეს საკვების ან წყლის ჩაწერა.';
 
   @override
   String streakHeroLabel(int count) {
@@ -1405,4 +1443,153 @@ class AppLocalizationsKa extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get mealPhotoAnalyzing => 'ვაანალიზებ კერძს…';
+
+  @override
+  String get mealPhotoNoFood =>
+      'ფოტოზე საკვები ვერ ამოვიცანი. სცადე ზემოდან უფრო ნათელი კადრი.';
+
+  @override
+  String get mealPhotoSave => 'კერძის შენახვა';
+
+  @override
+  String mealPhotoItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ინგრედიენტი',
+      one: '$count ინგრედიენტი',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mealPhotoDisclaimer =>
+      'ეს შეფასებებია — შეამოწმე იმასთან, რაც ნამდვილად მიირთვი.';
+
+  @override
+  String get mealPhotoEstimates => '≈ შეფასება';
+
+  @override
+  String get mealPhotoCancel => 'გაუქმება';
+
+  @override
+  String get mealPhotoErrorTooMany => 'ძალიან ბევრი მოთხოვნა, სცადე ერთ წუთში.';
+
+  @override
+  String get mealPhotoErrorFormat =>
+      'ფორმატი მხარდაუჭერელია. გამოიყენე JPEG, PNG ან HEIC.';
+
+  @override
+  String get mealPhotoErrorUpstream =>
+      'ხელოვნური ინტელექტი დროებით მიუწვდომელია, სცადე მოგვიანებით.';
+
+  @override
+  String get mealPhotoErrorServerEmpty => 'სერვერმა ცარიელი პასუხი დააბრუნა.';
+
+  @override
+  String get mealPhotoErrorNoFood => 'საკვები ვერ ამოვიცანი.';
+
+  @override
+  String get mealPhotoScan => 'კერძის სკანირება';
+
+  @override
+  String get mealPhotoPickerInstructions =>
+      'გადაიღე კერძი — ერთდროულად ყველა ინგრედიენტს ამოვიცნობთ';
+
+  @override
+  String get mealPhotoScanSubtitle => 'ამოიცანი ყველა ინგრედიენტი ერთ ფოტოზე';
+
+  @override
+  String get mealPhotoSingleItem => 'ერთი პროდუქტი';
+
+  @override
+  String get mealPhotoSingleItemSubtitle => 'გადაიღე მხოლოდ ერთი კერძი';
+
+  @override
+  String get mealPhotoModeTitle => 'მთელი კერძი თუ ერთი პროდუქტი?';
+
+  @override
+  String mealPhotoGramsLabel(String grams) {
+    return '$grams გ';
+  }
+
+  @override
+  String mealPhotoConfidence(String percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get balanceTitle => 'დღის ბალანსი';
+
+  @override
+  String get balanceSubtitle => 'პატარა ნაბიჯები პირადი მიზნებისკენ';
+
+  @override
+  String get balanceAchieved => 'ოთხივე მაჩვენებელი დიაპაზონშია';
+
+  @override
+  String get balanceCalories => 'კალორიები';
+
+  @override
+  String get balanceKcal => 'კკალ';
+
+  @override
+  String get balanceGrams => 'გ';
+
+  @override
+  String get balanceSetTargets =>
+      'დღის ბალანსის სანახავად პროფილში ოთხივე კვებითი მიზანი მიუთითე.';
+
+  @override
+  String get balanceTolerance =>
+      'დიაპაზონი პროფილის მიზნის ±10%-ია. დღეების სერია ცალკე ითვლება.';
+
+  @override
+  String get balanceConfigure => 'პროფილის გახსნა';
+
+  @override
+  String get balanceNoTarget => 'მიზანი არ არის მითითებული';
+
+  @override
+  String get balanceInRange => 'დიაპაზონშია';
+
+  @override
+  String get balanceAbove => 'დიაპაზონზე მეტია';
+
+  @override
+  String get balanceInProgress => 'მიმდინარეობს';
+
+  @override
+  String get streakTitle => 'შენი რეგულარულობა';
+
+  @override
+  String get streakGentleSubtitle => 'ცოტა ყურადღება საკუთარ თავს — ყოველდღე.';
+
+  @override
+  String get streakRecentDays => 'ბოლო 14 დღე';
+
+  @override
+  String get streakMilestonesTitle => 'რეგულარულობის ეტაპები';
+
+  @override
+  String get streakBalanceIndependence =>
+      'სერია საკვების ან წყლის ჩანაწერებს აღნიშნავს. მის გასაგრძელებლად კვებითი მიზნების მიღწევა საჭირო არ არის. გამოტოვებული დღე წარსულ ძალისხმევას არ აუქმებს.';
+
+  @override
+  String get streakDayLogged => 'ჩანაწერი დამატებულია';
+
+  @override
+  String get streakDayEmpty => 'ჩანაწერები არ არის';
+
+  @override
+  String get streakMilestoneReached => 'მიღწეულია';
+
+  @override
+  String get streakMilestoneAhead => 'წინ არის';
+
+  @override
+  String get balanceProtein => 'ცილები';
 }

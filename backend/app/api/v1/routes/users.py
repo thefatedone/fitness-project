@@ -21,6 +21,7 @@ from app.schemas.user import (
     PasswordChangeRequest,
     AccountDeletionRequest,
 )
+from app.services.sign_in_methods import build_sign_in_methods
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -131,6 +132,14 @@ async def get_me(
         is_email_verified=current_user.is_email_verified,
         created_at=current_user.created_at,
         profile_photo=current_user.profile_photo,
+        # Built from `users.password_hash` + every row in
+        # `auth_identities` for this user. The service module owns
+        # the masking logic; this route just composes the
+        # response. Old backends (or the same backend before this
+        # field was added) send `[]` / omit the field — the
+        # mobile client treats that as "no methods to show" and
+        # hides the section.
+        sign_in_methods=await build_sign_in_methods(db, current_user),
     )
 
 

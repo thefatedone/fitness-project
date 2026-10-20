@@ -33,6 +33,13 @@ extension AppLocalizationsLookup on AppLocalizations {
       // Empty-response error (generic).
       case 'userFacingErrorServerEmpty':
         return userFacingErrorServerEmpty;
+      // Meal-photo specific errors.
+      case 'mealPhotoErrorTooMany':
+        return mealPhotoErrorTooMany;
+      case 'mealPhotoErrorFormat':
+        return mealPhotoErrorFormat;
+      case 'mealPhotoErrorUpstream':
+        return mealPhotoErrorUpstream;
     }
     return null;
   }

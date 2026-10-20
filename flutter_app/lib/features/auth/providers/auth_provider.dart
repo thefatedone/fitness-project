@@ -168,6 +168,30 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  /// Signs the user in via Google. The caller is responsible for
+  /// obtaining the ID token from the `google_sign_in` SDK (the
+  /// native account chooser + OAuth flow lives there, NOT in
+  /// the provider — the provider just hands the token to the
+  /// backend and persists the issued access token).
+  ///
+  /// On success the issued token is saved to [tokenStorage] and
+  /// [status] flips to `authenticated` (same path as the email
+  /// login), so the rest of the app needs no special-casing.
+  ///
+  /// Cancellation (the user dismissed the native chooser) is
+  /// expected to be caught by the caller and handled silently —
+  /// it is NOT a network failure and should not surface a
+  /// "something went wrong" toast. See `login_screen.dart`'s
+  /// `_onGooglePressed` for the cancellation branch.
+  Future<bool> loginWithGoogle(String idToken) {
+    return _runAuthAction(
+      () async {
+        final token = await _authApi.loginWithGoogle(idToken);
+        await tokenStorage.saveToken(token);
+      },
+    );
+  }
+
   /// Logs the user out: purges the token, drops the cached profile, and
   /// resets the status. Safe to call repeatedly. This is the path used
   /// for user-initiated sign-out (e.g. the "Выйти" tile in Settings).

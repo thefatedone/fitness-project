@@ -40,7 +40,7 @@ class FoodRecognitionApi {
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(
           imageFile.path,
-          filename: _filenameFromPath(imageFile.path),
+          filename: filenameFromPath(imageFile.path),
         ),
       });
 
@@ -133,8 +133,9 @@ class FoodRecognitionApi {
   /// Extracts the basename of [path] (the segment after the last separator)
   /// as the upload filename. Falls back to `"upload.jpg"` if the path is
   /// bare or ends in a separator — `MultipartFile` requires a non-empty
-  /// filename.
-  static String _filenameFromPath(String path) {
+  /// filename. Exposed publicly because the meal-photo flow shares the
+  /// same field name and the same helper.
+  static String filenameFromPath(String path) {
     final separators = ['/', r'\'];
     for (final s in separators) {
       final i = path.lastIndexOf(s);

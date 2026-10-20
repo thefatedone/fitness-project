@@ -49,7 +49,7 @@ and `docker compose` commands work as if Docker Desktop were installed.
    cp .env.example .env
    ```
 
-   Then edit `.env` and replace the placeholder API keys (`ANTHROPIC_API_KEY`,
+   Then edit `.env` and replace the placeholder API keys (`GEMINI_API_KEY`,
    `GOOGLE_GEMINI_API_KEY`, `JWT_SECRET`, …). Defaults work for local dev but
    AI routes and the Telegram bot need real keys to be useful.
 

@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "NutriMind mobile (debug + hot reload)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/flutter_app",
+      "program": "${workspaceFolder}/flutter_app/lib/main.dart",
+      "flutterMode": "debug"
+    }
+  ]
+}

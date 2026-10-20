@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+# `auto` mode: every `async def test_*` is treated as a coroutine
+# and run on pytest-asyncio's event loop without an explicit
+# `@pytest.mark.asyncio` decorator. `strict` (the default) would
+# make mixing sync and async tests in the same module fail; `auto`
+# matches the way the rest of the project writes its tests.
+asyncio_mode = "auto"
+testpaths = ["tests"]

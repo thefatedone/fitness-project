@@ -35,6 +35,12 @@
   "authLoginButton": "Log in",
   "authForgotPassword": "Forgot password?",
   "authNoAccountRegister": "Don't have an account? Sign up",
+  "authLoginWithGoogle": "Continue with Google",
+  "authLoginWithApple": "Continue with Apple",
+  "authLoginWithPhone": "Continue with phone number",
+  "authLoginSocialDivider": "or",
+  "authGoogleSignInFailed": "Google sign-in failed. Please try again.",
+  "authGoogleSignInNotConfigured": "Google sign-in is not configured for this build. Contact the developer.",
   "authServerDebugLink": "Server settings (debug)",
   "authSessionExpired": "Your session expired, please log in again.",
   "authRegisterTitle": "Sign up",
@@ -176,6 +182,12 @@
   "profileSectionBasic": "Basic",
   "profileSectionBody": "Body measurements",
   "profileSectionGoalActivity": "Goal and activity",
+  "profileSectionSignInMethods": "Sign-in methods",
+  "authProviderPassword": "Email and password",
+  "authProviderGoogle": "Google",
+  "authProviderApple": "Apple",
+  "authProviderPhone": "Phone number",
+  "authProviderGeneric": "Other",
   "profileFieldName": "Name",
   "profileFieldBirthday": "Date of birth",
   "profileFieldGender": "Gender",
@@ -587,8 +599,8 @@
   "weightHistoryMustBePositive": "Must be > 0",
   "weightHistoryTooLarge": "Value too large",
   "streakStatusStart": "Start a new streak by logging today.",
-  "streakStatusDone": "You're set for today — see you tomorrow.",
-  "streakStatusPending": "Today isn't logged yet — it's still alive.",
+  "streakStatusDone": "An entry is logged today. Your streak continues.",
+  "streakStatusPending": "Your next step: log food or water today.",
   "@streakHeroLabel": {
     "placeholders": {
       "count": {
@@ -628,5 +640,69 @@
       }
     }
   },
-  "streakTrophyLabel": "{count, plural, one{🏆 {count} day streak} other{🏆 {count} day streak}}"
+  "streakTrophyLabel": "{count, plural, one{🏆 {count} day streak} other{🏆 {count} day streak}}",
+  "mealPhotoAnalyzing": "Analyzing your meal…",
+  "mealPhotoNoFood": "No food detected in the photo. Try a clearer top-down view.",
+  "mealPhotoSave": "Save meal",
+  "mealPhotoItems": "{count, plural, one{{count} item} other{{count} items}}",
+  "@mealPhotoItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mealPhotoDisclaimer": "Estimates — verify with what you actually ate.",
+  "mealPhotoEstimates": "≈ Estimates",
+  "mealPhotoCancel": "Cancel",
+  "mealPhotoErrorTooMany": "Too many analyses, try again in a moment.",
+  "mealPhotoErrorFormat": "Unsupported image format. Use JPEG, PNG, or HEIC.",
+  "mealPhotoErrorUpstream": "The AI is having trouble, try again in a moment.",
+  "mealPhotoErrorServerEmpty": "Server returned an empty response.",
+  "mealPhotoErrorNoFood": "No food detected.",
+  "mealPhotoScan": "Scan meal",
+  "mealPhotoPickerInstructions": "Take a photo of your meal to analyze multiple items at once",
+  "mealPhotoScanSubtitle": "Detect multiple items in one photo",
+  "mealPhotoSingleItem": "Single item",
+  "mealPhotoSingleItemSubtitle": "Photograph one food at a time",
+  "mealPhotoModeTitle": "Scan the whole plate or a single item?",
+  "mealPhotoGramsLabel": "{grams} g",
+  "@mealPhotoGramsLabel": {
+    "placeholders": {
+      "grams": {
+        "type": "String"
+      }
+    }
+  },
+  "mealPhotoConfidence": "{percent}%",
+  "@mealPhotoConfidence": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "balanceTitle": "Daily balance",
+  "balanceSubtitle": "Small steps toward your personal targets",
+  "balanceAchieved": "All four targets are in range",
+  "balanceCalories": "Calories",
+  "balanceKcal": "kcal",
+  "balanceGrams": "g",
+  "balanceSetTargets": "Set all four nutrition targets in your profile to see your daily balance.",
+  "balanceTolerance": "In range means ±10% of your profile target. Your diary streak is counted separately.",
+  "balanceConfigure": "Open profile",
+  "balanceNoTarget": "Target not set",
+  "balanceInRange": "In range",
+  "balanceAbove": "Above range",
+  "balanceInProgress": "In progress",
+  "streakTitle": "Your consistency",
+  "streakGentleSubtitle": "A little attention to yourself, day by day.",
+  "streakRecentDays": "Your last 14 days",
+  "streakMilestonesTitle": "Consistency milestones",
+  "streakBalanceIndependence": "Your streak recognises food or water logging. You do not need to meet your nutrition targets to keep it. A missed day does not erase your past effort.",
+  "streakDayLogged": "Entry logged",
+  "streakDayEmpty": "No entries",
+  "streakMilestoneReached": "Reached",
+  "streakMilestoneAhead": "Ahead",
+  "balanceProtein": "Protein"
 }
