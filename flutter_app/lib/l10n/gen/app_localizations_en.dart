@@ -1815,4 +1815,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get saveAlreadyDeleted =>
       'This entry was saved and then deleted. Retrying will not add it again.';
+
+  @override
+  String caloriesRemaining(String amount) {
+    return '$amount kcal remaining';
+  }
+
+  @override
+  String get caloriesReached => 'Goal reached';
+
+  @override
+  String caloriesAbove(String amount) {
+    return '$amount kcal above goal';
+  }
 }

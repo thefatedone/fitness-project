@@ -742,5 +742,10 @@
   "saveCheck": "Проверить сохранение",
   "saveConfirmed": "Сохранение подтверждено",
   "savePhotoRetry": "Результат пока не подтверждён. Повторите попытку с тем же фото.",
-  "saveAlreadyDeleted": "Эта запись была сохранена, а затем удалена. Повтор не добавит её заново."
+  "saveAlreadyDeleted": "Эта запись была сохранена, а затем удалена. Повтор не добавит её заново.",
+  "caloriesRemaining": "Осталось {amount} ккал",
+  "@caloriesRemaining": {"placeholders": {"amount": {"type": "String"}}},
+  "caloriesReached": "Цель достигнута",
+  "caloriesAbove": "Выше цели на {amount} ккал",
+  "@caloriesAbove": {"placeholders": {"amount": {"type": "String"}}}
 }

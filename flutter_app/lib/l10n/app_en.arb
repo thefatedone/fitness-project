@@ -771,5 +771,10 @@
   "saveCheck": "Check save",
   "saveConfirmed": "Save confirmed",
   "savePhotoRetry": "The result is not confirmed yet. Try again with the same photo.",
-  "saveAlreadyDeleted": "This entry was saved and then deleted. Retrying will not add it again."
+  "saveAlreadyDeleted": "This entry was saved and then deleted. Retrying will not add it again.",
+  "caloriesRemaining": "{amount} kcal remaining",
+  "@caloriesRemaining": {"placeholders": {"amount": {"type": "String"}}},
+  "caloriesReached": "Goal reached",
+  "caloriesAbove": "{amount} kcal above goal",
+  "@caloriesAbove": {"placeholders": {"amount": {"type": "String"}}}
 }

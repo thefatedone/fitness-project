@@ -1,3 +1,4 @@
+import '../widgets/calories_summary_card.dart';
 import '../../../shared/widgets/nutrimind_brand.dart';
 import '../models/diary_meal_group.dart';
 import 'dart:async';
@@ -7,7 +8,6 @@ import 'package:provider/provider.dart';
 
 import '../../../l10n/gen/app_localizations.dart';
 
-import '../../../theme/glass_tokens.dart';
 import '../../../shared/widgets/app_dock.dart';
 import '../../../shared/widgets/email_verification_banner.dart';
 import '../../../widgets/glass/glass_scroll_view.dart';
@@ -43,7 +43,6 @@ import '../../../widgets/glass/glass_card.dart';
 import '../../../widgets/glass/glass_chip.dart';
 import '../../../widgets/glass/glass_background_glow.dart';
 import '../../../widgets/glass/glass_bottom_sheet.dart';
-import '../../../widgets/glass/glass_progress_ring.dart';
 import '../../../widgets/glass/glass_surface.dart';
 import '../widgets/streak_detail_sheet.dart';
 
@@ -848,22 +847,12 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen>
                       ),
                       const EmailVerificationBanner(),
                       const SizedBox(height: 12),
-                      _CaloriesSummaryCard(
+                      CaloriesSummaryCard(
                         consumed: tracker.totalCalories,
                         target: auth.currentUser?.dailyCalTarget,
                       ),
                       const SizedBox(height: 12),
 
-                      if (isViewingToday) ...[
-                        GardenCard(
-                          garden: tracker.garden,
-                          loading: tracker.gardenLoading,
-                          failed: tracker.gardenFailed,
-                          onOpen: _openGarden,
-                          onRetry: tracker.loadGarden,
-                        ),
-                        const SizedBox(height: 12),
-                      ],
                       if (isViewingToday && !showInitialLoader) ...[
                         DailyGoalsCard(
                           calories: DailyGoalProgress(
@@ -887,15 +876,29 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen>
                         ),
                         const SizedBox(height: 12),
                       ],
-                      // Entry point to the weight history screen — sits between
-                      // the calorie summary and the macro rows so it's the
-                      // first thing visible after calories.
+                      _WaterRow(
+                        waterLogs: tracker.waterLogs,
+                        isLoading: tracker.isLoading,
+                        onAdd: _onAddWater,
+                        onDelete: (id) => _onDeleteWater(id),
+                      ),
+                      const SizedBox(height: 12),
                       _WeightHistoryEntryCard(
                         latestWeight: tracker.latestWeight,
                         onTap: _openWeightHistory,
                       ),
                       const SizedBox(height: 12),
 
+                      if (isViewingToday) ...[
+                        GardenCard(
+                          garden: tracker.garden,
+                          loading: tracker.gardenLoading,
+                          failed: tracker.gardenFailed,
+                          onOpen: _openGarden,
+                          onRetry: tracker.loadGarden,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       if (!isViewingToday) ...[
                         _MacroRow(
                           label: AppLocalizations.of(context).addFoodProtein,
@@ -918,14 +921,6 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen>
                           color: const Color(0xFFA855F7), // purple-500
                         ),
                       ],
-                      const SizedBox(height: 16),
-                      _WaterRow(
-                        waterLogs: tracker.waterLogs,
-                        isLoading: tracker.isLoading,
-                        onAdd: _onAddWater,
-                        onDelete: (id) => _onDeleteWater(id),
-                      ),
-                      const SizedBox(height: 24),
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton.icon(
@@ -1154,118 +1149,8 @@ class _WeightHistoryEntryCard extends StatelessWidget {
 // Sub-widgets
 // =============================================================================
 
-/// Rounded card showing calories consumed vs the user's daily target with
-/// a single progress bar. Gracefully degrades when the user hasn't filled
-/// in their profile yet (target is null) — we show only the consumed value.
-class _CaloriesSummaryCard extends StatelessWidget {
-  const _CaloriesSummaryCard({required this.consumed, required this.target});
-
-  final double consumed;
-  final num? target;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final hasTarget = target != null && target! > 0;
-    final ratio = hasTarget
-        ? (consumed / target!.toDouble()).clamp(0.0, 1.0)
-        : 0.0;
-    final consumedRounded = consumed.round();
-
-    // Glass treatment: the calorie summary is the dominant card on
-    // the home screen, so wrapping it in a GlassCard gives it the
-    // Liquid Glass look the rest of the screen now shares with the
-    // Dock. The calorie count is rendered inside a
-    // [GlassProgressRing] so the user reads both the absolute
-    // number (centre) and the % of goal (ring fill) at a glance.
-    //
-    // Visual polish over the prior version:
-    //   * The kcal value uses [onSurface] at `w700` so it reads as
-    //     the primary number (not as a muted label).
-    //   * The "X%" caption uses [onSurfaceVariant] at `w600` —
-    //     visible but secondary.
-    //   * The label "Calories today" is [onSurfaceVariant] as a
-    //     muted caption; the kcal number is [onSurface] so the
-    //     contrast hierarchy reads correctly on both themes.
-    //   * The ring's tip-highlight is themed ([onSurface]) so the
-    //     leading edge reads on both light and dark themes (the
-    //     previous hard-coded white was invisible on light).
-    return GlassCard(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-      borderRadius: BorderRadius.circular(20),
-      elevation: GlassElevation.hero,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          GlassProgressRing(
-            value: ratio,
-            color: scheme.primary,
-            size: 96,
-            strokeWidth: 10,
-            tipHighlightColor: scheme.onSurface,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '$consumedRounded',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (hasTarget)
-                  Text(
-                    '${(ratio * 100).round()}%',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  hasTarget
-                      ? AppLocalizations.of(context).trackerCaloriesToday
-                      : AppLocalizations.of(context).trackerCaloriesEaten,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  hasTarget
-                      ? AppLocalizations.of(
-                          context,
-                        ).trackerCaloriesKcalOf(target!.round().toString())
-                      : AppLocalizations.of(context).trackerCaloriesKcalOnly,
-                  // The kcal number is the primary text on the card —
-                  // full contrast, not muted. The previous version
-                  // used [onSurfaceVariant] which read as a label
-                  // rather than a number; this version uses
-                  // [onSurface] at `w700` so it reads as the hero
-                  // value on both light and dark themes.
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Single row in the macro summary block (protein / carbs / fat). Same
-/// null-tolerant design as `_CaloriesSummaryCard`.
+/// null-tolerant design as `CaloriesSummaryCard`.
 class _MacroRow extends StatelessWidget {
   const _MacroRow({
     required this.label,

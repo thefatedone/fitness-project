@@ -742,5 +742,10 @@
   "saveCheck": "შენახვის შემოწმება",
   "saveConfirmed": "შენახვა დადასტურდა",
   "savePhotoRetry": "შედეგი ჯერ დაუდასტურებელია. სცადეთ ისევ იმავე ფოტოთი.",
-  "saveAlreadyDeleted": "ეს ჩანაწერი შენახვის შემდეგ წაიშალა. ხელახალი ცდა მას აღარ დაამატებს."
+  "saveAlreadyDeleted": "ეს ჩანაწერი შენახვის შემდეგ წაიშალა. ხელახალი ცდა მას აღარ დაამატებს.",
+  "caloriesRemaining": "დარჩა {amount} კკალ",
+  "@caloriesRemaining": {"placeholders": {"amount": {"type": "String"}}},
+  "caloriesReached": "მიზანი მიღწეულია",
+  "caloriesAbove": "მიზანზე {amount} კკალ-ით მეტი",
+  "@caloriesAbove": {"placeholders": {"amount": {"type": "String"}}}
 }

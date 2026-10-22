@@ -1806,4 +1806,17 @@ class AppLocalizationsKa extends AppLocalizations {
   @override
   String get saveAlreadyDeleted =>
       'ეს ჩანაწერი შენახვის შემდეგ წაიშალა. ხელახალი ცდა მას აღარ დაამატებს.';
+
+  @override
+  String caloriesRemaining(String amount) {
+    return 'დარჩა $amount კკალ';
+  }
+
+  @override
+  String get caloriesReached => 'მიზანი მიღწეულია';
+
+  @override
+  String caloriesAbove(String amount) {
+    return 'მიზანზე $amount კკალ-ით მეტი';
+  }
 }

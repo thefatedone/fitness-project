@@ -1828,4 +1828,17 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get saveAlreadyDeleted =>
       'Эта запись была сохранена, а затем удалена. Повтор не добавит её заново.';
+
+  @override
+  String caloriesRemaining(String amount) {
+    return 'Осталось $amount ккал';
+  }
+
+  @override
+  String get caloriesReached => 'Цель достигнута';
+
+  @override
+  String caloriesAbove(String amount) {
+    return 'Выше цели на $amount ккал';
+  }
 }

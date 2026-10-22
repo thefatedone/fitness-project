@@ -3356,6 +3356,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This entry was saved and then deleted. Retrying will not add it again.'**
   String get saveAlreadyDeleted;
+
+  /// No description provided for @caloriesRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} kcal remaining'**
+  String caloriesRemaining(String amount);
+
+  /// No description provided for @caloriesReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal reached'**
+  String get caloriesReached;
+
+  /// No description provided for @caloriesAbove.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} kcal above goal'**
+  String caloriesAbove(String amount);
 }
 
 class _AppLocalizationsDelegate
