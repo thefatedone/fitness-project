@@ -56,6 +56,7 @@ dependencies:
   flutter_markdown: ^0.7.7+1
   image_cropper: ^12.2.1
   shared_preferences: ^2.5.5
+  crypto: ^3.0.7
   # Google sign-in SDK — used by `lib/features/auth/providers/auth_provider.dart`
   # on the meal-photo / login screens. Backend posts the resulting
   # ID token to `POST /api/v1/auth/google`; this package is the
@@ -85,6 +86,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/garden/
+    - assets/branding/nutrimind-mark.png
 
   # Comfortaa — primary UI font for Latin + Cyrillic (EN/RU).
   # The web client uses Noto Sans; Comfortaa is the visual

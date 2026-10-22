@@ -1,3 +1,4 @@
+import '../../../shared/widgets/dismiss_keyboard_on_tap.dart';
 // =============================================================================
 // Onboarding wizard — 4-step registration flow
 // =============================================================================
@@ -107,21 +108,21 @@ String _formatYmd(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}';
 
 Widget _sectionTitle(BuildContext context, String text) => Text(
-      text,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-    );
+  text,
+  style: Theme.of(
+    context,
+  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+);
 
 Widget _sectionSubtitle(BuildContext context, String text) => Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-      ),
-    );
+  padding: const EdgeInsets.only(top: 4),
+  child: Text(
+    text,
+    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    ),
+  ),
+);
 
 /// Inline error label rendered under a `FormField` when its validator
 /// rejects. Keeps the chip-row / date-row cases visually consistent
@@ -136,8 +137,8 @@ Widget _fieldError(BuildContext context, String? message) {
     child: Text(
       message,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.error,
-          ),
+        color: Theme.of(context).colorScheme.error,
+      ),
     ),
   );
 }
@@ -176,8 +177,7 @@ class OnboardingWizardScreen extends StatefulWidget {
   const OnboardingWizardScreen({super.key});
 
   @override
-  State<OnboardingWizardScreen> createState() =>
-      _OnboardingWizardScreenState();
+  State<OnboardingWizardScreen> createState() => _OnboardingWizardScreenState();
 }
 
 class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
@@ -259,15 +259,17 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
       setState(() => _isSubmitting = false);
       _goToStep(0);
       final msg = authProvider.errorMessageKey != null
-              ? AppLocalizations.of(context).lookup(authProvider.errorMessageKey!) ?? authProvider.errorMessage ?? ''
-              : authProvider.errorMessage ?? AppLocalizations.of(context).onboardingGenericError;
+          ? AppLocalizations.of(
+                  context,
+                ).lookup(authProvider.errorMessageKey!) ??
+                authProvider.errorMessage ??
+                ''
+          : authProvider.errorMessage ??
+                AppLocalizations.of(context).onboardingGenericError;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            behavior: SnackBarBehavior.floating,
-          ),
+          SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
         );
       return;
     }
@@ -302,8 +304,7 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
         'food_allergies': _data.allergies.join(','),
       };
 
-      final updatedUser =
-          await profileApi.updateProfile(profileFields);
+      final updatedUser = await profileApi.updateProfile(profileFields);
       // Refresh the auth state with server-computed fields
       // (bmr / tdee / daily_cal_target) so the home screen
       // calorie / macro rings render with the user's real numbers
@@ -359,56 +360,49 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
   Widget build(BuildContext context) {
     final isLastStep = _currentStep == _totalSteps - 1;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context).onboardingFinish),
-        // The default AppBar leading arrow lets the user back out of
-        // the wizard entirely. Per-step "Back" navigation lives in
-        // the bottom nav row.
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            _ProgressStrip(
-              currentStep: _currentStep,
-              totalSteps: _totalSteps,
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _BlurredStepPager(
-                controller: _pageController,
+    return DismissKeyboardOnTap(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(AppLocalizations.of(context).onboardingFinish),
+          // The default AppBar leading arrow lets the user back out of
+          // the wizard entirely. Per-step "Back" navigation lives in
+          // the bottom nav row.
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              _ProgressStrip(
                 currentStep: _currentStep,
-                onStepChanged: (i) => setState(() => _currentStep = i),
-                children: [
-                  _CredentialsStep(
-                    formKey: _stepFormKeys[0],
-                    data: _data,
-                    emailRegex: _emailRegex,
-                  ),
-                  _PersonalInfoStep(
-                    formKey: _stepFormKeys[1],
-                    data: _data,
-                  ),
-                  _BodyAndGoalStep(
-                    formKey: _stepFormKeys[2],
-                    data: _data,
-                  ),
-                  _DietaryStep(
-                    formKey: _stepFormKeys[3],
-                    data: _data,
-                  ),
-                ],
+                totalSteps: _totalSteps,
               ),
-            ),
-            _BottomNavBar(
-              currentStep: _currentStep,
-              isLastStep: isLastStep,
-              isSubmitting: _isSubmitting,
-              onBack: _onBack,
-              onNext: _onNext,
-            ),
-          ],
+              const SizedBox(height: 16),
+              Expanded(
+                child: _BlurredStepPager(
+                  controller: _pageController,
+                  currentStep: _currentStep,
+                  onStepChanged: (i) => setState(() => _currentStep = i),
+                  children: [
+                    _CredentialsStep(
+                      formKey: _stepFormKeys[0],
+                      data: _data,
+                      emailRegex: _emailRegex,
+                    ),
+                    _PersonalInfoStep(formKey: _stepFormKeys[1], data: _data),
+                    _BodyAndGoalStep(formKey: _stepFormKeys[2], data: _data),
+                    _DietaryStep(formKey: _stepFormKeys[3], data: _data),
+                  ],
+                ),
+              ),
+              _BottomNavBar(
+                currentStep: _currentStep,
+                isLastStep: isLastStep,
+                isSubmitting: _isSubmitting,
+                onBack: _onBack,
+                onNext: _onNext,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -425,10 +419,7 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
 /// greys out when ahead. Using solid filled segments (instead of
 /// pip-style dots) reads better on mobile widths.
 class _ProgressStrip extends StatelessWidget {
-  const _ProgressStrip({
-    required this.currentStep,
-    required this.totalSteps,
-  });
+  const _ProgressStrip({required this.currentStep, required this.totalSteps});
 
   final int currentStep;
   final int totalSteps;
@@ -526,7 +517,9 @@ class _BottomNavBar extends StatelessWidget {
                       )
                     : null,
                 label: Text(
-                  isLastStep ? AppLocalizations.of(context).onboardingFinish : AppLocalizations.of(context).onboardingNext,
+                  isLastStep
+                      ? AppLocalizations.of(context).onboardingFinish
+                      : AppLocalizations.of(context).onboardingNext,
                 ),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
@@ -603,13 +596,17 @@ class _CredentialsStepState extends State<_CredentialsStep> {
     }
 
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
       child: Form(
         key: widget.formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _sectionTitle(context, AppLocalizations.of(context).onboardingStep1Title),
+            _sectionTitle(
+              context,
+              AppLocalizations.of(context).onboardingStep1Title,
+            ),
             _sectionSubtitle(
               context,
               AppLocalizations.of(context).onboardingStep1Subtitle,
@@ -647,7 +644,9 @@ class _CredentialsStepState extends State<_CredentialsStep> {
               ),
               validator: (v) {
                 final trimmed = (v ?? '').trim();
-                if (trimmed.isEmpty) return AppLocalizations.of(context).authEmailRequired;
+                if (trimmed.isEmpty) {
+                  return AppLocalizations.of(context).authEmailRequired;
+                }
                 if (!widget.emailRegex.hasMatch(trimmed)) {
                   return AppLocalizations.of(context).authEmailInvalid;
                 }
@@ -676,13 +675,17 @@ class _CredentialsStepState extends State<_CredentialsStep> {
               textInputAction: TextInputAction.done,
               onChanged: (v) => widget.data.confirmPassword = v,
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).authResetConfirmPassword,
+                labelText: AppLocalizations.of(
+                  context,
+                ).authResetConfirmPassword,
                 prefixIcon: Icon(Icons.lock_outline),
                 border: OutlineInputBorder(),
               ),
               validator: (v) {
                 final trimmed = v ?? '';
-                if (trimmed.isEmpty) return AppLocalizations.of(context).authResetConfirmRequired;
+                if (trimmed.isEmpty) {
+                  return AppLocalizations.of(context).authResetConfirmRequired;
+                }
                 if (trimmed != _passwordCtrl.text) {
                   return AppLocalizations.of(context).authResetMismatch;
                 }
@@ -721,15 +724,15 @@ class _PersonalInfoStep extends StatefulWidget {
 class _PersonalInfoStepState extends State<_PersonalInfoStep> {
   Future<void> _pickDate(BuildContext context) async {
     final now = DateTime.now();
-    final initial = widget.data.dateOfBirth ??
-        DateTime(now.year - 20, now.month, now.day);
+    final initial =
+        widget.data.dateOfBirth ?? DateTime(now.year - 20, now.month, now.day);
     // Clamp the initial date into the picker range so the system
     // sheet doesn't open with an out-of-range default.
     final clampedInitial = initial.isAfter(_lastDate(now))
         ? _lastDate(now)
         : initial.isBefore(_firstDate(now))
-            ? _firstDate(now)
-            : initial;
+        ? _firstDate(now)
+        : initial;
 
     final picked = await showDatePicker(
       context: context,
@@ -742,8 +745,7 @@ class _PersonalInfoStepState extends State<_PersonalInfoStep> {
     }
   }
 
-  static DateTime _firstDate(DateTime now) =>
-      DateTime(now.year - 100);
+  static DateTime _firstDate(DateTime now) => DateTime(now.year - 100);
   static DateTime _lastDate(DateTime now) =>
       DateTime(now.year - 13, now.month, now.day);
 
@@ -753,14 +755,21 @@ class _PersonalInfoStepState extends State<_PersonalInfoStep> {
     final data = widget.data;
 
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
       child: Form(
         key: widget.formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _sectionTitle(context, AppLocalizations.of(context).onboardingStep2Title),
-            _sectionSubtitle(context, AppLocalizations.of(context).onboardingStep2Subtitle),
+            _sectionTitle(
+              context,
+              AppLocalizations.of(context).onboardingStep2Title,
+            ),
+            _sectionSubtitle(
+              context,
+              AppLocalizations.of(context).onboardingStep2Subtitle,
+            ),
             const SizedBox(height: 20),
 
             // Date picker — FormField<DateTime> wraps our InkWell +
@@ -772,7 +781,11 @@ class _PersonalInfoStepState extends State<_PersonalInfoStep> {
             FormField<DateTime>(
               initialValue: data.dateOfBirth,
               validator: (v) {
-                if (v == null) return AppLocalizations.of(context).onboardingBirthdayRequired;
+                if (v == null) {
+                  return AppLocalizations.of(
+                    context,
+                  ).onboardingBirthdayRequired;
+                }
                 return null;
               },
               builder: (state) {
@@ -787,17 +800,21 @@ class _PersonalInfoStepState extends State<_PersonalInfoStep> {
                   borderRadius: BorderRadius.circular(8),
                   child: InputDecorator(
                     decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context).onboardingBirthday,
+                      labelText: AppLocalizations.of(
+                        context,
+                      ).onboardingBirthday,
                       prefixIcon: const Icon(Icons.cake_outlined),
                       border: const OutlineInputBorder(),
                       errorText: state.errorText,
                     ),
                     child: Text(
                       dob == null
-                          ? AppLocalizations.of(context).onboardingBirthdayNotSet
+                          ? AppLocalizations.of(
+                              context,
+                            ).onboardingBirthdayNotSet
                           : '${dob.day.toString().padLeft(2, '0')}.'
-                              '${dob.month.toString().padLeft(2, '0')}.'
-                              '${dob.year}',
+                                '${dob.month.toString().padLeft(2, '0')}.'
+                                '${dob.year}',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: dob == null
                             ? theme.colorScheme.onSurfaceVariant
@@ -822,9 +839,24 @@ class _PersonalInfoStepState extends State<_PersonalInfoStep> {
                 border: OutlineInputBorder(),
               ),
               items: [
-                DropdownMenuItem(value: 'male', child: Text(AppLocalizations.of(context).onboardingGenderMale)),
-                DropdownMenuItem(value: 'female', child: Text(AppLocalizations.of(context).onboardingGenderFemale)),
-                DropdownMenuItem(value: 'other', child: Text(AppLocalizations.of(context).onboardingGenderOther)),
+                DropdownMenuItem(
+                  value: 'male',
+                  child: Text(
+                    AppLocalizations.of(context).onboardingGenderMale,
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'female',
+                  child: Text(
+                    AppLocalizations.of(context).onboardingGenderFemale,
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'other',
+                  child: Text(
+                    AppLocalizations.of(context).onboardingGenderOther,
+                  ),
+                ),
               ],
               onChanged: (v) {
                 if (v != null) setState(() => data.sex = v);
@@ -899,8 +931,10 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
   }) {
     return TextFormField(
       controller: controller,
-      keyboardType:
-          const TextInputType.numberWithOptions(decimal: true, signed: false),
+      keyboardType: const TextInputType.numberWithOptions(
+        decimal: true,
+        signed: false,
+      ),
       textInputAction: TextInputAction.next,
       decoration: InputDecoration(
         labelText: label,
@@ -919,13 +953,17 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
     final data = widget.data;
 
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
       child: Form(
         key: widget.formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _sectionTitle(context, AppLocalizations.of(context).onboardingStep3Title),
+            _sectionTitle(
+              context,
+              AppLocalizations.of(context).onboardingStep3Title,
+            ),
             _sectionSubtitle(
               context,
               AppLocalizations.of(context).onboardingStep3Subtitle,
@@ -965,8 +1003,9 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
               initialValue: data.activityLevel,
               validator: (v) {
                 if (v == null) {
-                  return AppLocalizations.of(context)
-                      .onboardingActivityLevelRequired;
+                  return AppLocalizations.of(
+                    context,
+                  ).onboardingActivityLevelRequired;
                 }
                 return null;
               },
@@ -1009,8 +1048,9 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
               initialValue: data.primaryGoal,
               validator: (v) {
                 if (v == null) {
-                  return AppLocalizations.of(context)
-                      .onboardingPrimaryGoalRequired;
+                  return AppLocalizations.of(
+                    context,
+                  ).onboardingPrimaryGoalRequired;
                 }
                 return null;
               },
@@ -1060,9 +1100,9 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
             // FormField wrapper needed; the slider's onChanged is
             // its own validation.
             Text(
-              AppLocalizations.of(context).onboardingPaceLabel(
-                data.weightLossPace.toStringAsFixed(2),
-              ),
+              AppLocalizations.of(
+                context,
+              ).onboardingPaceLabel(data.weightLossPace.toStringAsFixed(2)),
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -1072,9 +1112,9 @@ class _BodyAndGoalStepState extends State<_BodyAndGoalStep> {
               min: 0.25,
               max: 1.0,
               divisions: 3,
-              label: AppLocalizations.of(context).onboardingPaceChipLabel(
-                data.weightLossPace.toStringAsFixed(2),
-              ),
+              label: AppLocalizations.of(
+                context,
+              ).onboardingPaceChipLabel(data.weightLossPace.toStringAsFixed(2)),
               onChanged: (v) => setState(() => data.weightLossPace = v),
             ),
           ],
@@ -1111,30 +1151,36 @@ class _DietaryStepState extends State<_DietaryStep> {
     final data = widget.data;
 
     Widget sectionLabel(String text) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(
-            text,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        );
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
 
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
       child: Form(
         key: widget.formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _sectionTitle(context, AppLocalizations.of(context).onboardingStep4Title),
+            _sectionTitle(
+              context,
+              AppLocalizations.of(context).onboardingStep4Title,
+            ),
             _sectionSubtitle(
               context,
               AppLocalizations.of(context).onboardingStep4Subtitle,
             ),
             const SizedBox(height: 20),
 
-            sectionLabel(AppLocalizations.of(context).onboardingDietaryPreferences),
+            sectionLabel(
+              AppLocalizations.of(context).onboardingDietaryPreferences,
+            ),
             TagInputField(
               value: data.dietaryPrefs,
               onChanged: (v) => setState(() => data.dietaryPrefs = v),

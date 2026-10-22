@@ -657,6 +657,7 @@ class _AddWeightDialog extends StatefulWidget {
 }
 
 class _AddWeightDialogState extends State<_AddWeightDialog> {
+  bool _saveInProgress = false;
   final _formKey = GlobalKey<FormState>();
   final _weightCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
@@ -687,6 +688,7 @@ class _AddWeightDialogState extends State<_AddWeightDialog> {
   }
 
   Future<void> _submit() async {
+    if (_saveInProgress || context.read<TrackerProvider>().isLoading) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final tracker = context.read<TrackerProvider>();
@@ -696,6 +698,7 @@ class _AddWeightDialogState extends State<_AddWeightDialog> {
 
     final w = _parseWeight();
     if (w == null) return;
+    setState(() => _saveInProgress = true);
 
     final ok = await tracker.addWeightEntry(
       w,
@@ -703,6 +706,7 @@ class _AddWeightDialogState extends State<_AddWeightDialog> {
     );
 
     if (!mounted) return;
+    if (!ok) setState(() => _saveInProgress = false);
     if (ok) {
       Navigator.of(context).pop();
     } else {

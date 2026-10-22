@@ -5,14 +5,8 @@
 /// [FoodRecognitionResult], this DTO is *no-save* — the backend has not
 /// written any `food_logs` rows yet, it has only suggested ingredients
 /// with per-100g macros and a per-item `grams` portion estimate. The
-/// user reviews the items on the (future) screen, edits portions as
-/// needed, and the screen then POSTs each accepted item to
-/// `/api/v1/tracker/food` (via [TrackerApi.addFood]) to persist them
-/// individually.
-///
-/// The `id` per item is whatever the backend sent (a UUID); we keep it
-/// around so a future per-item PATCH path (e.g. "lock this item") has
-/// a stable handle, but the data layer itself never uses it.
+/// user reviews the items, edits ingredients and portions, then sends the
+/// complete dish to `/tracker/meals` in one atomic request.
 class MealAnalysisResult {
   /// `true` when the model inspected the image and found no edible items.
   /// When `true`, [items] is empty and [totals] is all-zero. The UI uses

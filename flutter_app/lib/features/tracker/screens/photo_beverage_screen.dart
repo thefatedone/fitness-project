@@ -1,3 +1,4 @@
+import '../../../shared/widgets/photo_preview.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -110,10 +111,7 @@ class _PhotoBeverageScreenState extends State<PhotoBeverageScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(hint),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(hint), behavior: SnackBarBehavior.floating),
       );
   }
 
@@ -143,10 +141,7 @@ class _PhotoBeverageScreenState extends State<PhotoBeverageScreen> {
     final Widget body;
     if (beverage.lastResult != null && !beverage.isAnalyzing) {
       if (beverage.lastResult!.autoLogged) {
-        body = _AutoLoggedView(
-          result: beverage.lastResult!,
-          onDone: _done,
-        );
+        body = _AutoLoggedView(result: beverage.lastResult!, onDone: _done);
       } else {
         body = _ManualConfirmView(
           suggestion: beverage.lastResult!.suggestion!,
@@ -157,8 +152,7 @@ class _PhotoBeverageScreenState extends State<PhotoBeverageScreen> {
     } else if (beverage.isAnalyzing && _pickedFile != null) {
       body = _AnalyzingView(image: _pickedFile!);
     } else if (!beverage.isAnalyzing &&
-        (beverage.errorMessage != null ||
-            beverage.errorMessageKey != null)) {
+        (beverage.errorMessage != null || beverage.errorMessageKey != null)) {
       body = _ErrorView(
         message: BeverageProvider.localizeError(context, beverage),
         onRetry: _retry,
@@ -212,8 +206,8 @@ class _PickerView extends StatelessWidget {
             AppLocalizations.of(context).photoBeverageInstructions,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 32),
           SizedBox(
@@ -260,9 +254,7 @@ class _AnalyzingView extends StatelessWidget {
     final theme = Theme.of(context);
     return Stack(
       children: [
-        Positioned.fill(
-          child: Image.file(image, fit: BoxFit.contain),
-        ),
+        Positioned.fill(child: PhotoPreview(file: image)),
         Positioned.fill(
           child: ColoredBox(
             color: Colors.black.withValues(alpha: 0.55),
@@ -298,26 +290,33 @@ class _AutoLoggedView extends StatelessWidget {
   final BeverageRecognitionResult result;
   final VoidCallback onDone;
 
-    // NOTE: these confidence badge labels are localized — they come from
+  // NOTE: these confidence badge labels are localized — they come from
   // `AppLocalizations.of(context).photoBeverageConfidence*` so the
   // whole card respects the active locale.
-  Map<String, ({String label, Color color})> _confidenceStyle(BuildContext context) {
+  Map<String, ({String label, Color color})> _confidenceStyle(
+    BuildContext context,
+  ) {
     final l10n = AppLocalizations.of(context);
     return {
-      'high': (label: l10n.photoBeverageConfidenceHigh, color: const Color(0xFF22C55E)),
-      'medium': (label: l10n.photoBeverageConfidenceMedium, color: const Color(0xFFEAB308)),
-      'low': (label: l10n.photoBeverageConfidenceLow, color: const Color(0xFFEF4444)),
+      'high': (
+        label: l10n.photoBeverageConfidenceHigh,
+        color: const Color(0xFF22C55E),
+      ),
+      'medium': (
+        label: l10n.photoBeverageConfidenceMedium,
+        color: const Color(0xFFEAB308),
+      ),
+      'low': (
+        label: l10n.photoBeverageConfidenceLow,
+        color: const Color(0xFFEF4444),
+      ),
     };
   }
 
   String _fmt(double v) =>
       v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
 
-  Widget _macroChip(
-    BuildContext context,
-    String label,
-    String value,
-  ) {
+  Widget _macroChip(BuildContext context, String label, String value) {
     final theme = Theme.of(context);
     return Expanded(
       child: Column(
@@ -346,7 +345,8 @@ class _AutoLoggedView extends StatelessWidget {
     final theme = Theme.of(context);
     final nutrition = result.nutrition!;
     final confidenceStyle = _confidenceStyle(context);
-    final confidence = confidenceStyle[result.confidence ?? 'high'] ??
+    final confidence =
+        confidenceStyle[result.confidence ?? 'high'] ??
         confidenceStyle['high']!;
 
     return SingleChildScrollView(
@@ -378,7 +378,9 @@ class _AutoLoggedView extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            AppLocalizations.of(context).photoFoodAllergyWarningTitle,
+                            AppLocalizations.of(
+                              context,
+                            ).photoFoodAllergyWarningTitle,
                             style: theme.textTheme.titleSmall?.copyWith(
                               color: const Color(0xFFB45309),
                               fontWeight: FontWeight.w700,
@@ -460,43 +462,62 @@ class _AutoLoggedView extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      AppLocalizations.of(context).photoBeverageMl(nutrition.volumeMl.round().toString()),
+                      AppLocalizations.of(
+                        context,
+                      ).photoBeverageMl(nutrition.volumeMl.round().toString()),
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
-                  ),
-                  const SizedBox(height: 16),
+                ),
+                const SizedBox(height: 16),
 
-                  // Compact macro row — five chips instead of the food
-                  // flow's four: Сахар (Sugar) is
-                  // beverage-specific. The order matches the
-                  // user's mental model of "calories first, then
-                  // macros, then sugar last". Labels and unit
-                  // suffixes come from `AppLocalizations.of(ctx)`
-                  // so they switch with the active locale.
-                  Builder(builder: (ctx) {
+                // Compact macro row — five chips instead of the food
+                // flow's four: Сахар (Sugar) is
+                // beverage-specific. The order matches the
+                // user's mental model of "calories first, then
+                // macros, then sugar last". Labels and unit
+                // suffixes come from `AppLocalizations.of(ctx)`
+                // so they switch with the active locale.
+                Builder(
+                  builder: (ctx) {
                     final l10n = AppLocalizations.of(ctx);
                     return Row(
                       children: [
-                        _macroChip(ctx, l10n.unitKcalShort,
-                            nutrition.calories.round().toString()),
-                        _macroChip(ctx, l10n.macroProteinShort,
-                            '${_fmt(nutrition.protein)} ${l10n.unitGramsShort}'),
-                        _macroChip(ctx, l10n.macroCarbsShort,
-                            '${_fmt(nutrition.carbs)} ${l10n.unitGramsShort}'),
-                        _macroChip(ctx, l10n.macroFatShort,
-                            '${_fmt(nutrition.fat)} ${l10n.unitGramsShort}'),
-                        _macroChip(ctx, l10n.macroSugarShort,
-                            '${_fmt(nutrition.sugarG)} ${l10n.unitGramsShort}'),
+                        _macroChip(
+                          ctx,
+                          l10n.unitKcalShort,
+                          nutrition.calories.round().toString(),
+                        ),
+                        _macroChip(
+                          ctx,
+                          l10n.macroProteinShort,
+                          '${_fmt(nutrition.protein)} ${l10n.unitGramsShort}',
+                        ),
+                        _macroChip(
+                          ctx,
+                          l10n.macroCarbsShort,
+                          '${_fmt(nutrition.carbs)} ${l10n.unitGramsShort}',
+                        ),
+                        _macroChip(
+                          ctx,
+                          l10n.macroFatShort,
+                          '${_fmt(nutrition.fat)} ${l10n.unitGramsShort}',
+                        ),
+                        _macroChip(
+                          ctx,
+                          l10n.macroSugarShort,
+                          '${_fmt(nutrition.sugarG)} ${l10n.unitGramsShort}',
+                        ),
                       ],
                     );
-                  }),
-                ],
-              ),
+                  },
+                ),
+              ],
             ),
+          ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: onDone,
@@ -529,9 +550,9 @@ class _ConfidenceChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -723,6 +744,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
   // ---- submit --------------------------------------------------------------
 
   Future<void> _submit() async {
+    if (_submitting) return;
     final ok = _formKey.currentState?.validate() ?? false;
     if (!ok) return;
 
@@ -745,8 +767,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
     final sugarG = _parseNumber(_sugarCtrl.text) ?? 0;
 
     final originalName = widget.suggestion.beverageName;
-    final namesDiffer =
-        _namesDifferMeaningfully(claimedName, originalName);
+    final namesDiffer = _namesDifferMeaningfully(claimedName, originalName);
 
     // Visibility for silent failures (Step A in the bug-fix
     // spec): log every branch decision so a future failed
@@ -791,8 +812,8 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
     // as the fallback for less obvious renamings (e.g.
     // "Coca-Cola" → "Diet Coke" — neither in the clear-liquid
     // list, but the AI should still flag the claim).
-    final fastPathMismatch = _isClearLiquidClaim(claimedName) &&
-        !_isClearLiquidClaim(originalName);
+    final fastPathMismatch =
+        _isClearLiquidClaim(claimedName) && !_isClearLiquidClaim(originalName);
     if (fastPathMismatch) {
       debugPrint(
         '[verify-check] fast-path triggered: clear liquid claimed '
@@ -919,10 +940,7 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            behavior: SnackBarBehavior.floating,
-          ),
+          SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
         );
     }
   }
@@ -1052,8 +1070,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
               if (detectedInstead != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  AppLocalizations.of(context)
-                      .photoBeverageMismatchLooksLike(detectedInstead),
+                  AppLocalizations.of(
+                    context,
+                  ).photoBeverageMismatchLooksLike(detectedInstead),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -1064,11 +1083,15 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(AppLocalizations.of(context).photoBeverageMismatchFix),
+              child: Text(
+                AppLocalizations.of(context).photoBeverageMismatchFix,
+              ),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text(AppLocalizations.of(context).photoBeverageMismatchProceed),
+              child: Text(
+                AppLocalizations.of(context).photoBeverageMismatchProceed,
+              ),
             ),
           ],
         );
@@ -1086,12 +1109,23 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
   // `AppLocalizations.of(context).photoBeverageConfidence*` so the
   // form inherits the same locale-driven labels as the photo and
   // edit-food result views.
-  Map<String, ({String label, Color color})> _confidenceStyle(BuildContext context) {
+  Map<String, ({String label, Color color})> _confidenceStyle(
+    BuildContext context,
+  ) {
     final l10n = AppLocalizations.of(context);
     return {
-      'high': (label: l10n.photoBeverageConfidenceHigh, color: const Color(0xFF22C55E)),
-      'medium': (label: l10n.photoBeverageConfidenceMedium, color: const Color(0xFFEAB308)),
-      'low': (label: l10n.photoBeverageConfidenceLow, color: const Color(0xFFEF4444)),
+      'high': (
+        label: l10n.photoBeverageConfidenceHigh,
+        color: const Color(0xFF22C55E),
+      ),
+      'medium': (
+        label: l10n.photoBeverageConfidenceMedium,
+        color: const Color(0xFFEAB308),
+      ),
+      'low': (
+        label: l10n.photoBeverageConfidenceLow,
+        color: const Color(0xFFEF4444),
+      ),
     };
   }
 
@@ -1162,7 +1196,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                 Expanded(
                   child: Text(
                     (suggestion.description ?? '').isEmpty
-                        ? AppLocalizations.of(context).photoBeverageDescriptionMissing
+                        ? AppLocalizations.of(
+                            context,
+                          ).photoBeverageDescriptionMissing
                         : suggestion.description!,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -1183,7 +1219,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
               ),
               validator: (v) {
                 final raw = (v ?? '').trim();
-                if (raw.isEmpty) return AppLocalizations.of(context).photoBeverageNameRequired;
+                if (raw.isEmpty) {
+                  return AppLocalizations.of(context).photoBeverageNameRequired;
+                }
                 return null;
               },
             ),
@@ -1196,7 +1234,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                 decimal: true,
               ),
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).photoBeverageVolumeLabel,
+                labelText: AppLocalizations.of(
+                  context,
+                ).photoBeverageVolumeLabel,
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
@@ -1211,7 +1251,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                 decimal: true,
               ),
               decoration: InputDecoration(
-                labelText: AppLocalizations.of(context).photoBeverageCaloriesLabel,
+                labelText: AppLocalizations.of(
+                  context,
+                ).photoBeverageCaloriesLabel,
                 border: const OutlineInputBorder(),
                 isDense: true,
                 suffixIcon: _RecalcBadge(
@@ -1234,7 +1276,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
               // borders for a flatter, settings-list look.
               data: theme.copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
-                title: Text(AppLocalizations.of(context).photoBeverageMoreDetails),
+                title: Text(
+                  AppLocalizations.of(context).photoBeverageMoreDetails,
+                ),
                 tilePadding: const EdgeInsets.symmetric(horizontal: 4),
                 childrenPadding: const EdgeInsets.only(bottom: 8),
                 children: [
@@ -1244,7 +1288,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context).photoBeverageProteinLabel,
+                      labelText: AppLocalizations.of(
+                        context,
+                      ).photoBeverageProteinLabel,
                       border: const OutlineInputBorder(),
                       isDense: true,
                       suffixIcon: _RecalcBadge(
@@ -1261,7 +1307,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context).photoBeverageCarbsLabel,
+                      labelText: AppLocalizations.of(
+                        context,
+                      ).photoBeverageCarbsLabel,
                       border: const OutlineInputBorder(),
                       isDense: true,
                       suffixIcon: _RecalcBadge(
@@ -1278,7 +1326,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context).photoBeverageFatLabel,
+                      labelText: AppLocalizations.of(
+                        context,
+                      ).photoBeverageFatLabel,
                       border: const OutlineInputBorder(),
                       isDense: true,
                       suffixIcon: _RecalcBadge(
@@ -1295,7 +1345,9 @@ class _ManualConfirmViewState extends State<_ManualConfirmView> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context).photoBeverageSugarLabel,
+                      labelText: AppLocalizations.of(
+                        context,
+                      ).photoBeverageSugarLabel,
                       border: const OutlineInputBorder(),
                       isDense: true,
                       suffixIcon: _RecalcBadge(
@@ -1352,11 +1404,7 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.cloud_off,
-              size: 56,
-              color: theme.colorScheme.error,
-            ),
+            Icon(Icons.cloud_off, size: 56, color: theme.colorScheme.error),
             const SizedBox(height: 12),
             Text(
               message,

@@ -1,3 +1,4 @@
+import '../../../shared/widgets/photo_preview.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,7 +8,8 @@ import 'package:provider/provider.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
 import '../widgets/meal_scan_overlay.dart';
-import '../models/food_log_model.dart';
+import '../models/saved_meal_model.dart';
+import '../widgets/meal_ingredient_dialog.dart';
 import '../models/meal_analysis_result.dart';
 import '../providers/food_recognition_provider.dart';
 import '../providers/tracker_api.dart';
@@ -24,9 +26,7 @@ import '../../../theme/glass_tokens.dart';
 /// Single responsibility: drive the camera/gallery picker, hand the
 /// chosen image off to [FoodRecognitionProvider.analyzeMealPhoto] for
 /// the no-save multi-item estimate, then on success let the user
-/// review/edit the items and POST each accepted one through
-/// [TrackerApi.addFood] (via [TrackerProvider.addLocalFoodEntry]) to
-/// persist the day's log.
+/// review/edit ingredients, then save the entire dish with one request.
 ///
 /// State precedence (driven by the provider's observable state, not
 /// local flags):
@@ -49,7 +49,15 @@ class MealPhotoScreen extends StatefulWidget {
   /// Which meal slot the accepted items will be filed under.
   final String mealType;
 
-  const MealPhotoScreen({super.key, required this.mealType});
+  final SavedMealModel? initialMeal;
+  final SavedMealModel? pendingMeal;
+
+  const MealPhotoScreen({
+    super.key,
+    required this.mealType,
+    this.initialMeal,
+    this.pendingMeal,
+  });
 
   @override
   State<MealPhotoScreen> createState() => _MealPhotoScreenState();
@@ -63,6 +71,12 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
   File? _pickedFile;
 
   final ImagePicker _picker = ImagePicker();
+  final _mealName = TextEditingController();
+  late final String _mealId;
+  late String _mealType;
+  DateTime? _mealDate;
+  MealAnalysisResult? _initialResult;
+  SavedMealModel? _pendingSave;
 
   // Independent scan, focus and result-reveal timelines.
   late final AnimationController _scanController;
@@ -84,7 +98,7 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
   /// its siblings. `null` means "everything is in chip form".
   String? _expandedItemId;
 
-  /// `true` while the per-item POSTs are in flight. Used to swap
+  /// `true` while the atomic meal save is in flight. Used to swap
   /// the save button to a spinner while the day's log is being
   /// updated.
   bool _isSaving = false;
@@ -96,6 +110,15 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
   @override
   void initState() {
     super.initState();
+    _mealId = widget.pendingMeal?.id ?? newMealId();
+    _pendingSave = widget.pendingMeal;
+    final initial = widget.pendingMeal ?? widget.initialMeal;
+    _mealDate = widget.pendingMeal?.date;
+    _mealType = initial?.mealType ?? widget.mealType;
+    if (initial != null) {
+      _mealName.text = initial.name;
+      _initialResult = initial.toAnalysis();
+    }
     _scanController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 4400),
@@ -115,6 +138,10 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _mealDate ??= context.read<TrackerProvider>().selectedDate;
+    if (_mealName.text.isEmpty) {
+      _mealName.text = AppLocalizations.of(context).mealDefaultName;
+    }
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final analyzing = context.read<FoodRecognitionProvider>().isAnalyzing;
     if (reduceMotion) {
@@ -138,6 +165,7 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
     } catch (_) {
       // Provider may already be torn down; swallow.
     }
+    _mealName.dispose();
     _scanController.dispose();
     _focusController.dispose();
     _revealController.dispose();
@@ -283,88 +311,114 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
 
   // ---- save -----------------------------------------------------------------
 
+  Future<void> _editIngredient(String? id) async {
+    if (_isSaving || _pendingSave != null) return;
+    final old = id == null
+        ? null
+        : _editableItems!.firstWhere((v) => v.id == id);
+    final ingredient = await showDialog<MealIngredient>(
+      context: context,
+      builder: (_) => MealIngredientDialog(
+        ingredient: old == null
+            ? null
+            : MealIngredient(
+                name: old.name,
+                grams: old.grams,
+                calories: old.totals.kcal,
+                protein: old.totals.protein,
+                carbs: old.totals.carbs,
+                fat: old.totals.fat,
+              ),
+      ),
+    );
+    if (ingredient == null || !mounted) return;
+    setState(() {
+      final updated = _EditableItem.fromAnalyzed(
+        ingredient.toAnalyzed(id ?? newMealId()),
+      );
+      if (id == null) {
+        _editableItems!.add(updated);
+      } else {
+        _editableItems![_editableItems!.indexWhere((v) => v.id == id)] =
+            updated;
+      }
+      _recalcToken++;
+    });
+  }
+
   Future<void> _saveAll() async {
     final items = _editableItems;
-    if (items == null || items.isEmpty) return;
-    setState(() => _isSaving = true);
-
-    final tracker = context.read<TrackerProvider>();
-    final api = TrackerApi();
-    final messenger = ScaffoldMessenger.of(context);
-
-    var savedAny = false;
-    var failedAny = false;
-    for (final item in items) {
-      try {
-        // Build a one-off FoodLogModel with the per-item fields
-        // the backend's POST /api/v1/tracker/food expects. `userId`
-        // is intentionally empty — the backend fills that in from
-        // the auth token. `aiGenerated: true` so the home screen
-        // renders the row with the AI provenance (matching the
-        // single-item flow's behaviour).
-        final draft = FoodLogModel(
-          id: '',
-          userId: '',
-          date: DateTime.now(),
-          mealType: widget.mealType,
-          foodName: item.name,
-          calories: item.totals.kcal,
-          protein: item.totals.protein,
-          carbs: item.totals.carbs,
-          fat: item.totals.fat,
-          quantity: item.grams,
-          unit: 'g',
-          photoUrl: null,
-          aiGenerated: true,
-          createdAt: DateTime.now(),
-        );
-        final saved = await api.addFood(draft);
-        tracker.addLocalFoodEntry(saved);
-        savedAny = true;
-      } catch (_) {
-        // One item failing shouldn't block the rest of the save —
-        // every accepted item is posted independently so a partial
-        // failure still gets the day's log updated with whatever
-        // the server accepted.
-        failedAny = true;
-      }
+    if (_isSaving || items == null || items.isEmpty) return;
+    final l10n = AppLocalizations.of(context);
+    if (_mealName.text.trim().isEmpty ||
+        items.length > 100 ||
+        items.any(
+          (item) =>
+              item.name.trim().isEmpty ||
+              item.grams <= 0 ||
+              [
+                item.grams,
+                item.totals.kcal,
+                item.totals.protein,
+                item.totals.carbs,
+                item.totals.fat,
+              ].any((value) => !value.isFinite || value < 0 || value > 100000),
+        )) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.mealInvalidValue)));
+      return;
     }
-
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-
-    if (savedAny && !failedAny) {
-      // Full success — pop back to the home screen which will
-      // re-render with the new rows already merged via
-      // `addLocalFoodEntry`.
+    // A retry uses precisely the same snapshot and operation ID, even if the
+    // response was lost after the server committed the entire meal.
+    _pendingSave ??= SavedMealModel(
+      id: _mealId,
+      name: _mealName.text.trim(),
+      mealType: _mealType,
+      date: _mealDate!,
+      ingredients: [
+        for (final item in items)
+          MealIngredient(
+            name: item.name,
+            grams: item.grams,
+            calories: item.totals.kcal,
+            protein: item.totals.protein,
+            carbs: item.totals.carbs,
+            fat: item.totals.fat,
+          ),
+      ],
+    );
+    setState(() => _isSaving = true);
+    final tracker = context.read<TrackerProvider>();
+    final account = tracker.recoveryAccountKey;
+    try {
+      await tracker.persistMealDraft(_pendingSave!);
+      final saved = await TrackerApi().saveMeal(_pendingSave!);
+      if (tracker.recoveryAccountKey != account) return;
+      await tracker.acceptCommittedMeal(saved);
+      await tracker.clearMealDraft(_pendingSave!.id);
+      if (tracker.recoveryAccountKey != account) return;
+      if (!mounted) return;
       context.read<FoodRecognitionProvider>().resetMealAnalysis();
       Navigator.of(context).pop(true);
-    } else if (savedAny && failedAny) {
-      // Partial — let the user know but stay on the screen so they
-      // can retry the missing items.
-      messenger
+    } on UnresolvedMealDraft {
+      if (!mounted) return;
+      setState(() => _pendingSave = null);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.diaryFinishPreviousMeal)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).commonError),
+            content: Text(l10n.mealSaveRetry),
             behavior: SnackBarBehavior.floating,
           ),
         );
-    } else {
-      // Total failure — surface the provider's localised error.
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              FoodRecognitionProvider.localizeError(
-                context,
-                context.read<FoodRecognitionProvider>(),
-              ),
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -429,7 +483,7 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
     // Seed editable items on result land (sibling of the
     // post-frame initState hook so re-builds during navigation
     // don't miss the transition).
-    final result = recognition.lastMealAnalysis;
+    final result = _initialResult ?? recognition.lastMealAnalysis;
     if (result != null && _editableItems == null && !recognition.isAnalyzing) {
       // Mark seed as needed; the actual assignment happens in
       // `_onResultArrived` to keep build pure.
@@ -462,6 +516,8 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
         image: _pickedFile,
         result: result,
         editableItems: _editableItems!,
+        showConfidence:
+            widget.initialMeal == null && widget.pendingMeal == null,
         expandedItemId: _expandedItemId,
         recalcToken: _recalcToken,
         revealController: _revealController,
@@ -474,6 +530,51 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
         onToggleExpand: _toggleExpand,
         onRemoveItem: _removeItem,
         onUpdateGrams: _updateGrams,
+        onEditItem: (id) => _editIngredient(id),
+        onAddItem: () => _editIngredient(null),
+        header: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _mealName,
+              maxLength: 200,
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).mealNameLabel,
+              ),
+            ),
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              initialValue: _mealType,
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).trackerMealPickerTitle,
+              ),
+              items: [
+                DropdownMenuItem(
+                  value: 'breakfast',
+                  child: Text(
+                    AppLocalizations.of(context).trackerMealBreakfast,
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'lunch',
+                  child: Text(AppLocalizations.of(context).trackerMealLunch),
+                ),
+                DropdownMenuItem(
+                  value: 'dinner',
+                  child: Text(AppLocalizations.of(context).trackerMealDinner),
+                ),
+                DropdownMenuItem(
+                  value: 'snack',
+                  child: Text(AppLocalizations.of(context).trackerMealSnack),
+                ),
+              ],
+              onChanged: (v) {
+                if (v != null) setState(() => _mealType = v);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       );
     } else if (hasError) {
       body = _ErrorView(
@@ -490,7 +591,11 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context).mealPhotoScan),
+        title: Text(
+          widget.initialMeal == null
+              ? AppLocalizations.of(context).mealPhotoScan
+              : AppLocalizations.of(context).mealRepeat,
+        ),
         backgroundColor: theme.colorScheme.surface,
       ),
       // The save button lives in a persistent bottom bar so the
@@ -504,7 +609,23 @@ class _MealPhotoScreenState extends State<MealPhotoScreen>
               enabled: _editableItems!.isNotEmpty,
             )
           : null,
-      body: SafeArea(child: body),
+      body: SafeArea(
+        child: Column(
+          children: [
+            if (_pendingSave != null && !_isSaving)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(AppLocalizations.of(context).mealSaveRetry),
+              ),
+            Expanded(
+              child: AbsorbPointer(
+                absorbing: _isSaving || _pendingSave != null,
+                child: body,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -601,7 +722,9 @@ class _ScanningView extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  RepaintBoundary(child: Image.file(image, fit: BoxFit.cover)),
+                  RepaintBoundary(
+                    child: PhotoPreview(file: image, fit: BoxFit.cover),
+                  ),
                   if (!reduceMotion) MealScanOverlay(phase: scanController),
                 ],
               ),
@@ -649,6 +772,7 @@ class _ScanningView extends StatelessWidget {
 class _ResultsView extends StatelessWidget {
   const _ResultsView({
     required this.image,
+    required this.showConfidence,
     required this.result,
     required this.editableItems,
     required this.expandedItemId,
@@ -660,8 +784,15 @@ class _ResultsView extends StatelessWidget {
     required this.onToggleExpand,
     required this.onRemoveItem,
     required this.onUpdateGrams,
+    required this.onEditItem,
+    required this.onAddItem,
+    required this.header,
   });
 
+  final bool showConfidence;
+  final Widget header;
+  final ValueChanged<String> onEditItem;
+  final VoidCallback onAddItem;
   final File? image;
   final MealAnalysisResult result;
   final List<_EditableItem> editableItems;
@@ -716,24 +847,26 @@ class _ResultsView extends StatelessWidget {
             ),
           if (image != null) const SizedBox(height: 16),
 
-          // Item count caption + disclaimer.
+          header,
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Row(
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Expanded(
-                  child: Text(
-                    l10n.mealPhotoItems(editableItems.length),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                Text(
+                  l10n.mealPhotoItems(editableItems.length),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                GlassChip(
-                  label: l10n.mealPhotoEstimates,
-                  color: theme.colorScheme.primary,
-                ),
+                if (showConfidence)
+                  GlassChip(
+                    label: l10n.mealPhotoEstimates,
+                    color: theme.colorScheme.primary,
+                  ),
               ],
             ),
           ),
@@ -780,12 +913,19 @@ class _ResultsView extends StatelessWidget {
               reduceMotion: reduceMotion,
               child: _ItemRow(
                 item: editableItems[i],
+                showConfidence: showConfidence,
+                onEdit: () => onEditItem(editableItems[i].id),
                 expanded: expandedItemId == editableItems[i].id,
                 onToggleExpand: () => onToggleExpand(editableItems[i].id),
                 onRemove: () => onRemoveItem(editableItems[i].id),
                 onUpdateGrams: (g) => onUpdateGrams(editableItems[i].id, g),
               ),
             ),
+          OutlinedButton.icon(
+            onPressed: onAddItem,
+            icon: const Icon(Icons.add),
+            label: Text(l10n.mealAddIngredient),
+          ),
         ],
       ),
     );
@@ -821,7 +961,8 @@ class _FocusingImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: controller,
-      builder: (context, _) {
+      child: PhotoPreview(file: image, fit: BoxFit.cover),
+      builder: (context, preview) {
         final t = reduceMotion ? 1.0 : controller.value;
         final eased = Curves.easeOutCubic.transform(t);
         final scale = reduceMotion ? 1.0 : 1.0 + 0.035 * eased;
@@ -848,10 +989,7 @@ class _FocusingImage extends StatelessWidget {
                       pan.dx * constraints.maxWidth,
                       pan.dy * constraints.maxHeight,
                     ),
-                    child: Transform.scale(
-                      scale: scale,
-                      child: Image.file(image, fit: BoxFit.cover),
-                    ),
+                    child: Transform.scale(scale: scale, child: preview),
                   ),
                 ),
               ),
@@ -1092,12 +1230,16 @@ class _AnimatedBar extends StatelessWidget {
 class _ItemRow extends StatelessWidget {
   const _ItemRow({
     required this.item,
+    required this.showConfidence,
+    required this.onEdit,
     required this.expanded,
     required this.onToggleExpand,
     required this.onRemove,
     required this.onUpdateGrams,
   });
 
+  final bool showConfidence;
+  final VoidCallback onEdit;
   final _EditableItem item;
   final bool expanded;
   final VoidCallback onToggleExpand;
@@ -1123,6 +1265,7 @@ class _ItemRow extends StatelessWidget {
         // First: chip form (compact pill, tappable).
         firstChild: _ItemChipRow(
           item: item,
+          showConfidence: showConfidence,
           confidencePct: pct,
           onTap: onToggleExpand,
           onRemove: onRemove,
@@ -1145,10 +1288,12 @@ class _ItemRow extends StatelessWidget {
                       ),
                     ),
                   ),
-                  GlassChip(
-                    label: l10n.mealPhotoConfidence('$pct'),
-                    color: theme.colorScheme.primary,
-                  ),
+                  if (showConfidence &&
+                      MediaQuery.textScalerOf(context).scale(14) < 21)
+                    GlassChip(
+                      label: l10n.mealPhotoConfidence('$pct'),
+                      color: theme.colorScheme.primary,
+                    ),
                   const SizedBox(width: 4),
                   IconButton(
                     tooltip: l10n.mealPhotoCancel,
@@ -1174,9 +1319,14 @@ class _ItemRow extends StatelessWidget {
                 baseline: item.lastBaseline,
                 onChanged: onUpdateGrams,
               ),
-              Row(
+              Wrap(
+                spacing: 8,
                 children: [
-                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: Text(l10n.mealEditIngredient),
+                  ),
                   TextButton.icon(
                     onPressed: onRemove,
                     icon: Icon(
@@ -1258,11 +1408,13 @@ class _GramsStepper extends StatelessWidget {
 class _ItemChipRow extends StatelessWidget {
   const _ItemChipRow({
     required this.item,
+    required this.showConfidence,
     required this.confidencePct,
     required this.onTap,
     required this.onRemove,
   });
 
+  final bool showConfidence;
   final _EditableItem item;
   final int confidencePct;
   final VoidCallback onTap;
@@ -1308,10 +1460,12 @@ class _ItemChipRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            GlassScalePulseBadge(
-              label: l10n.mealPhotoConfidence('$confidencePct'),
-              color: theme.colorScheme.primary,
-            ),
+            if (showConfidence &&
+                MediaQuery.textScalerOf(context).scale(14) < 21)
+              GlassScalePulseBadge(
+                label: l10n.mealPhotoConfidence('$confidencePct'),
+                color: theme.colorScheme.primary,
+              ),
             const SizedBox(width: 4),
             IconButton(
               tooltip: l10n.commonDelete,
@@ -1521,7 +1675,7 @@ class _SaveBar extends StatelessWidget {
                 : const Icon(Icons.check),
             label: Text(
               isSaving
-                  ? AppLocalizations.of(context).mealPhotoAnalyzing
+                  ? AppLocalizations.of(context).mealSaving
                   : AppLocalizations.of(context).mealPhotoSave,
             ),
             style: FilledButton.styleFrom(

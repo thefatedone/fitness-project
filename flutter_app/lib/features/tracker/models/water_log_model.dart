@@ -38,4 +38,11 @@ class WaterLogModel {
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
+  Map<String, dynamic> toCacheJson() => {
+    'id': id,
+    'user_id': userId,
+    'date': date.toIso8601String(),
+    'amount': amount,
+    'created_at': createdAt.toIso8601String(),
+  };
 }

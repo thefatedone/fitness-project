@@ -1,3 +1,4 @@
+import '../../../shared/widgets/dismiss_keyboard_on_tap.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show PlatformException;
@@ -262,242 +263,245 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: GlassCard(
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
-                borderRadius: BorderRadius.circular(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Brand mark + greeting.
-                    Text(
-                      l10n.authLoginTitle,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.authLoginSubtitle,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    TextFormField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: l10n.authEmailLabel,
-                        prefixIcon: const Icon(Icons.alternate_email),
-                        border: const OutlineInputBorder(),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return l10n.authEmailRequired;
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordCtrl,
-                      obscureText: true,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _onSubmit(),
-                      decoration: InputDecoration(
-                        labelText: l10n.authPasswordLabel,
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        border: const OutlineInputBorder(),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) {
-                          return l10n.authPasswordRequired;
-                        }
-                        return null;
-                      },
-                    ),
-
-                    // Forgot-password link. Placed directly under the
-                    // password field (right-aligned, low-emphasis
-                    // text button) so the user who's about to give up
-                    // because they can't remember the password sees
-                    // the alternative path right next to the input
-                    // they're stuck on. A11y label clarifies intent.
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: auth.isLoading
-                            ? null
-                            : () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const ForgotPasswordScreen(),
-                                  ),
-                                );
-                              },
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 0,
-                          ),
-                          minimumSize: const Size(0, 32),
-                          tapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(l10n.authForgotPassword),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-                    // Primary CTA — GlassButton so the "Войти" pill
-                    // picks up the same Liquid Glass treatment as
-                    // the rest of the app's CTAs (spring press,
-                    // brand-tinted emphasized glass).
-                    GlassButton(
-                      label: auth.isLoading ? '' : l10n.authLoginButton,
-                      onPressed: auth.isLoading ? null : _onSubmit,
-                      expand: true,
-                      variant: GlassButtonVariant.primary,
-                    ),
-                    if (auth.isLoading)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                            ),
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-
-                    // --------------------------------------------------------
-                    // Social-login block.
-                    //
-                    // Placed below the email-password form (rather than
-                    // above) because email is still the primary path —
-                    // the user's account from a previous install lives
-                    // there, and putting the primary path on top matches
-                    // every other NutriMind entry point. The "or"
-                    // divider makes the social buttons read as an
-                    // alternative rather than a competing requirement.
-                    //
-                    // Apple and phone buttons are intentionally NOT
-                    // rendered today — the spec says "lay it out so
-                    // Apple and phone buttons can be added below
-                    // later, but do not render them now." The
-                    // `authLoginWithApple` / `authLoginWithPhone`
-                    // l10n strings already exist so the future
-                    // additions are a one-liner per row.
-                    Row(
+    return DismissKeyboardOnTap(
+      child: Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: GlassCard(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                  borderRadius: BorderRadius.circular(24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Expanded(child: Divider()),
-                        Padding(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            l10n.authLoginSocialDivider,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                        // Brand mark + greeting.
+                        Text(
+                          l10n.authLoginTitle,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
+                            color: theme.colorScheme.primary,
                           ),
                         ),
-                        const Expanded(child: Divider()),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _SocialLoginButton.google(
-                      label: l10n.authLoginWithGoogle,
-                      onPressed: auth.isLoading ? null : _onGooglePressed,
-                    ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.authLoginSubtitle,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
 
-                    TextButton(
-                      onPressed: auth.isLoading
-                          ? null
-                          : () => Navigator.of(context).push(
-                                // New users land in the 4-step onboarding
-                                // wizard (auth credentials + full
-                                // profile), not the old single-screen
-                                // RegisterScreen. The old widget stays
-                                // in the codebase for now in case a
-                                // future deep link references it.
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const OnboardingWizardScreen(),
+                        TextFormField(
+                          controller: _emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          autocorrect: false,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: l10n.authEmailLabel,
+                            prefixIcon: const Icon(Icons.alternate_email),
+                            border: const OutlineInputBorder(),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return l10n.authEmailRequired;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordCtrl,
+                          obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) => _onSubmit(),
+                          decoration: InputDecoration(
+                            labelText: l10n.authPasswordLabel,
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            border: const OutlineInputBorder(),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.isEmpty) {
+                              return l10n.authPasswordRequired;
+                            }
+                            return null;
+                          },
+                        ),
+
+                        // Forgot-password link. Placed directly under the
+                        // password field (right-aligned, low-emphasis
+                        // text button) so the user who's about to give up
+                        // because they can't remember the password sees
+                        // the alternative path right next to the input
+                        // they're stuck on. A11y label clarifies intent.
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: auth.isLoading
+                                ? null
+                                : () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ForgotPasswordScreen(),
+                                      ),
+                                    );
+                                  },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 0,
+                              ),
+                              minimumSize: const Size(0, 32),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(l10n.authForgotPassword),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+                        // Primary CTA — GlassButton so the "Войти" pill
+                        // picks up the same Liquid Glass treatment as
+                        // the rest of the app's CTAs (spring press,
+                        // brand-tinted emphasized glass).
+                        GlassButton(
+                          label: auth.isLoading ? '' : l10n.authLoginButton,
+                          onPressed: auth.isLoading ? null : _onSubmit,
+                          expand: true,
+                          variant: GlassButtonVariant.primary,
+                        ),
+                        if (auth.isLoading)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.4,
                                 ),
                               ),
-                      child: Text(l10n.authNoAccountRegister),
-                    ),
-
-                    // --------------------------------------------------------
-                    // Debug-only entry point for the API-environment
-                    // switcher. Solves the chicken-and-egg problem:
-                    // before any auth can happen, `apiClient.dio` needs
-                    // the right base URL — but the original switcher
-                    // lived only on the Settings screen, which itself
-                    // is only reachable AFTER authentication.
-                    //
-                    // Placement rationale: at the very bottom of the
-                    // Column, with a meaningful top gap (40 px) so
-                    // the link reads as a *separate* category from the
-                    // auth controls above. Lower-emphasis text + muted
-                    // foreground signal "out of band" — the same visual
-                    // language the "Забыл пароль?" link uses so we
-                    // don't introduce a new pattern.
-                    //
-                    // Modal: tapping the link opens the same
-                    // `ApiEnvironmentCard` as Settings — no duplicated
-                    // UI. Pressing back, the drag handle, or tapping
-                    // outside dismisses.
-                    //
-                    // The link is intentionally NOT gated on
-                    // `auth.isLoading` — flipping the API URL while a
-                    // login is in flight is harmless (the in-flight
-                    // request keeps its captured URL, and the next
-                    // request goes to the new host), and gating it
-                    // would just be visual noise.
-                    //
-                    // Entire block is `if (kDebugMode)` so a release
-                    // build doesn't ship this control.
-                    if (kDebugMode) ...[
-                      const SizedBox(height: 40),
-                      TextButton.icon(
-                        onPressed: _openApiEnvironment,
-                        icon: const Icon(Icons.settings_ethernet, size: 18),
-                        label: Text(l10n.authServerDebugLink),
-                        style: TextButton.styleFrom(
-                          foregroundColor:
-                              theme.colorScheme.onSurfaceVariant,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                            ),
                           ),
+                        const SizedBox(height: 12),
+
+                        // --------------------------------------------------------
+                        // Social-login block.
+                        //
+                        // Placed below the email-password form (rather than
+                        // above) because email is still the primary path —
+                        // the user's account from a previous install lives
+                        // there, and putting the primary path on top matches
+                        // every other NutriMind entry point. The "or"
+                        // divider makes the social buttons read as an
+                        // alternative rather than a competing requirement.
+                        //
+                        // Apple and phone buttons are intentionally NOT
+                        // rendered today — the spec says "lay it out so
+                        // Apple and phone buttons can be added below
+                        // later, but do not render them now." The
+                        // `authLoginWithApple` / `authLoginWithPhone`
+                        // l10n strings already exist so the future
+                        // additions are a one-liner per row.
+                        Row(
+                          children: [
+                            const Expanded(child: Divider()),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Text(
+                                l10n.authLoginSocialDivider,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            const Expanded(child: Divider()),
+                          ],
                         ),
-                      ),
-                    ],
-                  ],
-                ),
+                        const SizedBox(height: 12),
+                        _SocialLoginButton.google(
+                          label: l10n.authLoginWithGoogle,
+                          onPressed: auth.isLoading ? null : _onGooglePressed,
+                        ),
+
+                        TextButton(
+                          onPressed: auth.isLoading
+                              ? null
+                              : () => Navigator.of(context).push(
+                                  // New users land in the 4-step onboarding
+                                  // wizard (auth credentials + full
+                                  // profile), not the old single-screen
+                                  // RegisterScreen. The old widget stays
+                                  // in the codebase for now in case a
+                                  // future deep link references it.
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const OnboardingWizardScreen(),
+                                  ),
+                                ),
+                          child: Text(l10n.authNoAccountRegister),
+                        ),
+
+                        // --------------------------------------------------------
+                        // Debug-only entry point for the API-environment
+                        // switcher. Solves the chicken-and-egg problem:
+                        // before any auth can happen, `apiClient.dio` needs
+                        // the right base URL — but the original switcher
+                        // lived only on the Settings screen, which itself
+                        // is only reachable AFTER authentication.
+                        //
+                        // Placement rationale: at the very bottom of the
+                        // Column, with a meaningful top gap (40 px) so
+                        // the link reads as a *separate* category from the
+                        // auth controls above. Lower-emphasis text + muted
+                        // foreground signal "out of band" — the same visual
+                        // language the "Забыл пароль?" link uses so we
+                        // don't introduce a new pattern.
+                        //
+                        // Modal: tapping the link opens the same
+                        // `ApiEnvironmentCard` as Settings — no duplicated
+                        // UI. Pressing back, the drag handle, or tapping
+                        // outside dismisses.
+                        //
+                        // The link is intentionally NOT gated on
+                        // `auth.isLoading` — flipping the API URL while a
+                        // login is in flight is harmless (the in-flight
+                        // request keeps its captured URL, and the next
+                        // request goes to the new host), and gating it
+                        // would just be visual noise.
+                        //
+                        // Entire block is `if (kDebugMode)` so a release
+                        // build doesn't ship this control.
+                        if (kDebugMode) ...[
+                          const SizedBox(height: 40),
+                          TextButton.icon(
+                            onPressed: _openApiEnvironment,
+                            icon: const Icon(Icons.settings_ethernet, size: 18),
+                            label: Text(l10n.authServerDebugLink),
+                            style: TextButton.styleFrom(
+                              foregroundColor:
+                                  theme.colorScheme.onSurfaceVariant,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

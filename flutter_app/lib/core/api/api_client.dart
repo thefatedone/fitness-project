@@ -45,7 +45,7 @@ class ApiClient {
   /// that want to inject a fake; in production, callers should rely on the
   /// module-level [tokenStorage] / [apiClient] singletons declared below.
   ApiClient({TokenStorage? tokenStorage})
-      : _tokenStorage = tokenStorage ?? TokenStorage() {
+    : _tokenStorage = tokenStorage ?? TokenStorage() {
     dio = Dio(
       BaseOptions(
         baseUrl: AppConfig.apiBaseUrl,
@@ -55,7 +55,8 @@ class ApiClient {
         contentType: 'application/json',
         // 2xx only — anything else becomes a DioException so call sites can
         // handle errors uniformly rather than checking `response.statusCode`.
-        validateStatus: (status) => status != null && status >= 200 && status < 300,
+        validateStatus: (status) =>
+            status != null && status >= 200 && status < 300,
       ),
     );
 
@@ -65,6 +66,10 @@ class ApiClient {
         // We re-read on every request so a login / logout from elsewhere in
         // the app takes effect immediately without rebuilding the client.
         onRequest: (options, handler) async {
+          options.headers.putIfAbsent(
+            'X-Diary-Offset-Minutes',
+            () => DateTime.now().timeZoneOffset.inMinutes.toString(),
+          );
           final token = await _tokenStorage.readToken();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';

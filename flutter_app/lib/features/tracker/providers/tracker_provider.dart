@@ -1,14 +1,22 @@
+import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../../../l10n/gen/app_localizations.dart';
 import '../../../l10n/gen/app_localizations_lookup.dart';
 import '../../auth/providers/auth_api.dart';
 import '../models/beverage_result.dart';
+import '../models/pending_diary_deletion.dart';
+import '../models/saved_meal_model.dart';
+import '../services/diary_recovery_store.dart';
+import '../services/save_coordinator.dart';
 import '../models/food_log_model.dart';
 import '../models/streak_model.dart';
+import '../models/garden_model.dart';
 import '../models/water_log_model.dart';
 import '../models/weight_log_model.dart';
 import 'tracker_api.dart';
+
+part '../services/tracker_recovery.dart';
 
 /// `ChangeNotifier` that owns the food / water / weight tracker state for the
 /// currently-selected day.
@@ -22,6 +30,8 @@ import 'tracker_api.dart';
 /// The state model is intentionally small and per-day: switching the
 /// date via [loadDailyData] replaces [foodLogs] / [waterLogs], but
 /// [weightHistory] is global (the history endpoint returns everything).
+class UnresolvedMealDraft implements Exception {}
+
 class TrackerProvider extends ChangeNotifier {
   /// Local mid-night of "today" on app start. Loading another day overwrites
   /// this — it's the day the UI is currently displaying.
@@ -63,10 +73,82 @@ class TrackerProvider extends ChangeNotifier {
   StreakModel? _streak;
   StreakModel? get streak => _streak;
 
-  /// The shared HTTP client for tracker endpoints.
-  final TrackerApi _trackerApi = TrackerApi();
+  GardenModel? garden;
+  bool gardenLoading = false;
+  bool gardenFailed = false;
 
-  TrackerProvider() : selectedDate = _midnightOf(DateTime.now());
+  int _gardenRequest = 0;
+  int _streakRequest = 0;
+
+  Future<void> loadGarden() => _loadGarden();
+
+  Future<void> _loadGarden({bool force = false}) async {
+    if (gardenLoading && !force) return;
+    final request = ++_gardenRequest;
+    final account = _recoveryGeneration;
+    gardenLoading = true;
+    gardenFailed = false;
+    notifyListeners();
+    try {
+      final result = await _trackerApi.syncGarden(DateTime.now());
+      if (account != _recoveryGeneration || request != _gardenRequest) {
+        return;
+      }
+      garden = result;
+    } catch (_) {
+      if (account == _recoveryGeneration && request == _gardenRequest) {
+        gardenFailed = true;
+      }
+    } finally {
+      if (account == _recoveryGeneration && request == _gardenRequest) {
+        gardenLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// Yesterday's daily status must not masquerade as today's while offline.
+  void refreshForLocalClock(DateTime day) {
+    _streak = null;
+    garden = null;
+    unawaited(loadDailyData(day));
+    unawaited(loadStreak());
+    unawaited(_loadGarden(force: true));
+  }
+
+  /// The shared HTTP client for tracker endpoints.
+  final TrackerApi _trackerApi;
+  final Duration undoWindow;
+  DiaryRecoveryStore? _recovery;
+  String? _recoveryKey;
+  String? get recoveryAccountKey => _recoveryKey;
+  int _recoveryGeneration = 0;
+  int _dailyLoadGeneration = 0;
+  int _diaryRevision = 0;
+  Future<void>? _recoveryReady;
+  Timer? _undoTimer;
+  bool _recoveryBusy = false;
+  bool recoveryFailed = false;
+  bool dailyDataStale = false;
+  PendingDiaryDeletion? pendingDeletion;
+  SavedMealModel? mealDraft;
+
+  TrackerProvider({
+    TrackerApi? trackerApi,
+    DiaryRecoveryStore? recoveryStore,
+    this.undoWindow = const Duration(seconds: 10),
+  }) : _trackerApi = trackerApi ?? TrackerApi(),
+       _recovery = recoveryStore,
+       selectedDate = _midnightOf(DateTime.now());
+
+  @override
+  void dispose() {
+    _undoTimer?.cancel();
+    _recoveryGeneration++;
+    super.dispose();
+  }
+
+  void _notifyRecovery() => notifyListeners();
 
   // ---- error localization --------------------------------------------------
 
@@ -81,7 +163,9 @@ class TrackerProvider extends ChangeNotifier {
     final key = tracker.errorMessageKey;
     if (key != null) {
       final fromL10n = l10n.lookup(key);
-      if (fromL10n != null) return fromL10n;
+      if (fromL10n != null) {
+        return fromL10n;
+      }
     }
     return tracker.errorMessage ?? l10n.commonError;
   }
@@ -97,16 +181,13 @@ class TrackerProvider extends ChangeNotifier {
       foodLogs.fold<double>(0, (sum, f) => sum + f.protein);
 
   /// Sum of every food entry's carbohydrates in grams.
-  double get totalCarbs =>
-      foodLogs.fold<double>(0, (sum, f) => sum + f.carbs);
+  double get totalCarbs => foodLogs.fold<double>(0, (sum, f) => sum + f.carbs);
 
   /// Sum of every food entry's fat in grams.
-  double get totalFat =>
-      foodLogs.fold<double>(0, (sum, f) => sum + f.fat);
+  double get totalFat => foodLogs.fold<double>(0, (sum, f) => sum + f.fat);
 
   /// Sum of every water entry's volume in millilitres.
-  int get totalWaterMl =>
-      waterLogs.fold<int>(0, (sum, w) => sum + w.amount);
+  int get totalWaterMl => waterLogs.fold<int>(0, (sum, w) => sum + w.amount);
 
   /// Food entries grouped by `mealType`. The bucket set is derived
   /// dynamically from whatever meal types are actually present — the
@@ -122,7 +203,8 @@ class TrackerProvider extends ChangeNotifier {
 
   /// Most recent weight in [weightHistory], or `null` if no entries have
   /// been logged yet. The list is already newest-first per the backend.
-  double? get latestWeight => weightHistory.isEmpty ? null : weightHistory.first.weight;
+  double? get latestWeight =>
+      weightHistory.isEmpty ? null : weightHistory.first.weight;
 
   /// Daily water-intake target in millilitres.
   ///
@@ -139,7 +221,9 @@ class TrackerProvider extends ChangeNotifier {
   /// doesn't need to subscribe to the auth provider just to call it
   /// — it can call once per build with the value it already read.
   static int computeDailyWaterGoalMl(double? currentWeightKg) {
-    if (currentWeightKg == null) return 2000;
+    if (currentWeightKg == null) {
+      return 2000;
+    }
     return (currentWeightKg * 35).round();
   }
 
@@ -150,42 +234,100 @@ class TrackerProvider extends ChangeNotifier {
   /// atomically on success. Errors from either call collapse into
   /// [errorMessage].
   Future<void> loadDailyData(DateTime date) async {
-    selectedDate = _midnightOf(date);
+    final day = _midnightOf(date);
+    final request = ++_dailyLoadGeneration;
+    final account = _recoveryGeneration;
+    final revision = _diaryRevision;
+    if (day != selectedDate) {
+      foodLogs = [];
+      waterLogs = [];
+    }
+    selectedDate = day;
     isLoading = true;
     errorMessage = null;
     errorMessageKey = null;
     notifyListeners();
-
     try {
-      // A record of futures resolves to a record of results, preserving
-      // each element's type. A plain `Future.wait([...])` over a mixed
-      // `[Future<List<FoodLogModel>>, Future<List<WaterLogModel>>]` would
-      // collapse to `Future<List<Object>>` and lose the per-list type.
+      try {
+        await _ensureRecoveryLoaded();
+      } catch (_) {
+        /* Recovery banner remains visible. */
+      }
+      if (account != _recoveryGeneration || request != _dailyLoadGeneration) {
+        return;
+      }
       final (food, water) = await (
-        _trackerApi.getDailyFood(selectedDate),
-        _trackerApi.getWaterLogs(selectedDate),
+        _trackerApi.getDailyFood(day),
+        _trackerApi.getWaterLogs(day),
       ).wait;
+      if (account != _recoveryGeneration || request != _dailyLoadGeneration) {
+        return;
+      }
+      if (revision != _diaryRevision) {
+        // A save/undo completed after this read began. Fetch its committed
+        // state instead of replacing newer local entries with an old response.
+        unawaited(loadDailyData(day));
+        return;
+      }
       foodLogs = food;
       waterLogs = water;
-    } on ApiException catch (e) {
-      errorMessage = e.message;
-      errorMessageKey = e.messageKey;
+      dailyDataStale = false;
+      _overlayPendingDeletion();
+      _cacheAfterChange(changed: false);
+    } catch (_) {
+      if (account != _recoveryGeneration || request != _dailyLoadGeneration) {
+        return;
+      }
+      dailyDataStale = true;
+      errorMessageKey = 'commonError';
+      try {
+        final cached = await _recovery?.read('day:${_formatYmd(day)}');
+        if (account != _recoveryGeneration || request != _dailyLoadGeneration) {
+          return;
+        }
+        if (cached != null) {
+          foodLogs = (cached['foods'] as List)
+              .map(
+                (v) =>
+                    FoodLogModel.fromJson(Map<String, dynamic>.from(v as Map)),
+              )
+              .toList();
+          waterLogs = (cached['water'] as List)
+              .map(
+                (v) =>
+                    WaterLogModel.fromJson(Map<String, dynamic>.from(v as Map)),
+              )
+              .toList();
+        }
+      } catch (_) {
+        /* Never discard currently displayed entries on cache failure. */
+      }
+      _overlayPendingDeletion();
     } finally {
-      isLoading = false;
-      notifyListeners();
+      if (account == _recoveryGeneration && request == _dailyLoadGeneration) {
+        isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   /// Loads the full weight history. Independent of [loadDailyData] — the
   /// history endpoint is global, not per-day.
   Future<void> loadWeightHistory() async {
+    final account = _recoveryGeneration;
     try {
-      weightHistory = await _trackerApi.getWeightHistory();
+      final result = await _trackerApi.getWeightHistory();
+      if (account != _recoveryGeneration) {
+        return;
+      }
+      weightHistory = result;
     } on ApiException catch (e) {
       errorMessage = e.message;
       errorMessageKey = e.messageKey;
     } finally {
-      notifyListeners();
+      if (account == _recoveryGeneration) {
+        notifyListeners();
+      }
     }
   }
 
@@ -203,12 +345,20 @@ class TrackerProvider extends ChangeNotifier {
   /// the streak is a "today" concept independent of which
   /// historical day the user is viewing.
   Future<void> loadStreak() async {
+    final request = ++_streakRequest;
+    final account = _recoveryGeneration;
     try {
-      _streak = await _trackerApi.getStreak(DateTime.now());
+      final result = await _trackerApi.getStreak(DateTime.now());
+      if (account != _recoveryGeneration || request != _streakRequest) {
+        return;
+      }
+      _streak = result;
     } on ApiException {
       // Silent per the method doc above.
     } finally {
-      notifyListeners();
+      if (account == _recoveryGeneration && request == _streakRequest) {
+        notifyListeners();
+      }
     }
   }
 
@@ -221,14 +371,7 @@ class TrackerProvider extends ChangeNotifier {
   /// Failures are intentionally non-fatal: the streak badge
   /// staying stale for one extra cycle is a strictly-better UX
   /// than a SnackBar every time someone logs a meal.
-  Future<void> refreshStreakAfterSave() async {
-    try {
-      _streak = await _trackerApi.getStreak(DateTime.now());
-      notifyListeners();
-    } on ApiException {
-      // Silent.
-    }
-  }
+  Future<void> refreshStreakAfterSave() => loadStreak();
 
   /// Adds a new food entry. The server-assigned row (with id +
   /// timestamps) is appended to [foodLogs] on success. Also kicks
@@ -238,7 +381,11 @@ class TrackerProvider extends ChangeNotifier {
     return _runTrackerAction<FoodLogModel>(
       action: () => _trackerApi.addFood(food),
       onSuccess: (saved) {
-        foodLogs = [...foodLogs, saved];
+        if (_midnightOf(saved.date) == selectedDate) {
+          foodLogs = [...foodLogs.where((v) => v.id != saved.id), saved];
+        } else {
+          unawaited(loadDailyData(selectedDate));
+        }
         // Fire-and-forget: refreshStreakAfterSave catches and
         // swallows its own errors, so we don't need to await or
         // handle the result here.
@@ -260,34 +407,20 @@ class TrackerProvider extends ChangeNotifier {
   /// rationale (a regression where these lists became non-growable
   /// caused "Cannot add to a fixed-length list" crashes downstream
   /// at `addLocalFoodEntry` time).
-  Future<bool> deleteFoodEntry(String foodId) {
-    return _runTrackerAction<void>(
-      action: () => _trackerApi.deleteFood(foodId),
-      onSuccess: (_) {
-        foodLogs = foodLogs.where((f) => f.id != foodId).toList();
-      },
-    );
+  Future<bool> deleteFoodEntries(List<String> foodIds) {
+    final ids = foodIds.toSet();
+    final foods = foodLogs.where((food) => ids.contains(food.id)).toList();
+    if (foods.length != ids.length) {
+      return Future.value(false);
+    }
+    return _deleteWithRecovery(foods: foods);
   }
 
-  /// Removes the water entry whose id matches [waterId] from [waterLogs]
-  /// on success. Same no-op-if-unknown semantics as
-  /// [deleteFoodEntry]. The entry must come from TODAY's loaded
-  /// `waterLogs`; the backend endpoint doesn't return entries from
-  /// other days in this query, so deleting an id that's not in the
-  /// current list is silently a no-op (matches the existing
-  /// food-deleted pattern).
-  ///
-  /// List-mutation note: same as [deleteFoodEntry] — `.toList()`
-  /// defaults to `growable: true`; never pass `growable: false`
-  /// here.
-  Future<bool> deleteWaterEntry(String waterId) {
-    return _runTrackerAction<void>(
-      action: () => _trackerApi.deleteWater(waterId),
-      onSuccess: (_) {
-        waterLogs = waterLogs.where((w) => w.id != waterId).toList();
-      },
-    );
-  }
+  Future<bool> deleteFoodEntry(String foodId) => deleteFoodEntries([foodId]);
+
+  Future<bool> deleteWaterEntry(String waterId) => _deleteWithRecovery(
+    water: waterLogs.where((v) => v.id == waterId).toList(),
+  );
 
   /// Adds a water entry to [selectedDate]. The returned row is appended to
   /// [waterLogs]. Also refreshes the streak so the badge in the UI
@@ -296,7 +429,11 @@ class TrackerProvider extends ChangeNotifier {
     return _runTrackerAction<WaterLogModel>(
       action: () => _trackerApi.addWater(selectedDate, amountMl),
       onSuccess: (saved) {
-        waterLogs = [...waterLogs, saved];
+        if (_midnightOf(saved.date) == selectedDate) {
+          waterLogs = [...waterLogs.where((v) => v.id != saved.id), saved];
+        } else {
+          unawaited(loadDailyData(selectedDate));
+        }
         // ignore: discarded_futures
         refreshStreakAfterSave();
       },
@@ -318,7 +455,10 @@ class TrackerProvider extends ChangeNotifier {
           weight: saved.weight,
           note: saved.note,
         );
-        weightHistory = [entry, ...weightHistory];
+        weightHistory = [
+          entry,
+          ...weightHistory.where((v) => v.id != entry.id),
+        ];
       },
     );
   }
@@ -332,9 +472,33 @@ class TrackerProvider extends ChangeNotifier {
   /// Skipped (silently) if a row with the same [FoodLogModel.id] is
   /// already present, so a duplicate notify from racey retry logic
   /// can't produce two entries in the UI list.
+  /// Merge a committed dish in one notification, into its own calendar day only.
+  void addLocalMealEntries(List<FoodLogModel> entries) {
+    final byId = {for (final food in foodLogs) food.id: food};
+    for (final food in entries) {
+      if (_midnightOf(food.date) == selectedDate) {
+        byId[food.id] = food;
+      }
+    }
+    foodLogs = byId.values.toList();
+    _cacheAfterChange();
+    notifyListeners();
+    refreshStreakAfterSave();
+    loadGarden();
+  }
+
   void addLocalFoodEntry(FoodLogModel food) {
-    if (foodLogs.any((f) => f.id == food.id)) return;
+    if (foodLogs.any((f) => f.id == food.id)) {
+      return;
+    }
+    if (_midnightOf(food.date) != selectedDate) {
+      loadDailyData(selectedDate);
+      loadGarden();
+      return;
+    }
     foodLogs = [...foodLogs, food];
+    _cacheAfterChange();
+    loadGarden();
     notifyListeners();
   }
 
@@ -366,10 +530,10 @@ class TrackerProvider extends ChangeNotifier {
   /// crash that triggers only after this method runs first.
   void updateLocalFoodEntry(FoodLogModel updated) {
     final exists = foodLogs.any((f) => f.id == updated.id);
-    if (!exists) return;
-    foodLogs = foodLogs
-        .map((f) => f.id == updated.id ? updated : f)
-        .toList();
+    if (!exists) {
+      return;
+    }
+    foodLogs = foodLogs.map((f) => f.id == updated.id ? updated : f).toList();
     notifyListeners();
   }
 
@@ -402,18 +566,32 @@ class TrackerProvider extends ChangeNotifier {
     BeverageRecognitionResult result, {
     required bool aiGenerated,
   }) {
-    if (!result.autoLogged) return;
-    if (result.nutrition == null) return;
-    if (result.foodLogId == null) return;
+    if (!result.autoLogged) {
+      return;
+    }
+    if (result.nutrition == null) {
+      return;
+    }
+    if (result.foodLogId == null) {
+      return;
+    }
 
     // De-dup on food_log_id (not just on the food entry): a
     // racey retry that re-invokes the same provider method twice
     // would otherwise produce two visible food rows AND two
     // duplicate water rows. Same pattern as addLocalFoodEntry.
-    if (foodLogs.any((f) => f.id == result.foodLogId)) return;
+    if (foodLogs.any((f) => f.id == result.foodLogId)) {
+      return;
+    }
 
     final nutrition = result.nutrition!;
     final loggedAt = result.loggedAt ?? DateTime.now();
+    if (_midnightOf(loggedAt) != selectedDate) {
+      loadDailyData(selectedDate);
+      loadGarden();
+      refreshStreakAfterSave();
+      return;
+    }
 
     final foodLog = FoodLogModel(
       id: result.foodLogId!,
@@ -472,6 +650,7 @@ class TrackerProvider extends ChangeNotifier {
     // applies: plain `.toList()` everywhere (no `growable: false`).
     foodLogs = [...foodLogs, foodLog];
     waterLogs = [...waterLogs, waterLog];
+    _cacheAfterChange();
     notifyListeners();
     // Beverage recognition is its own flow (not routed through
     // _runTrackerAction), so the streak refresh has to be wired
@@ -486,7 +665,7 @@ class TrackerProvider extends ChangeNotifier {
   void clearError() {
     if (errorMessage != null) {
       errorMessage = null;
-    errorMessageKey = null;
+      errorMessageKey = null;
       notifyListeners();
     }
   }
@@ -509,6 +688,8 @@ class TrackerProvider extends ChangeNotifier {
     required Future<T> Function() action,
     required void Function(T result) onSuccess,
   }) async {
+    if (isLoading || _recoveryBusy) return false;
+    final account = _recoveryGeneration;
     isLoading = true;
     errorMessage = null;
     errorMessageKey = null;
@@ -516,13 +697,24 @@ class TrackerProvider extends ChangeNotifier {
 
     try {
       final result = await action();
+      if (account != _recoveryGeneration) {
+        return false;
+      }
       onSuccess(result);
+      _cacheAfterChange();
+      loadGarden();
       return true;
     } on ApiException catch (e) {
+      if (account != _recoveryGeneration) {
+        return false;
+      }
       errorMessage = e.message;
       errorMessageKey = e.messageKey;
       return false;
     } catch (_) {
+      if (account != _recoveryGeneration) {
+        return false;
+      }
       // Defensive: any non-ApiException that escapes the tracker API
       // shouldn't crash the UI. The UI layer resolves `errorMessageKey`
       // via `AppLocalizations.of(context).commonError` for the active
@@ -532,8 +724,10 @@ class TrackerProvider extends ChangeNotifier {
       errorMessageKey = 'commonError';
       return false;
     } finally {
-      isLoading = false;
-      notifyListeners();
+      if (account == _recoveryGeneration) {
+        isLoading = false;
+        notifyListeners();
+      }
     }
   }
 

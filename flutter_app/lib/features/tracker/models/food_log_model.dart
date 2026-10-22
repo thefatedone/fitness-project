@@ -11,6 +11,8 @@
 class FoodLogModel {
   /// Server-assigned UUID.
   final String id;
+  final String? mealId;
+  final String? mealName;
 
   /// Owning user's UUID.
   final String userId;
@@ -68,6 +70,8 @@ class FoodLogModel {
     required this.unit,
     required this.aiGenerated,
     required this.createdAt,
+    this.mealId,
+    this.mealName,
     this.fiber,
     this.photoUrl,
   });
@@ -76,6 +80,8 @@ class FoodLogModel {
   factory FoodLogModel.fromJson(Map<String, dynamic> json) {
     return FoodLogModel(
       id: json['id'] as String,
+      mealId: json['meal_id'] as String?,
+      mealName: json['meal_name'] as String?,
       userId: json['user_id'] as String,
       date: DateTime.parse(json['date'] as String),
       mealType: json['meal_type'] as String,
@@ -112,6 +118,16 @@ class FoodLogModel {
       if (photoUrl != null) 'photo_url': photoUrl,
     };
   }
+
+  Map<String, dynamic> toCacheJson() => {
+    ...toCreateJson(),
+    'id': id,
+    'user_id': userId,
+    'ai_generated': aiGenerated,
+    'created_at': createdAt.toIso8601String(),
+    'meal_id': mealId,
+    'meal_name': mealName,
+  };
 
   /// Coerces a JSON `number` (which the backend may serialise as `int` or
   /// `double`) to `double`. Returns `0` only when the field is genuinely

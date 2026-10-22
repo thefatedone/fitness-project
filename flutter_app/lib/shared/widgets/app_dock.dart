@@ -48,13 +48,9 @@ class DockItem {
 /// itself is just the visual + interaction — the parent decides where
 /// it sits, when it appears, and what it overlaps.
 ///
-/// Why a Stack / Positioned parent rather than `bottomNavigationBar`:
-/// `Scaffold.bottomNavigationBar` reserves a permanent strip of the
-/// Scaffold's body area for itself (it never overlaps the content).
-/// The Dock is intended to OVERLAP the scrolling body — content
-/// scrolls under it — which requires the Dock to be a child of a
-/// Stack rather than a Scaffold slot. The body ListView picks up the
-/// extra bottom padding so its last item still clears the Dock.
+/// Works in a Scaffold.bottomNavigationBar slot, which reserves the dock's
+/// measured height, or in an explicitly positioned overlay on other screens.
+/// The Center shrink-wraps vertically so it never consumes the whole body.
 ///
 /// Visual treatment is delegated to [GlassSurface] (with the
 /// `dockRadius` corner), so every other glass surface in the app
@@ -110,6 +106,7 @@ class _AppDockState extends State<AppDock> {
     return Padding(
       padding: EdgeInsets.only(bottom: bottomMargin),
       child: Center(
+        heightFactor: 1,
         child: ConstrainedBox(
           // Keeps the Dock from ever stretching edge-to-edge on
           // tablets. The hard cap at 480 is roughly the
@@ -203,8 +200,9 @@ class _DockIcon extends StatelessWidget {
                   boxShadow: item.emphasized
                       ? [
                           BoxShadow(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.35),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.35,
+                            ),
                             blurRadius: 10,
                             spreadRadius: 0,
                             offset: const Offset(0, 4),

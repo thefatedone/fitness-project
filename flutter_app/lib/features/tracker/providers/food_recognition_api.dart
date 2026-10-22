@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../../../core/api/api_client.dart';
 import '../../auth/providers/auth_api.dart';
 import '../models/food_recognition_result.dart';
+import '../services/save_coordinator.dart';
 
 /// HTTP client for the AI-powered food-recognition endpoints.
 ///
@@ -35,45 +36,9 @@ class FoodRecognitionApi {
   Future<FoodRecognitionResult> recognizeAndLog({
     required File imageFile,
     required String mealType,
-  }) async {
-    try {
-      final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(
-          imageFile.path,
-          filename: filenameFromPath(imageFile.path),
-        ),
-      });
-
-      final res = await _dio.post<Map<String, dynamic>>(
-        '/food/recognize-and-log',
-        data: formData,
-        queryParameters: {'meal_type': mealType},
-        options: Options(
-          sendTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 30),
-        ),
-      );
-
-      final body = res.data;
-      if (body == null) {
-        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
-      }
-      return FoodRecognitionResult.fromJson(body);
-    } on DioException catch (e) {
-      // The backend's raw 422 detail is English and not very helpful to
-      // a user staring at a photo of their lunch; surface a friendlier
-      // localized hint for *this specific endpoint* only. The English
-      // string doubles as a last-ditch fallback for callers that don't
-      // resolve `messageKey` through `AppLocalizations`.
-      if (e.response?.statusCode == 422) {
-        throw const ApiException(
-          'Could not recognize the dish in the photo. Try a clearer photo.',
-          messageKey: 'userFacingErrorFoodPhotoRecognize',
-        );
-      }
-      throw ApiException.fromDioError(e);
-    }
-  }
+  }) => saveCoordinator.photo('/food/recognize-and-log', imageFile, {
+    'meal_type': mealType,
+  }, FoodRecognitionResult.fromJson);
 
   /// Gemini-backed food recognition — edited text → row UPDATE in place.
   ///
@@ -111,7 +76,10 @@ class FoodRecognitionApi {
 
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
+        throw const ApiException(
+          'Server returned an empty response.',
+          messageKey: 'userFacingErrorServerEmpty',
+        );
       }
       return FoodRecognitionResult.fromJson(body);
     } on DioException catch (e) {

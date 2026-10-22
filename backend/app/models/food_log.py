@@ -17,6 +17,8 @@ class FoodLog(Base):
     user_id      = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     date         = Column(DateTime, nullable=False, index=True)
     meal_type    = Column(String, nullable=False)
+    meal_id      = Column(String, ForeignKey("saved_meals.id", ondelete="SET NULL"), nullable=True, index=True)
+    meal_name    = Column(String, nullable=True)
     food_name    = Column(String, nullable=False)
     calories     = Column(Float, nullable=False)
     protein      = Column(Float, nullable=False)

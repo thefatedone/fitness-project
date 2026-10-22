@@ -1592,4 +1592,218 @@ class AppLocalizationsKa extends AppLocalizations {
 
   @override
   String get balanceProtein => 'ცილები';
+
+  @override
+  String get bulkDeleteTitle => 'წაიშალოს საკვების ჩანაწერები?';
+
+  @override
+  String get bulkDeleteExplanation =>
+      'ამ კვების ყველა ჩანაწერი მონიშნულია. მოხსენი მონიშვნა იმას, რისი დატოვებაც გსურს. წაშლის გაუქმება შეუძლებელია.';
+
+  @override
+  String get bulkDeleteTooltip => 'კვების ჩანაწერების წაშლა';
+
+  @override
+  String bulkDeleteCount(int count) {
+    return 'წაშლა ($count)';
+  }
+
+  @override
+  String get bulkDeleteSuccess => 'მონიშნული ჩანაწერები წაიშალა';
+
+  @override
+  String get gardenTitle => 'ჩემი ბაღი';
+
+  @override
+  String get gardenAvocado => 'შენი ავოკადო';
+
+  @override
+  String get gardenIntro => 'პატარა ნაბიჯები. ცოცხალი შედეგი.';
+
+  @override
+  String get gardenSeed => 'კურკა';
+
+  @override
+  String get gardenRoot => 'პირველი ფესვი';
+
+  @override
+  String get gardenSprout => 'ყლორტი';
+
+  @override
+  String get gardenLeaves => 'პირველი ფოთლები';
+
+  @override
+  String get gardenTree => 'ხე გაიზარდა';
+
+  @override
+  String get gardenLoading => 'შენი ბაღი იტვირთება…';
+
+  @override
+  String get gardenLoadFailed => 'ბაღის ჩატვირთვა ვერ მოხერხდა';
+
+  @override
+  String get gardenRetry => 'ბაღის განახლება';
+
+  @override
+  String get gardenStale =>
+      'ნაჩვენებია შენახული პროგრესი. კავშირის აღდგენისას განაახლე ბაღი.';
+
+  @override
+  String get gardenOpen => 'ჩემი ბაღის გახსნა';
+
+  @override
+  String gardenNextDays(int count) {
+    return 'შემდეგ ეტაპამდე: $count დღე';
+  }
+
+  @override
+  String get gardenMatureHint =>
+      'შემდეგი დღე საკვების ჩანაწერით ახალ ავოკადოს დარგავს.';
+
+  @override
+  String get gardenTodayDone => 'დღევანდელი ნაბიჯი მიღებულია';
+
+  @override
+  String get gardenTodayPrompt => 'ჩაწერე საკვები — მიიღე ნაბიჯი';
+
+  @override
+  String get gardenWeeklyTitle => 'ამ კვირაში';
+
+  @override
+  String get gardenWeeklyBody => 'ჩაწერე საკვები კვირის ნებისმიერ 4 დღეს.';
+
+  @override
+  String get gardenWeekDone => 'ოთხი დღე აღინიშნა. თბილი ქოთანი გაიხსნა!';
+
+  @override
+  String get gardenPotOwned =>
+      'თბილი ქოთანი უკვე შენია. გააგრძელე საკუთარი ტემპით.';
+
+  @override
+  String get gardenPotReward => 'ჯილდო — თბილი კერამიკული ქოთანი.';
+
+  @override
+  String gardenGrowthCount(int count) {
+    return 'ზრდის დღეები: $count / 21';
+  }
+
+  @override
+  String gardenCollection(int count) {
+    return 'გაზრდილი ხეები: $count';
+  }
+
+  @override
+  String get gardenRules =>
+      'დღე საკვების ჩანაწერით ზრდის ერთ ნაბიჯს გაძლევს. ავოკადოს ჭამა აუცილებელი არ არის. წყალი და სასმელები ნაბიჯებს არ იძლევა. გამოტოვებული დღეები და წაშლილი ჩანაწერები მიღებულ ზრდას არ აკლებს.';
+
+  @override
+  String get gardenAddMeal => 'საკვების დამატება';
+
+  @override
+  String get gardenEarnStep => 'ზრდის ნაბიჯის მიღება';
+
+  @override
+  String get gardenStagesTitle => 'ზრდის ეტაპები';
+
+  @override
+  String get gardenPreview => 'ეტაპის გადახედვა';
+
+  @override
+  String get gardenReturnToPlant => 'ჩემი მცენარე';
+
+  @override
+  String get mealLibrary => 'ჩემი კერძები';
+
+  @override
+  String get mealLibraryEmpty =>
+      'აქ გამოჩნდება ამოცნობილი და შენახული კერძები.';
+
+  @override
+  String get mealRepeat => 'კერძის გამეორება';
+
+  @override
+  String get mealNameLabel => 'კერძის სახელი';
+
+  @override
+  String get mealDefaultName => 'ჩემი კერძი';
+
+  @override
+  String get mealAddIngredient => 'ინგრედიენტის დამატება';
+
+  @override
+  String get mealEditIngredient => 'ინგრედიენტის შეცვლა';
+
+  @override
+  String get mealIngredientGrams => 'პორცია, გ';
+
+  @override
+  String get mealNutritionForPortion =>
+      'კვებითი ღირებულება ამ პორციისთვის. სახელის შეცვლა კვებით ღირებულებას არ ითვლის თავიდან.';
+
+  @override
+  String get mealInvalidValue => 'შეიყვანეთ სწორი მნიშვნელობა';
+
+  @override
+  String get mealSaveRetry =>
+      'შენახვა ვერ დადასტურდა. იმავე მცდელობის შესამოწმებლად კვლავ დააჭირეთ შენახვას. ინგრედიენტები ამ ეკრანზე რჩება.';
+
+  @override
+  String get mealRetry => 'ხელახლა ცდა';
+
+  @override
+  String get mealSaving => 'ინახება…';
+
+  @override
+  String get diaryUndo => 'გაუქმება';
+
+  @override
+  String get diaryDeleted => 'ჩანაწერი წაიშალა';
+
+  @override
+  String get diaryDeleteUnconfirmed =>
+      'წაშლა ვერ დადასტურდა. ჩანაწერები შენარჩუნებულია. სცადეთ ხელახლა ან გააუქმეთ წაშლა.';
+
+  @override
+  String get diaryRestorePending =>
+      'ჩანაწერები აღდგენილია მოწყობილობაზე. სერვერთან დასადასტურებლად სცადეთ ხელახლა.';
+
+  @override
+  String get diaryOfflineCache =>
+      'სერვერი მიუწვდომელია. ხელმისაწვდომია მხოლოდ ადრე ჩატვირთული ჩანაწერები.';
+
+  @override
+  String get diaryLocalSaveError =>
+      'აღდგენის მონაცემები მოწყობილობაზე ვერ შეინახა. ახალი წაშლა არ გაგზავნილა.';
+
+  @override
+  String get diaryMealDraft =>
+      'გაქვთ დაუსრულებელი კერძი. ინგრედიენტები მოწყობილობაზეა შენახული.';
+
+  @override
+  String get diaryResumeMeal => 'კერძის გახსნა';
+
+  @override
+  String get diaryFinishPreviousMeal =>
+      'ჯერ გახსენით და დაასრულეთ წინა კერძი. მონახაზი დღიურის ეკრანზეა ხელმისაწვდომი.';
+
+  @override
+  String get savePendingDifferent =>
+      'წინა შენახვა დაუდასტურებელია. მონაცემების შეცვლამდე შეამოწმეთ იგი დღიურის ეკრანზე.';
+
+  @override
+  String get savePendingTitle => 'შენახვა დადასტურებას ელოდება';
+
+  @override
+  String get saveCheck => 'შენახვის შემოწმება';
+
+  @override
+  String get saveConfirmed => 'შენახვა დადასტურდა';
+
+  @override
+  String get savePhotoRetry =>
+      'შედეგი ჯერ დაუდასტურებელია. სცადეთ ისევ იმავე ფოტოთი.';
+
+  @override
+  String get saveAlreadyDeleted =>
+      'ეს ჩანაწერი შენახვის შემდეგ წაიშალა. ხელახალი ცდა მას აღარ დაამატებს.';
 }

@@ -18,6 +18,18 @@ extension AppLocalizationsLookup on AppLocalizations {
   /// returns `null`.
   String? lookup(String key) {
     switch (key) {
+      case 'savePendingDifferent':
+        return savePendingDifferent;
+      case 'savePhotoRetry':
+        return savePhotoRetry;
+      case 'saveAlreadyDeleted':
+        return saveAlreadyDeleted;
+      case 'mealSaving':
+        return mealSaving;
+      case 'userFacingErrorFoodPhotoRecognize':
+        return userFacingErrorFoodPhotoRecognize;
+      case 'userFacingErrorBeverageRecognize':
+        return userFacingErrorBeverageRecognize;
       // Common.
       case 'commonError':
         return commonError;

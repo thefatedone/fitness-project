@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../l10n/gen/app_localizations.dart';
 import '../models/food_log_model.dart';
+import 'saved_meals_screen.dart';
 import '../providers/tracker_provider.dart';
 
 /// Manual food-entry form.
@@ -21,6 +22,7 @@ class AddFoodScreen extends StatefulWidget {
 
 class _AddFoodScreenState extends State<AddFoodScreen> {
   final _formKey = GlobalKey<FormState>();
+  bool _saveInProgress = false;
 
   // Controllers — kept here so we don't fight Flutter over managed state.
   final _nameCtrl = TextEditingController();
@@ -123,7 +125,9 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
   // ---- submit ----------------------------------------------------------------
 
   Future<void> _onSubmit() async {
+    if (_saveInProgress || context.read<TrackerProvider>().isLoading) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _saveInProgress = true);
 
     // Build a FoodLogModel. Server-managed fields (id, user_id,
     // ai_generated, created_at) are placeholder values — toCreateJson()
@@ -153,6 +157,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     final tracker = context.read<TrackerProvider>();
     final ok = await tracker.addFoodEntry(food);
     if (!mounted) return;
+    if (!ok) setState(() => _saveInProgress = false);
 
     if (ok) {
       Navigator.of(context).pop<FoodLogModel>(food);
@@ -181,6 +186,18 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.addFoodTitle),
+        actions: [
+          IconButton(
+            tooltip: l10n.mealLibrary,
+            icon: const Icon(Icons.bookmark_border),
+            onPressed: () async {
+              final saved = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(builder: (_) => const SavedMealsScreen()),
+              );
+              if (saved == true && context.mounted) Navigator.of(context).pop();
+            },
+          ),
+        ],
         backgroundColor: theme.colorScheme.surface,
       ),
       body: SafeArea(

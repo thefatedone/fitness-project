@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../../../core/api/api_client.dart';
 import '../../auth/providers/auth_api.dart';
 import '../models/beverage_result.dart';
+import '../services/save_coordinator.dart';
 
 /// HTTP client for the beverage-recognition endpoints.
 ///
@@ -36,45 +37,13 @@ class BeverageApi {
   /// the same slow path regardless of whether the prompt is
   /// food-shaped or beverage-shaped, so the rationale carries
   /// over.
-  Future<BeverageRecognitionResult> recognizeBeverage(File imageFile) async {
-    try {
-      final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(
-          imageFile.path,
-          filename: _filenameFromPath(imageFile.path),
-        ),
-      });
-
-      final res = await _dio.post<Map<String, dynamic>>(
+  Future<BeverageRecognitionResult> recognizeBeverage(File imageFile) =>
+      saveCoordinator.photo(
         '/food/recognize-beverage',
-        data: formData,
-        options: Options(
-          sendTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 30),
-        ),
+        imageFile,
+        const {},
+        BeverageRecognitionResult.fromJson,
       );
-
-      final body = res.data;
-      if (body == null) {
-        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
-      }
-      return BeverageRecognitionResult.fromJson(body);
-    } on DioException catch (e) {
-      // Same friendlier-Russian-hint pattern as
-      // [FoodRecognitionApi.recognizeAndLog], adapted for the
-      // beverage path: a 422 here usually means Gemini's
-      // beverage output was unparseable (too ambiguous, or the
-      // photo wasn't actually a drink). Asking the user to try
-      // a different photo is the productive next step.
-      if (e.response?.statusCode == 422) {
-        throw const ApiException(
-          'Could not recognize the beverage. Try a different photo.',
-          messageKey: 'userFacingErrorBeverageRecognize',
-        );
-      }
-      throw ApiException.fromDioError(e);
-    }
-  }
 
   /// User-confirmed values → dual-write.
   ///
@@ -98,30 +67,15 @@ class BeverageApi {
     double carbs = 0,
     double fat = 0,
     double sugarG = 0,
-  }) async {
-    try {
-      final res = await _dio.post<Map<String, dynamic>>(
-        '/food/log-beverage-manual',
-        data: {
-          'beverage_name': beverageName,
-          'volume_ml': volumeMl,
-          'calories': calories,
-          'protein': protein,
-          'carbs': carbs,
-          'fat': fat,
-          'sugar_g': sugarG,
-        },
-      );
-
-      final body = res.data;
-      if (body == null) {
-        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
-      }
-      return BeverageRecognitionResult.fromJson(body);
-    } on DioException catch (e) {
-      throw ApiException.fromDioError(e);
-    }
-  }
+  }) => saveCoordinator.json('/food/log-beverage-manual', {
+    'beverage_name': beverageName,
+    'volume_ml': volumeMl,
+    'calories': calories,
+    'protein': protein,
+    'carbs': carbs,
+    'fat': fat,
+    'sugar_g': sugarG,
+  }, BeverageRecognitionResult.fromJson);
 
   /// Extracts the basename of [path] (the segment after the last
   /// separator) as the upload filename. Falls back to
@@ -193,7 +147,10 @@ class BeverageApi {
 
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
+        throw const ApiException(
+          'Server returned an empty response.',
+          messageKey: 'userFacingErrorServerEmpty',
+        );
       }
       return body;
     } on DioException catch (e) {

@@ -1,3 +1,4 @@
+import 'core/performance/performance_monitor.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -40,6 +41,7 @@ void main() {
   // `tryAutoLogin`) before `runApp` is invoked. The call is
   // idempotent — Flutter's runtime skips the second invocation.
   WidgetsFlutterBinding.ensureInitialized();
+  PerformanceMonitor.installIfEnabled();
 
   // Single instance — used both for the provider tree below AND for
   // the apiClient 401 hook. The hook has to be set before runApp so a
@@ -98,8 +100,10 @@ void main() {
         // exhaustive switch because the *watched* instance's status
         // would never change).
         ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
-        ChangeNotifierProvider<TrackerProvider>(
+        ChangeNotifierProxyProvider2<AuthProvider, ApiEnvironmentProvider, TrackerProvider>(
           create: (_) => TrackerProvider(),
+          update: (_, auth, environment, tracker) => (tracker ?? TrackerProvider())
+            ..bindAccount(auth.currentUser?.id, environment: apiClient.dio.options.baseUrl),
         ),
         ChangeNotifierProvider<FoodRecognitionProvider>(
           create: (_) => FoodRecognitionProvider(),
@@ -193,8 +197,10 @@ class NutriMindApp extends StatelessWidget {
           // here — AuthGate will render a spinner while it resolves.
           create: (_) => AuthProvider()..tryAutoLogin(),
         ),
-        ChangeNotifierProvider<TrackerProvider>(
+        ChangeNotifierProxyProvider2<AuthProvider, ApiEnvironmentProvider, TrackerProvider>(
           create: (_) => TrackerProvider(),
+          update: (_, auth, environment, tracker) => (tracker ?? TrackerProvider())
+            ..bindAccount(auth.currentUser?.id, environment: apiClient.dio.options.baseUrl),
         ),
         ChangeNotifierProvider<FoodRecognitionProvider>(
           create: (_) => FoodRecognitionProvider(),

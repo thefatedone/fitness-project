@@ -1,6 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from app.services.diary_time import diary_date as local_diary_date, local_now
+from app.services.idempotent_save import idempotent_save
+from fastapi import Request, APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, delete
+from sqlalchemy.exc import IntegrityError
+from app.models.saved_meal import SavedMeal
 from datetime import datetime, timedelta
 from typing import List, Set
 from app.core.database import get_db
@@ -9,7 +13,12 @@ from app.core.redis_client import redis_client
 from app.core.security import get_current_user_id
 from app.models.food_log import FoodLog, WeightLog, WaterLog
 from app.schemas.food import (
+    DiaryDeletionRequest,
+    DiaryDeletionResponse,
+    MealCreate,
+    SavedMealResponse,
     FoodLogCreate,
+    FoodLogBulkDelete,
     FoodLogResponse,
     WaterLogCreate,
     WaterLogResponse,
@@ -19,6 +28,7 @@ from app.schemas.food import (
     StreakDayEntry,
     StreakResponse,
 )
+from app.services.garden import credit_garden_day, sync_garden
 from app.services.photo_analysis import (
     PHOTO_ANALYSIS_PROMPT,
     PhotoAnalysisResult,
@@ -71,6 +81,25 @@ def parse_query_date(date_str: str) -> datetime:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD or ISO format.")
 
 
+@router.get("/saves/{key}")
+async def check_saved_operation(
+    key: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    from uuid import UUID
+    from app.models.save_operation import SaveOperation
+    from app.services.idempotent_save import replay_save
+    try:
+        key = str(UUID(key))
+    except ValueError:
+        raise HTTPException(400, "Invalid save ID")
+    operation = await db.get(SaveOperation, (user_id, key))
+    if operation is None or operation.response is None:
+        raise HTTPException(404, "Save not confirmed yet")
+    return await replay_save(db, operation)
+
+
 @router.get("/daily", response_model=List[FoodLogResponse])
 async def get_daily_food(
     date_str: str = Query(...),
@@ -95,7 +124,9 @@ async def get_daily_food(
 
 
 @router.post("/food", response_model=FoodLogResponse)
+@idempotent_save
 async def add_food_log(
+    _request: Request,
     food_data: FoodLogCreate,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
@@ -103,7 +134,7 @@ async def add_food_log(
     """Add a new food log entry"""
     food_log = FoodLog(
         user_id=user_id,
-        date=food_data.date,
+        date=local_diary_date(food_data.date, _request),
         meal_type=food_data.meal_type,
         food_name=food_data.food_name,
         calories=food_data.calories,
@@ -118,9 +149,73 @@ async def add_food_log(
     )
 
     db.add(food_log)
-    await db.commit()
+    # The same transaction saves food and the once-per-day cosmetic credit.
+    # Future diary entries are backfilled only when their calendar day arrives.
+    if food_data.meal_type != "drinks" and local_diary_date(food_data.date, _request).date() <= local_now(_request).date():
+        await credit_garden_day(db, user_id, local_diary_date(food_data.date, _request).date())
+    await db.flush()
     await db.refresh(food_log)
     return food_log
+
+
+@router.get("/meals", response_model=list[SavedMealResponse])
+async def get_saved_meals(
+    limit: int = Query(30, ge=1, le=100),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(SavedMeal).where(SavedMeal.user_id == user_id)
+        .order_by(SavedMeal.created_at.desc(), SavedMeal.id).limit(limit))
+    return [{**meal.payload, "created_at": meal.created_at} for meal in result.scalars()]
+
+
+@router.post("/meals", response_model=list[FoodLogResponse])
+async def save_meal(
+    _request: Request,
+    data: MealCreate,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    # The client keeps this ID while retrying; new repetitions get a new ID.
+    meal_id = str(data.id)
+    payload = data.model_dump(mode="json")
+
+    async def replay(existing):
+        if existing.user_id != user_id:
+            raise HTTPException(404, "Meal not found")
+        if existing.payload != payload:
+            raise HTTPException(409, "This save ID belongs to a different meal")
+        result = await db.execute(select(FoodLog).where(
+            FoodLog.user_id == user_id, FoodLog.meal_id == meal_id).order_by(FoodLog.created_at, FoodLog.id))
+        return result.scalars().all()
+
+    existing = await db.get(SavedMeal, meal_id)
+    if existing:
+        return await replay(existing)
+
+    # Diary dates follow the existing local wall-clock convention.
+    diary_date = local_diary_date(data.date, _request)
+    db.add(SavedMeal(id=meal_id, user_id=user_id, payload=payload))
+    try:
+        # Flush the snapshot first so concurrent retries meet the unique key
+        # before inserting any ingredients or earning a garden day.
+        await db.flush()
+        rows = [FoodLog(user_id=user_id, date=diary_date,
+            meal_type=data.meal_type, meal_id=meal_id, meal_name=data.name,
+            **item.model_dump(), unit="g", ai_generated=False)
+            for item in data.ingredients]
+        db.add_all(rows)
+        if diary_date.date() <= local_now(_request).date():
+            await credit_garden_day(db, user_id, diary_date.date())
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        existing = await db.get(SavedMeal, meal_id)
+        if existing:
+            return await replay(existing)
+        raise
+    # One read for the complete committed dish, also used by retry responses.
+    return await replay(await db.get(SavedMeal, meal_id))
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +430,44 @@ async def analyze_food_photo(
     return result
 
 
+@router.post("/diary/deletion", response_model=DiaryDeletionResponse)
+async def change_diary_deletion(
+    data: DiaryDeletionRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services.diary_deletion import mutate_diary
+    return await mutate_diary(db, user_id, data)
+
+
+@router.post("/food/bulk-delete")
+async def delete_food_logs(
+    payload: FoodLogBulkDelete,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete an explicitly confirmed set of the caller's rows atomically.
+
+    Never infer dish membership from timestamps or meal type: an existing
+    breakfast can contain several independent dishes.
+    """
+    requested = set(payload.food_ids)
+    result = await db.execute(
+        select(FoodLog.id).where(
+            FoodLog.user_id == user_id, FoodLog.id.in_(requested)
+        )
+    )
+    if set(result.scalars().all()) != requested:
+        raise HTTPException(status_code=404, detail="Food logs not found")
+    await db.execute(
+        delete(FoodLog).where(
+            FoodLog.user_id == user_id, FoodLog.id.in_(requested)
+        )
+    )
+    await db.commit()
+    return {"deleted_count": len(requested)}
+
+
 @router.delete("/food/{food_id}")
 async def delete_food_log(
     food_id: str,
@@ -379,7 +512,9 @@ async def get_water_logs(
 
 
 @router.post("/water", response_model=WaterLogResponse)
+@idempotent_save
 async def add_water_log(
+    _request: Request,
     water_data: WaterLogCreate,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
@@ -387,12 +522,12 @@ async def add_water_log(
     """Add a water log entry"""
     water_log = WaterLog(
         user_id=user_id,
-        date=water_data.date,
+        date=local_diary_date(water_data.date, _request),
         amount=water_data.amount
     )
 
     db.add(water_log)
-    await db.commit()
+    await db.flush()
     await db.refresh(water_log)
     return water_log
 
@@ -415,6 +550,15 @@ async def delete_water_log(
     await db.delete(water_log)
     await db.commit()
     return {"message": "Deleted"}
+
+
+@router.post("/garden/sync")
+async def get_garden_snapshot(
+    today_str: str = Query(...),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sync_garden(db, user_id, parse_query_date(today_str).date())
 
 
 @router.get("/streak", response_model=StreakResponse)
@@ -591,7 +735,9 @@ async def get_weight_logs(
 
 
 @router.post("/weight", response_model=WeightLogResponse)
+@idempotent_save
 async def add_weight_log(
+    _request: Request,
     weight_data: WeightLogCreate,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
@@ -599,13 +745,13 @@ async def add_weight_log(
     """Add a weight log entry"""
     weight_log = WeightLog(
         user_id=user_id,
-        date=weight_data.date,
+        date=local_diary_date(weight_data.date, _request),
         weight=weight_data.weight,
         note=weight_data.note
     )
 
     db.add(weight_log)
-    await db.commit()
+    await db.flush()
     await db.refresh(weight_log)
     return weight_log
 

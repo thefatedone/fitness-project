@@ -1614,4 +1614,218 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get balanceProtein => 'Белки';
+
+  @override
+  String get bulkDeleteTitle => 'Удалить записи еды?';
+
+  @override
+  String get bulkDeleteExplanation =>
+      'Выбраны все записи этого приёма пищи. Сними отметки с того, что нужно оставить. Удаление нельзя отменить.';
+
+  @override
+  String get bulkDeleteTooltip => 'Удалить записи приёма пищи';
+
+  @override
+  String bulkDeleteCount(int count) {
+    return 'Удалить ($count)';
+  }
+
+  @override
+  String get bulkDeleteSuccess => 'Выбранные записи удалены';
+
+  @override
+  String get gardenTitle => 'Мой сад';
+
+  @override
+  String get gardenAvocado => 'Твоё авокадо';
+
+  @override
+  String get gardenIntro => 'Небольшие шаги. Живой результат.';
+
+  @override
+  String get gardenSeed => 'Косточка';
+
+  @override
+  String get gardenRoot => 'Первый корешок';
+
+  @override
+  String get gardenSprout => 'Росток';
+
+  @override
+  String get gardenLeaves => 'Первые листья';
+
+  @override
+  String get gardenTree => 'Дерево выросло';
+
+  @override
+  String get gardenLoading => 'Загружаем твой сад…';
+
+  @override
+  String get gardenLoadFailed => 'Не удалось загрузить сад';
+
+  @override
+  String get gardenRetry => 'Обновить сад';
+
+  @override
+  String get gardenStale =>
+      'Показан сохранённый прогресс. Обнови сад при подключении к сети.';
+
+  @override
+  String get gardenOpen => 'Открыть мой сад';
+
+  @override
+  String gardenNextDays(int count) {
+    return 'До следующего этапа: $count дн.';
+  }
+
+  @override
+  String get gardenMatureHint =>
+      'Следующий день с записью посадит новое авокадо.';
+
+  @override
+  String get gardenTodayDone => 'Сегодня шаг получен';
+
+  @override
+  String get gardenTodayPrompt => 'Запиши еду — получи шаг';
+
+  @override
+  String get gardenWeeklyTitle => 'На этой неделе';
+
+  @override
+  String get gardenWeeklyBody => 'Добавь еду в дневник в любые 4 дня недели.';
+
+  @override
+  String get gardenWeekDone => 'Четыре дня отмечены. Тёплый горшок открыт!';
+
+  @override
+  String get gardenPotOwned =>
+      'Тёплый горшок уже твой. Продолжай в своём ритме.';
+
+  @override
+  String get gardenPotReward => 'Награда — тёплый керамический горшок.';
+
+  @override
+  String gardenGrowthCount(int count) {
+    return 'Дней роста: $count / 21';
+  }
+
+  @override
+  String gardenCollection(int count) {
+    return 'Деревьев выращено: $count';
+  }
+
+  @override
+  String get gardenRules =>
+      'Один день с записью еды — один шаг роста. Авокадо есть необязательно. Вода и напитки не дают шагов. Пропуски и удаление записей не отнимают полученный рост.';
+
+  @override
+  String get gardenAddMeal => 'Добавить еду';
+
+  @override
+  String get gardenEarnStep => 'Получить шаг роста';
+
+  @override
+  String get gardenStagesTitle => 'Этапы роста';
+
+  @override
+  String get gardenPreview => 'Предпросмотр этапа';
+
+  @override
+  String get gardenReturnToPlant => 'Моё растение';
+
+  @override
+  String get mealLibrary => 'Мои блюда';
+
+  @override
+  String get mealLibraryEmpty =>
+      'Здесь появятся блюда, которые вы распознали и сохранили.';
+
+  @override
+  String get mealRepeat => 'Повторить блюдо';
+
+  @override
+  String get mealNameLabel => 'Название блюда';
+
+  @override
+  String get mealDefaultName => 'Моё блюдо';
+
+  @override
+  String get mealAddIngredient => 'Добавить ингредиент';
+
+  @override
+  String get mealEditIngredient => 'Изменить ингредиент';
+
+  @override
+  String get mealIngredientGrams => 'Порция, г';
+
+  @override
+  String get mealNutritionForPortion =>
+      'КБЖУ для этой порции. Изменение названия не пересчитывает пищевую ценность.';
+
+  @override
+  String get mealInvalidValue => 'Введите корректное значение';
+
+  @override
+  String get mealSaveRetry =>
+      'Не удалось подтвердить сохранение. Нажмите «Сохранить» ещё раз, чтобы проверить и повторить ту же попытку. Состав блюда сохранён на этом экране.';
+
+  @override
+  String get mealRetry => 'Повторить';
+
+  @override
+  String get mealSaving => 'Сохраняем…';
+
+  @override
+  String get diaryUndo => 'Отменить';
+
+  @override
+  String get diaryDeleted => 'Запись удалена';
+
+  @override
+  String get diaryDeleteUnconfirmed =>
+      'Удаление не подтверждено. Записи сохранены на этом экране. Повторите попытку или отмените удаление.';
+
+  @override
+  String get diaryRestorePending =>
+      'Записи восстановлены на устройстве. Нажмите «Повторить», чтобы подтвердить восстановление на сервере.';
+
+  @override
+  String get diaryOfflineCache =>
+      'Сервер недоступен. Доступны только ранее загруженные записи.';
+
+  @override
+  String get diaryLocalSaveError =>
+      'Не удалось сохранить данные восстановления на устройстве. Новое удаление не отправлено.';
+
+  @override
+  String get diaryMealDraft =>
+      'Есть незавершённое блюдо. Его состав сохранён на устройстве.';
+
+  @override
+  String get diaryResumeMeal => 'Открыть блюдо';
+
+  @override
+  String get diaryFinishPreviousMeal =>
+      'Сначала откройте и завершите предыдущее блюдо. Черновик доступен на главном экране.';
+
+  @override
+  String get savePendingDifferent =>
+      'Предыдущее сохранение не подтверждено. Проверьте его на главном экране перед изменением данных.';
+
+  @override
+  String get savePendingTitle => 'Сохранение ожидает подтверждения';
+
+  @override
+  String get saveCheck => 'Проверить сохранение';
+
+  @override
+  String get saveConfirmed => 'Сохранение подтверждено';
+
+  @override
+  String get savePhotoRetry =>
+      'Результат пока не подтверждён. Повторите попытку с тем же фото.';
+
+  @override
+  String get saveAlreadyDeleted =>
+      'Эта запись была сохранена, а затем удалена. Повтор не добавит её заново.';
 }

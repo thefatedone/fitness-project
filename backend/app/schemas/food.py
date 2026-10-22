@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Optional, Literal
+from uuid import UUID
 from datetime import datetime
 
 
@@ -21,9 +22,15 @@ class FoodLogCreate(FoodLogBase):
     pass
 
 
+class FoodLogBulkDelete(BaseModel):
+    food_ids: list[str] = Field(..., min_length=1, max_length=500)
+
+
 class FoodLogResponse(FoodLogBase):
     id: str
     user_id: str
+    meal_id: Optional[str] = None
+    meal_name: Optional[str] = None
     ai_generated: bool = False
     created_at: datetime
 
@@ -218,3 +225,58 @@ class StreakResponse(BaseModel):
     history: list[StreakDayEntry]
     next_milestone: int | None
     days_to_next_milestone: int | None
+
+
+class MealIngredient(BaseModel):
+    food_name: str = Field(min_length=1, max_length=200)
+    quantity: float = Field(gt=0, le=100000, allow_inf_nan=False)
+    calories: float = Field(ge=0, le=100000, allow_inf_nan=False)
+    protein: float = Field(ge=0, le=100000, allow_inf_nan=False)
+    carbs: float = Field(ge=0, le=100000, allow_inf_nan=False)
+    fat: float = Field(ge=0, le=100000, allow_inf_nan=False)
+
+    @field_validator("food_name")
+    @classmethod
+    def clean_name(cls, value):
+        value = value.strip()
+        if not value:
+            raise ValueError("Ingredient name must not be blank")
+        return value
+
+
+class MealCreate(BaseModel):
+    id: UUID
+    name: str = Field(min_length=1, max_length=200)
+    date: datetime
+    meal_type: Literal["breakfast", "lunch", "dinner", "snack"]
+    ingredients: list[MealIngredient] = Field(min_length=1, max_length=100)
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, value):
+        value = value.strip()
+        if not value:
+            raise ValueError("Meal name must not be blank")
+        return value
+
+
+class SavedMealResponse(MealCreate):
+    created_at: datetime
+
+
+class DiaryDeletionRequest(BaseModel):
+    id: UUID
+    food_ids: list[str] = Field(default_factory=list, max_length=500)
+    water_ids: list[str] = Field(default_factory=list, max_length=500)
+    restore: bool = False
+
+    @model_validator(mode="after")
+    def require_selection(self):
+        if not self.food_ids and not self.water_ids:
+            raise ValueError("Select at least one diary entry")
+        return self
+
+
+class DiaryDeletionResponse(BaseModel):
+    id: UUID
+    state: Literal["deleted", "restored"]

@@ -45,8 +45,8 @@ class FoodRecognitionProvider extends ChangeNotifier {
   /// Most recent successful meal-photo (multi-item) analysis, or
   /// `null` if none / cleared. Distinct from [lastResult] because the
   /// shapes are intentionally different: this one is a list of items
-  /// the user reviews and POSTs individually via
-  /// `trackerProvider.addFoodEntry(...)`, not a single already-saved
+  /// the user reviews and saves atomically via `/tracker/meals`,
+  /// not a single already-saved
   /// row. The single-item screen renders [lastResult]; the meal-photo
   /// screen renders [lastMealAnalysis].
   MealAnalysisResult? lastMealAnalysis;
@@ -112,6 +112,7 @@ class FoodRecognitionProvider extends ChangeNotifier {
     required String mealType,
     required TrackerProvider trackerProvider,
   }) async {
+    if (isAnalyzing) return false;
     isAnalyzing = true;
     errorMessage = null;
     lastResult = null;
@@ -160,6 +161,7 @@ class FoodRecognitionProvider extends ChangeNotifier {
       // The 422 message has already been humanised by
       // `FoodRecognitionApi`; we just forward it.
       errorMessage = e.message;
+      errorMessageKey = e.messageKey;
       isAnalyzing = false;
       notifyListeners();
       return false;
@@ -193,6 +195,7 @@ class FoodRecognitionProvider extends ChangeNotifier {
     required String description,
     required TrackerProvider trackerProvider,
   }) async {
+    if (isAnalyzing) return false;
     isAnalyzing = true;
     errorMessage = null;
     lastResult = null;
@@ -248,6 +251,7 @@ class FoodRecognitionProvider extends ChangeNotifier {
       // The 422 message has already been humanised by
       // `FoodRecognitionApi`; we just forward it.
       errorMessage = e.message;
+      errorMessageKey = e.messageKey;
       isAnalyzing = false;
       notifyListeners();
       return false;
@@ -293,6 +297,7 @@ class FoodRecognitionProvider extends ChangeNotifier {
     required String mealType,
     required TrackerProvider trackerProvider,
   }) async {
+    if (isAnalyzing) return false;
     isAnalyzing = true;
     errorMessage = null;
     errorMessageKey = null;
@@ -337,6 +342,7 @@ class FoodRecognitionProvider extends ChangeNotifier {
       // [MealPhotoApi]; we forward them verbatim and let the matching
       // `messageKey` drive the active-locale copy.
       errorMessage = e.message;
+      errorMessageKey = e.messageKey;
       errorMessageKey = e.messageKey;
       isAnalyzing = false;
       notifyListeners();

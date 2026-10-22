@@ -1,3 +1,4 @@
+import '../../../shared/widgets/photo_preview.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -97,10 +98,7 @@ class _PhotoFoodScreenState extends State<PhotoFoodScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(hint),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(hint), behavior: SnackBarBehavior.floating),
       );
   }
 
@@ -133,8 +131,7 @@ class _PhotoFoodScreenState extends State<PhotoFoodScreen> {
         (recognition.errorMessage != null ||
             recognition.errorMessageKey != null)) {
       body = _ErrorView(
-        message:
-            FoodRecognitionProvider.localizeError(context, recognition),
+        message: FoodRecognitionProvider.localizeError(context, recognition),
         onRetry: _retry,
       );
     } else {
@@ -185,8 +182,8 @@ class _PickerView extends StatelessWidget {
             AppLocalizations.of(context).photoFoodInstructions,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 32),
           SizedBox(
@@ -231,21 +228,14 @@ class _AnalyzingView extends StatelessWidget {
     final theme = Theme.of(context);
     return Stack(
       children: [
-        Positioned.fill(
-          child: Image.file(
-            image,
-            fit: BoxFit.contain,
-          ),
-        ),
+        Positioned.fill(child: PhotoPreview(file: image)),
         Positioned.fill(
           child: ColoredBox(
             color: Colors.black.withValues(alpha: 0.55),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircularProgressIndicator(
-                  color: Colors.white,
-                ),
+                const CircularProgressIndicator(color: Colors.white),
                 const SizedBox(height: 16),
                 Text(
                   AppLocalizations.of(context).photoFoodAnalyzing,
@@ -275,12 +265,23 @@ class _ResultView extends StatelessWidget {
   // Confidence → (label, color) — used for the badge. Built per-build
   // because the labels come from `AppLocalizations.of(context)` and
   // depend on the active locale.
-  Map<String, ({String label, Color color})> _confidenceStyle(BuildContext context) {
+  Map<String, ({String label, Color color})> _confidenceStyle(
+    BuildContext context,
+  ) {
     final l10n = AppLocalizations.of(context);
     return {
-      'high': (label: l10n.photoFoodConfidenceHigh, color: const Color(0xFF22C55E)),
-      'medium': (label: l10n.photoFoodConfidenceMedium, color: const Color(0xFFEAB308)),
-      'low': (label: l10n.photoFoodConfidenceLow, color: const Color(0xFFEF4444)),
+      'high': (
+        label: l10n.photoFoodConfidenceHigh,
+        color: const Color(0xFF22C55E),
+      ),
+      'medium': (
+        label: l10n.photoFoodConfidenceMedium,
+        color: const Color(0xFFEAB308),
+      ),
+      'low': (
+        label: l10n.photoFoodConfidenceLow,
+        color: const Color(0xFFEF4444),
+      ),
     };
   }
 
@@ -315,8 +316,8 @@ class _ResultView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final confidenceStyle = _confidenceStyle(context);
-    final confidence = confidenceStyle[result.confidence] ??
-        confidenceStyle['medium']!;
+    final confidence =
+        confidenceStyle[result.confidence] ?? confidenceStyle['medium']!;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -346,7 +347,9 @@ class _ResultView extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            AppLocalizations.of(context).photoFoodAllergyWarningTitle,
+                            AppLocalizations.of(
+                              context,
+                            ).photoFoodAllergyWarningTitle,
                             style: theme.textTheme.titleSmall?.copyWith(
                               color: const Color(0xFFB45309),
                               fontWeight: FontWeight.w700,
@@ -427,62 +430,73 @@ class _ResultView extends StatelessWidget {
                 ],
                 const SizedBox(height: 16),
 
-                  // Compact macro row — mirrors `_MacroRow` visually so
-                  // the two screens feel of a piece. The chip
-                  // labels and unit suffixes (kcal / g) come from
-                  // `AppLocalizations.of(context)` so they switch
-                  // with the active locale.
-                  Builder(builder: (ctx) {
+                // Compact macro row — mirrors `_MacroRow` visually so
+                // the two screens feel of a piece. The chip
+                // labels and unit suffixes (kcal / g) come from
+                // `AppLocalizations.of(context)` so they switch
+                // with the active locale.
+                Builder(
+                  builder: (ctx) {
                     final l10n = AppLocalizations.of(ctx);
                     return Row(
                       children: [
-                        _macroChip(ctx, l10n.unitKcalShort,
-                            result.calories.round().toString()),
-                        _macroChip(ctx, l10n.macroProteinShort,
-                            '${_fmt(result.protein)} ${l10n.unitGramsShort}'),
-                        _macroChip(ctx, l10n.macroCarbsShort,
-                            '${_fmt(result.carbs)} ${l10n.unitGramsShort}'),
-                        _macroChip(ctx, l10n.macroFatShort,
-                            '${_fmt(result.fat)} ${l10n.unitGramsShort}'),
+                        _macroChip(
+                          ctx,
+                          l10n.unitKcalShort,
+                          result.calories.round().toString(),
+                        ),
+                        _macroChip(
+                          ctx,
+                          l10n.macroProteinShort,
+                          '${_fmt(result.protein)} ${l10n.unitGramsShort}',
+                        ),
+                        _macroChip(
+                          ctx,
+                          l10n.macroCarbsShort,
+                          '${_fmt(result.carbs)} ${l10n.unitGramsShort}',
+                        ),
+                        _macroChip(
+                          ctx,
+                          l10n.macroFatShort,
+                          '${_fmt(result.fat)} ${l10n.unitGramsShort}',
+                        ),
                       ],
                     );
-                  }),
+                  },
+                ),
 
-                  if (result.ingredients.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      AppLocalizations.of(context).photoFoodIngredientsTitle,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                if (result.ingredients.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    AppLocalizations.of(context).photoFoodIngredientsTitle,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: result.ingredients
-                          .map(
-                            (ing) => Chip(
-                              label: Text(
-                                ing,
-                                style: theme.textTheme.bodySmall,
-                              ),
-                              backgroundColor:
-                                  theme.colorScheme.surfaceContainerHigh,
-                              side: BorderSide(
-                                color: theme.colorScheme.outlineVariant,
-                              ),
-                              visualDensity: VisualDensity.compact,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: result.ingredients
+                        .map(
+                          (ing) => Chip(
+                            label: Text(ing, style: theme.textTheme.bodySmall),
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHigh,
+                            side: BorderSide(
+                              color: theme.colorScheme.outlineVariant,
                             ),
-                          )
-                          .toList(growable: false),
-                    ),
-                  ],
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
                 ],
-              ),
+              ],
             ),
+          ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: onDone,
@@ -515,9 +529,9 @@ class _ConfidenceChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -540,11 +554,7 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.cloud_off,
-              size: 56,
-              color: theme.colorScheme.error,
-            ),
+            Icon(Icons.cloud_off, size: 56, color: theme.colorScheme.error),
             const SizedBox(height: 12),
             Text(
               message,

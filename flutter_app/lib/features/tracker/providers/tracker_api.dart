@@ -8,7 +8,11 @@ import 'package:dio/dio.dart';
 import '../../../core/api/api_client.dart';
 import '../../auth/providers/auth_api.dart';
 import '../models/food_log_model.dart';
+import '../models/saved_meal_model.dart';
+import '../models/pending_diary_deletion.dart';
+import '../services/save_coordinator.dart';
 import '../models/streak_model.dart';
+import '../models/garden_model.dart';
 import '../models/water_log_model.dart';
 import '../models/weight_log_model.dart';
 
@@ -45,6 +49,21 @@ class TrackerApi {
   /// header automatically — never add it manually here.
   final Dio _dio = apiClient.dio;
 
+  Future<GardenModel> syncGarden(DateTime today) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/tracker/garden/sync',
+        queryParameters: {'today_str': _formatDate(today)},
+      );
+      if (response.data == null) {
+        throw const ApiException('Empty garden response');
+      }
+      return GardenModel.fromJson(response.data!);
+    } on DioException catch (error) {
+      throw ApiException.fromDioError(error);
+    }
+  }
+
   // ----- Food logs -------------------------------------------------------------
 
   /// `GET /api/v1/tracker/daily?date_str=YYYY-MM-DD`
@@ -75,23 +94,72 @@ class TrackerApi {
   }
 
   /// `POST /api/v1/tracker/food`. Sends the body via [FoodLogModel.toCreateJson].
-  Future<FoodLogModel> addFood(FoodLogModel food) async {
+  Future<FoodLogModel> addFood(FoodLogModel food) => saveCoordinator.json(
+    '/tracker/food',
+    food.toCreateJson(),
+    FoodLogModel.fromJson,
+  );
+
+  Future<List<SavedMealModel>> getSavedMeals() async {
     try {
-      final res = await _dio.post<Map<String, dynamic>>(
-        '/tracker/food',
-        data: food.toCreateJson(),
+      final response = await _dio.get<List<dynamic>>('/tracker/meals');
+      return (response.data ?? [])
+          .map(
+            (v) => SavedMealModel.fromJson(Map<String, dynamic>.from(v as Map)),
+          )
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  Future<List<FoodLogModel>> saveMeal(SavedMealModel meal) async {
+    try {
+      final response = await _dio.post<List<dynamic>>(
+        '/tracker/meals',
+        data: meal.toJson(),
       );
-      final body = res.data;
-      if (body == null) {
-        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
+      if (response.data == null) {
+        throw const ApiException('Empty meal response');
       }
-      return FoodLogModel.fromJson(body);
+      return response.data!
+          .map(
+            (v) => FoodLogModel.fromJson(Map<String, dynamic>.from(v as Map)),
+          )
+          .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
   }
 
   /// `DELETE /api/v1/tracker/food/{foodId}`.
+  Future<String> changeDeletion(PendingDiaryDeletion deletion) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/tracker/diary/deletion',
+        data: deletion.toRequest(),
+      );
+      final state = response.data?['state'];
+      if (state != 'deleted' && state != 'restored') {
+        throw const ApiException('Invalid deletion response');
+      }
+      return state as String;
+    } on DioException catch (error) {
+      throw ApiException.fromDioError(error);
+    }
+  }
+
+  Future<void> deleteFoods(List<String> foodIds) async {
+    try {
+      await _dio.post<void>(
+        '/tracker/food/bulk-delete',
+        data: {'food_ids': foodIds},
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<void> deleteFood(String foodId) async {
     try {
       await _dio.delete<void>('/tracker/food/$foodId');
@@ -124,24 +192,11 @@ class TrackerApi {
   }
 
   /// `POST /api/v1/tracker/water`. [amountMl] is the volume in millilitres.
-  Future<WaterLogModel> addWater(DateTime date, int amountMl) async {
-    try {
-      final res = await _dio.post<Map<String, dynamic>>(
-        '/tracker/water',
-        data: {
-          'date': date.toIso8601String(),
-          'amount': amountMl,
-        },
-      );
-      final body = res.data;
-      if (body == null) {
-        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
-      }
-      return WaterLogModel.fromJson(body);
-    } on DioException catch (e) {
-      throw ApiException.fromDioError(e);
-    }
-  }
+  Future<WaterLogModel> addWater(DateTime date, int amountMl) =>
+      saveCoordinator.json('/tracker/water', {
+        'date': date.toIso8601String(),
+        'amount': amountMl,
+      }, WaterLogModel.fromJson);
 
   /// `DELETE /api/v1/tracker/water/{waterId}`.
   Future<void> deleteWater(String waterId) async {
@@ -174,7 +229,10 @@ class TrackerApi {
       );
       final body = res.data;
       if (body == null) {
-        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
+        throw const ApiException(
+          'Server returned an empty response.',
+          messageKey: 'userFacingErrorServerEmpty',
+        );
       }
       return StreakModel.fromJson(body);
     } on DioException catch (e) {
@@ -207,25 +265,11 @@ class TrackerApi {
     DateTime date,
     double weight, {
     String? note,
-  }) async {
-    try {
-      final res = await _dio.post<Map<String, dynamic>>(
-        '/tracker/weight',
-        data: {
-          'date': date.toIso8601String(),
-          'weight': weight,
-          if (note != null) 'note': note,
-        },
-      );
-      final body = res.data;
-      if (body == null) {
-        throw const ApiException('Server returned an empty response.', messageKey: 'userFacingErrorServerEmpty');
-      }
-      return WeightLogModel.fromJson(body);
-    } on DioException catch (e) {
-      throw ApiException.fromDioError(e);
-    }
-  }
+  }) => saveCoordinator.json('/tracker/weight', {
+    'date': date.toIso8601String(),
+    'weight': weight,
+    if (note != null) 'note': note,
+  }, WeightLogModel.fromJson);
 
   /// `GET /api/v1/tracker/weight/history`. The `date` field on each row is a
   /// date-only string, so this method yields [WeightHistoryEntry] (with the

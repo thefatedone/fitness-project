@@ -2978,6 +2978,384 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Protein'**
   String get balanceProtein;
+
+  /// No description provided for @bulkDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete food entries?'**
+  String get bulkDeleteTitle;
+
+  /// No description provided for @bulkDeleteExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'All entries in this meal slot are selected. Uncheck anything you want to keep. Deletion cannot be undone.'**
+  String get bulkDeleteExplanation;
+
+  /// No description provided for @bulkDeleteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected food entries'**
+  String get bulkDeleteTooltip;
+
+  /// No description provided for @bulkDeleteCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete ({count})'**
+  String bulkDeleteCount(int count);
+
+  /// No description provided for @bulkDeleteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected entries deleted'**
+  String get bulkDeleteSuccess;
+
+  /// No description provided for @gardenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My garden'**
+  String get gardenTitle;
+
+  /// No description provided for @gardenAvocado.
+  ///
+  /// In en, this message translates to:
+  /// **'Your avocado'**
+  String get gardenAvocado;
+
+  /// No description provided for @gardenIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Small steps. Something growing.'**
+  String get gardenIntro;
+
+  /// No description provided for @gardenSeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Avocado seed'**
+  String get gardenSeed;
+
+  /// No description provided for @gardenRoot.
+  ///
+  /// In en, this message translates to:
+  /// **'First root'**
+  String get gardenRoot;
+
+  /// No description provided for @gardenSprout.
+  ///
+  /// In en, this message translates to:
+  /// **'Sprout'**
+  String get gardenSprout;
+
+  /// No description provided for @gardenLeaves.
+  ///
+  /// In en, this message translates to:
+  /// **'First leaves'**
+  String get gardenLeaves;
+
+  /// No description provided for @gardenTree.
+  ///
+  /// In en, this message translates to:
+  /// **'Fully grown'**
+  String get gardenTree;
+
+  /// No description provided for @gardenLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your garden…'**
+  String get gardenLoading;
+
+  /// No description provided for @gardenLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your garden'**
+  String get gardenLoadFailed;
+
+  /// No description provided for @gardenRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh garden'**
+  String get gardenRetry;
+
+  /// No description provided for @gardenStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing saved progress. Refresh when you are connected.'**
+  String get gardenStale;
+
+  /// No description provided for @gardenOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open my garden'**
+  String get gardenOpen;
+
+  /// No description provided for @gardenNextDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Next stage in {count} days'**
+  String gardenNextDays(int count);
+
+  /// No description provided for @gardenMatureHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your next logged day will plant a new avocado.'**
+  String get gardenMatureHint;
+
+  /// No description provided for @gardenTodayDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Today’s step is earned'**
+  String get gardenTodayDone;
+
+  /// No description provided for @gardenTodayPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Log food to grow'**
+  String get gardenTodayPrompt;
+
+  /// No description provided for @gardenWeeklyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get gardenWeeklyTitle;
+
+  /// No description provided for @gardenWeeklyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Log food on any 4 days this week.'**
+  String get gardenWeeklyBody;
+
+  /// No description provided for @gardenWeekDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Four days logged. Your warm ceramic pot is unlocked!'**
+  String get gardenWeekDone;
+
+  /// No description provided for @gardenPotOwned.
+  ///
+  /// In en, this message translates to:
+  /// **'The warm pot is already yours. Keep your own pace.'**
+  String get gardenPotOwned;
+
+  /// No description provided for @gardenPotReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward: a warm ceramic pot.'**
+  String get gardenPotReward;
+
+  /// No description provided for @gardenGrowthCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Growing days: {count} / 21'**
+  String gardenGrowthCount(int count);
+
+  /// No description provided for @gardenCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Trees grown: {count}'**
+  String gardenCollection(int count);
+
+  /// No description provided for @gardenRules.
+  ///
+  /// In en, this message translates to:
+  /// **'One day with a food entry earns one step. No need to eat avocado. Water and drinks do not earn steps. Missed days and deleted entries never take earned growth away.'**
+  String get gardenRules;
+
+  /// No description provided for @gardenAddMeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Add food'**
+  String get gardenAddMeal;
+
+  /// No description provided for @gardenEarnStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Earn a growing step'**
+  String get gardenEarnStep;
+
+  /// No description provided for @gardenStagesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Growth stages'**
+  String get gardenStagesTitle;
+
+  /// No description provided for @gardenPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage preview'**
+  String get gardenPreview;
+
+  /// No description provided for @gardenReturnToPlant.
+  ///
+  /// In en, this message translates to:
+  /// **'My plant'**
+  String get gardenReturnToPlant;
+
+  /// No description provided for @mealLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'My meals'**
+  String get mealLibrary;
+
+  /// No description provided for @mealLibraryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Your saved dishes will appear here after you scan and save a meal.'**
+  String get mealLibraryEmpty;
+
+  /// No description provided for @mealRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat meal'**
+  String get mealRepeat;
+
+  /// No description provided for @mealNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Meal name'**
+  String get mealNameLabel;
+
+  /// No description provided for @mealDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'My dish'**
+  String get mealDefaultName;
+
+  /// No description provided for @mealAddIngredient.
+  ///
+  /// In en, this message translates to:
+  /// **'Add ingredient'**
+  String get mealAddIngredient;
+
+  /// No description provided for @mealEditIngredient.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit ingredient'**
+  String get mealEditIngredient;
+
+  /// No description provided for @mealIngredientGrams.
+  ///
+  /// In en, this message translates to:
+  /// **'Portion, g'**
+  String get mealIngredientGrams;
+
+  /// No description provided for @mealNutritionForPortion.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition for this portion. Changing the name does not recalculate nutrition.'**
+  String get mealNutritionForPortion;
+
+  /// No description provided for @mealInvalidValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid value'**
+  String get mealInvalidValue;
+
+  /// No description provided for @mealSaveRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'The save could not be confirmed. Tap Save again to check and retry the same meal. Your ingredients are kept here.'**
+  String get mealSaveRetry;
+
+  /// No description provided for @mealRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get mealRetry;
+
+  /// No description provided for @mealSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get mealSaving;
+
+  /// No description provided for @diaryUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get diaryUndo;
+
+  /// No description provided for @diaryDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Entry deleted'**
+  String get diaryDeleted;
+
+  /// No description provided for @diaryDeleteUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion is not confirmed. Your entries are kept here. Retry or undo.'**
+  String get diaryDeleteUnconfirmed;
+
+  /// No description provided for @diaryRestorePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Entries restored on this device. Tap Retry to confirm restoration with the server.'**
+  String get diaryRestorePending;
+
+  /// No description provided for @diaryOfflineCache.
+  ///
+  /// In en, this message translates to:
+  /// **'The server is unavailable. Only previously loaded entries are available.'**
+  String get diaryOfflineCache;
+
+  /// No description provided for @diaryLocalSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save recovery data on this device. No new deletion was sent.'**
+  String get diaryLocalSaveError;
+
+  /// No description provided for @diaryMealDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'You have an unfinished meal. Its ingredients are saved on this device.'**
+  String get diaryMealDraft;
+
+  /// No description provided for @diaryResumeMeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Open meal'**
+  String get diaryResumeMeal;
+
+  /// No description provided for @diaryFinishPreviousMeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Open and finish your previous meal draft first. It is available on the diary screen.'**
+  String get diaryFinishPreviousMeal;
+
+  /// No description provided for @savePendingDifferent.
+  ///
+  /// In en, this message translates to:
+  /// **'An earlier save is unconfirmed. Check it on the diary screen before changing the values.'**
+  String get savePendingDifferent;
+
+  /// No description provided for @savePendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save awaiting confirmation'**
+  String get savePendingTitle;
+
+  /// No description provided for @saveCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check save'**
+  String get saveCheck;
+
+  /// No description provided for @saveConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Save confirmed'**
+  String get saveConfirmed;
+
+  /// No description provided for @savePhotoRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'The result is not confirmed yet. Try again with the same photo.'**
+  String get savePhotoRetry;
+
+  /// No description provided for @saveAlreadyDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'This entry was saved and then deleted. Retrying will not add it again.'**
+  String get saveAlreadyDeleted;
 }
 
 class _AppLocalizationsDelegate

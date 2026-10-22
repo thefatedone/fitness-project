@@ -73,6 +73,7 @@ class BeverageProvider extends ChangeNotifier {
     required File imageFile,
     required TrackerProvider trackerProvider,
   }) async {
+    if (isAnalyzing) return false;
     isAnalyzing = true;
     errorMessage = null;
     lastResult = null;
@@ -97,6 +98,7 @@ class BeverageProvider extends ChangeNotifier {
       // The 422 message has already been humanised by
       // `BeverageApi`; we just forward it.
       errorMessage = e.message;
+      errorMessageKey = e.messageKey;
       isAnalyzing = false;
       notifyListeners();
       return false;
@@ -134,6 +136,7 @@ class BeverageProvider extends ChangeNotifier {
     double sugarG = 0,
     required TrackerProvider trackerProvider,
   }) async {
+    if (isAnalyzing) return false;
     isAnalyzing = true;
     errorMessage = null;
     lastResult = null;
@@ -157,6 +160,7 @@ class BeverageProvider extends ChangeNotifier {
       return true;
     } on ApiException catch (e) {
       errorMessage = e.message;
+      errorMessageKey = e.messageKey;
       isAnalyzing = false;
       notifyListeners();
       return false;

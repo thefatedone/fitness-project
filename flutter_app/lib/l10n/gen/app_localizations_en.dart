@@ -1600,4 +1600,219 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get balanceProtein => 'Protein';
+
+  @override
+  String get bulkDeleteTitle => 'Delete food entries?';
+
+  @override
+  String get bulkDeleteExplanation =>
+      'All entries in this meal slot are selected. Uncheck anything you want to keep. Deletion cannot be undone.';
+
+  @override
+  String get bulkDeleteTooltip => 'Delete selected food entries';
+
+  @override
+  String bulkDeleteCount(int count) {
+    return 'Delete ($count)';
+  }
+
+  @override
+  String get bulkDeleteSuccess => 'Selected entries deleted';
+
+  @override
+  String get gardenTitle => 'My garden';
+
+  @override
+  String get gardenAvocado => 'Your avocado';
+
+  @override
+  String get gardenIntro => 'Small steps. Something growing.';
+
+  @override
+  String get gardenSeed => 'Avocado seed';
+
+  @override
+  String get gardenRoot => 'First root';
+
+  @override
+  String get gardenSprout => 'Sprout';
+
+  @override
+  String get gardenLeaves => 'First leaves';
+
+  @override
+  String get gardenTree => 'Fully grown';
+
+  @override
+  String get gardenLoading => 'Loading your garden…';
+
+  @override
+  String get gardenLoadFailed => 'Could not load your garden';
+
+  @override
+  String get gardenRetry => 'Refresh garden';
+
+  @override
+  String get gardenStale =>
+      'Showing saved progress. Refresh when you are connected.';
+
+  @override
+  String get gardenOpen => 'Open my garden';
+
+  @override
+  String gardenNextDays(int count) {
+    return 'Next stage in $count days';
+  }
+
+  @override
+  String get gardenMatureHint =>
+      'Your next logged day will plant a new avocado.';
+
+  @override
+  String get gardenTodayDone => 'Today’s step is earned';
+
+  @override
+  String get gardenTodayPrompt => 'Log food to grow';
+
+  @override
+  String get gardenWeeklyTitle => 'This week';
+
+  @override
+  String get gardenWeeklyBody => 'Log food on any 4 days this week.';
+
+  @override
+  String get gardenWeekDone =>
+      'Four days logged. Your warm ceramic pot is unlocked!';
+
+  @override
+  String get gardenPotOwned =>
+      'The warm pot is already yours. Keep your own pace.';
+
+  @override
+  String get gardenPotReward => 'Reward: a warm ceramic pot.';
+
+  @override
+  String gardenGrowthCount(int count) {
+    return 'Growing days: $count / 21';
+  }
+
+  @override
+  String gardenCollection(int count) {
+    return 'Trees grown: $count';
+  }
+
+  @override
+  String get gardenRules =>
+      'One day with a food entry earns one step. No need to eat avocado. Water and drinks do not earn steps. Missed days and deleted entries never take earned growth away.';
+
+  @override
+  String get gardenAddMeal => 'Add food';
+
+  @override
+  String get gardenEarnStep => 'Earn a growing step';
+
+  @override
+  String get gardenStagesTitle => 'Growth stages';
+
+  @override
+  String get gardenPreview => 'Stage preview';
+
+  @override
+  String get gardenReturnToPlant => 'My plant';
+
+  @override
+  String get mealLibrary => 'My meals';
+
+  @override
+  String get mealLibraryEmpty =>
+      'Your saved dishes will appear here after you scan and save a meal.';
+
+  @override
+  String get mealRepeat => 'Repeat meal';
+
+  @override
+  String get mealNameLabel => 'Meal name';
+
+  @override
+  String get mealDefaultName => 'My dish';
+
+  @override
+  String get mealAddIngredient => 'Add ingredient';
+
+  @override
+  String get mealEditIngredient => 'Edit ingredient';
+
+  @override
+  String get mealIngredientGrams => 'Portion, g';
+
+  @override
+  String get mealNutritionForPortion =>
+      'Nutrition for this portion. Changing the name does not recalculate nutrition.';
+
+  @override
+  String get mealInvalidValue => 'Enter a valid value';
+
+  @override
+  String get mealSaveRetry =>
+      'The save could not be confirmed. Tap Save again to check and retry the same meal. Your ingredients are kept here.';
+
+  @override
+  String get mealRetry => 'Retry';
+
+  @override
+  String get mealSaving => 'Saving…';
+
+  @override
+  String get diaryUndo => 'Undo';
+
+  @override
+  String get diaryDeleted => 'Entry deleted';
+
+  @override
+  String get diaryDeleteUnconfirmed =>
+      'Deletion is not confirmed. Your entries are kept here. Retry or undo.';
+
+  @override
+  String get diaryRestorePending =>
+      'Entries restored on this device. Tap Retry to confirm restoration with the server.';
+
+  @override
+  String get diaryOfflineCache =>
+      'The server is unavailable. Only previously loaded entries are available.';
+
+  @override
+  String get diaryLocalSaveError =>
+      'Could not save recovery data on this device. No new deletion was sent.';
+
+  @override
+  String get diaryMealDraft =>
+      'You have an unfinished meal. Its ingredients are saved on this device.';
+
+  @override
+  String get diaryResumeMeal => 'Open meal';
+
+  @override
+  String get diaryFinishPreviousMeal =>
+      'Open and finish your previous meal draft first. It is available on the diary screen.';
+
+  @override
+  String get savePendingDifferent =>
+      'An earlier save is unconfirmed. Check it on the diary screen before changing the values.';
+
+  @override
+  String get savePendingTitle => 'Save awaiting confirmation';
+
+  @override
+  String get saveCheck => 'Check save';
+
+  @override
+  String get saveConfirmed => 'Save confirmed';
+
+  @override
+  String get savePhotoRetry =>
+      'The result is not confirmed yet. Try again with the same photo.';
+
+  @override
+  String get saveAlreadyDeleted =>
+      'This entry was saved and then deleted. Retrying will not add it again.';
 }

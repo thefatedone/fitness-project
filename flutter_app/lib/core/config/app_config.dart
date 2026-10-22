@@ -111,6 +111,7 @@ class AppConfig {
   /// prefix.
   ///
   /// Lookup order:
+  ///   0. Explicit `--dart-define=API_BASE_URL=…`, when supplied.
   ///   1. Runtime override ([setRuntimeOverride]), if non-null —
   ///      the in-app, debug-only override. If the override does
   ///      NOT end with `/api/v1`, this getter appends it —
@@ -126,7 +127,27 @@ class AppConfig {
   ///      `http://localhost:8000/api/v1`.
   ///   2. The compile-time [environment] switch below — the
   ///      original "edit-then-rebuild" flow. Unchanged.
+  static const String compiledApiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+  );
+
   static String get apiBaseUrl {
+    // An explicit build target wins over saved debug settings on the device.
+    final compiled = compiledApiBaseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
+    if (compiled.isNotEmpty) {
+      final uri = Uri.tryParse(compiled);
+      if (uri == null ||
+          !uri.hasAuthority ||
+          (uri.scheme != 'http' && uri.scheme != 'https') ||
+          uri.userInfo.isNotEmpty ||
+          uri.hasQuery ||
+          uri.hasFragment) {
+        throw StateError(
+          'API_BASE_URL must be an http(s) URL without credentials, query or fragment',
+        );
+      }
+      return compiled.endsWith('/api/v1') ? compiled : '$compiled/api/v1';
+    }
     final override = _runtimeOverrideUrl;
     if (override != null) {
       return override.endsWith('/api/v1') ? override : '$override/api/v1';

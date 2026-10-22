@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from app.services.diary_time import captured_time
+from app.services.idempotent_save import idempotent_save
+from fastapi import Request, APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
@@ -6,6 +8,7 @@ from app.core.config import settings
 from app.core.security import get_current_user_id
 from app.models.user import User
 from app.models.food_log import FoodLog, WaterLog
+from app.services.garden import credit_garden_day
 from app.schemas.food import ReanalyzeDescriptionRequest, ManualBeverageLogRequest
 from datetime import datetime, timezone
 import google.generativeai as genai
@@ -159,8 +162,13 @@ async def _dual_log_beverage(
     user_id: str,
     beverage_data: dict,
     ai_generated: bool,
+    commit: bool = True,
+    logged_at: datetime | None = None,
 ) -> tuple[FoodLog, WaterLog]:
     """Atomically write the FoodLog + WaterLog pair for a beverage.
+
+    With commit=False, the enclosing idempotent-save boundary commits
+    both rows and their replay response together.
 
     Single transaction: both rows are added to the session, then a
     single `commit()` flushes them. If the commit fails (constraint
@@ -182,11 +190,9 @@ async def _dual_log_beverage(
     UI uses this flag to gate the "Уточнить" affordance on the
     resulting row — see `tracker_home_screen.dart`.
     """
-    # Strip tzinfo so the value fits the TIMESTAMP WITHOUT TIME
-    # ZONE column (asyncpg can't subtract offset-aware from
-    # offset-naive datetimes). Same note as the existing food
-    # endpoint.
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Both rows share the captured local wall-clock time. UTC is retained
+    # only for legacy direct callers without a request context.
+    now = logged_at or datetime.now(timezone.utc).replace(tzinfo=None)
     volume_ml = float(beverage_data["volume_ml"])
 
     food_log = FoodLog(
@@ -234,7 +240,10 @@ async def _dual_log_beverage(
     db.add(food_log)
     db.add(water_log)
     try:
-        await db.commit()
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
     except Exception as e:
         # Both rows added but neither persisted. The rollback
         # restores the session to a clean state so a subsequent
@@ -289,7 +298,9 @@ def _beverage_response(
 
 
 @router.post("/recognize-and-log")
+@idempotent_save
 async def recognize_and_log_food(
+    _request: Request,
     meal_type: str = "snack",
     file: UploadFile = File(...),
     user_id: str = Depends(get_current_user_id),
@@ -356,13 +367,12 @@ Rules:
         else []
     )
 
-    # Log to database — strip tzinfo so the value fits the
-    # TIMESTAMP WITHOUT TIME ZONE column (asyncpg can't subtract
-    # offset-aware from offset-naive datetimes).
+    # Record the device-local capture time, including when AI completes
+    # after midnight. Existing columns store local wall-clock timestamps.
     food_log = FoodLog(
         id=str(uuid.uuid4()),
         user_id=user_id,
-        date=datetime.now(timezone.utc).replace(tzinfo=None),
+        date=captured_time(_request),
         meal_type=meal_type,
         food_name=nutrition_data["food_name"],
         calories=float(nutrition_data["calories"]),
@@ -375,7 +385,9 @@ Rules:
         ai_generated=True,
     )
     db.add(food_log)
-    await db.commit()
+    if food_log.meal_type != "drinks":
+        await credit_garden_day(db, user_id, food_log.date.date())
+    await db.flush()
     await db.refresh(food_log)
 
     return _nutrition_response(food_log, nutrition_data, ingredients, allergy_warnings)
@@ -519,7 +531,9 @@ Rules:
 
 
 @router.post("/recognize-beverage")
+@idempotent_save
 async def recognize_beverage(
+    _request: Request,
     file: UploadFile = File(...),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
@@ -704,13 +718,17 @@ Rules:
         user_id=user_id,
         beverage_data=beverage_data,
         ai_generated=True,
+        commit=False,
+        logged_at=captured_time(_request),
     )
 
     return _beverage_response(food_log, water_log, beverage_data, allergy_warnings)
 
 
 @router.post("/log-beverage-manual")
+@idempotent_save
 async def log_beverage_manual(
+    _request: Request,
     request: ManualBeverageLogRequest,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
@@ -766,6 +784,8 @@ async def log_beverage_manual(
         user_id=user_id,
         beverage_data=beverage_data,
         ai_generated=False,
+        commit=False,
+        logged_at=captured_time(_request),
     )
 
     return _beverage_response(food_log, water_log, beverage_data, [])

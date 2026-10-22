@@ -1,3 +1,7 @@
+import '../../../shared/widgets/nutrimind_brand.dart';
+import '../models/diary_meal_group.dart';
+import 'dart:async';
+import '../services/diary_clock.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -12,10 +16,19 @@ import '../../chat/screens/chat_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../settings/screens/settings_screen.dart';
 import '../models/food_log_model.dart';
+import '../models/saved_meal_model.dart';
+import '../widgets/logged_meal_tile.dart';
+import '../widgets/diary_recovery_banner.dart';
+import '../services/save_coordinator.dart';
+import '../../auth/providers/auth_api.dart';
+import 'saved_meals_screen.dart';
 import '../models/streak_model.dart';
 import '../models/daily_goal_progress.dart';
 import '../widgets/daily_goals_card.dart';
 import '../widgets/streak_badge.dart';
+import '../widgets/garden_card.dart';
+import 'garden_screen.dart';
+import '../widgets/bulk_food_delete_dialog.dart';
 import '../models/water_log_model.dart';
 import '../providers/food_recognition_provider.dart';
 import '../providers/tracker_provider.dart';
@@ -56,11 +69,28 @@ class TrackerHomeScreen extends StatefulWidget {
   State<TrackerHomeScreen> createState() => _TrackerHomeScreenState();
 }
 
-class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
+class _TrackerHomeScreenState extends State<TrackerHomeScreen>
+    with WidgetsBindingObserver {
+  final _clock = DiaryClock(DateTime.now());
+  Timer? _clockTimer;
+
+  void _checkClock() {
+    if (!mounted) return;
+    final tracker = context.read<TrackerProvider>();
+    final now = DateTime.now();
+    final day = _clock.observe(now, tracker.selectedDate);
+    if (day != null) {
+      tracker.refreshForLocalClock(day);
+      setState(() {});
+    }
+    _clockTimer?.cancel();
+    _clockTimer = Timer(DiaryClock.nextCheck(now), _checkClock);
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Defer the first load until after the first frame so `context.read`
     // is safe to call and we don't trigger a setState during build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -80,12 +110,36 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
       tracker.loadDailyData(DateTime.now());
       tracker.loadWeightHistory();
       tracker.loadStreak();
+      tracker.loadGarden();
+      _checkClock();
     });
   }
 
   @override
   void dispose() {
+    _clockTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      _clockTimer?.cancel();
+      return;
+    }
+    if (state == AppLifecycleState.resumed && mounted) {
+      _checkClock();
+      context.read<TrackerProvider>().loadGarden();
+    }
+  }
+
+  void _openGarden() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GardenScreen(onAddFood: _openAddFood),
+      ),
+    );
   }
 
   // Friendly Russian labels for the meal buckets we know about; anything
@@ -176,11 +230,11 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
       // with. The internal `SingleChildScrollView` on
       // [StreakDetailSheet] still kicks in if the content overflows
       // the resolved sheet height (small phone, large system text
-        // scale) — the user can either drag the handle up OR scroll
-        // inside the sheet, both work.
+      // scale) — the user can either drag the handle up OR scroll
+      // inside the sheet, both work.
       // `useSafeArea: true` makes the sheet respect the iPhone home-
       // indicator area so the drag handle doesn't sit under the
-        // indicator.
+      // indicator.
       // Both options are passed through to `showModalBottomSheet`
       // by [showGlassBottomSheet].
       isScrollControlled: true,
@@ -221,20 +275,88 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     );
   }
 
-  Future<void> _onDeleteWater(String waterId) async {
-    final tracker = context.read<TrackerProvider>();
-    final ok = await tracker.deleteWaterEntry(waterId);
+  void _showDeletionResult(bool ok) {
     if (!mounted) return;
-    if (!ok && tracker.errorMessage != null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(tracker.errorMessage!),
-            behavior: SnackBarBehavior.floating
-          ),
-        );
+    final tracker = context.read<TrackerProvider>();
+    final l = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 10),
+          content: Text(ok ? l.diaryDeleted : l.diaryDeleteUnconfirmed),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          action: tracker.pendingDeletion == null
+              ? null
+              : SnackBarAction(
+                  label: l.diaryUndo,
+                  onPressed: () async {
+                    await tracker.undoDeletion();
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  },
+                ),
+        ),
+      );
+  }
+
+  Future<void> _resolvePendingSave(PendingSave save) async {
+    final tracker = context.read<TrackerProvider>();
+    final account = tracker.recoveryAccountKey;
+    try {
+      await saveCoordinator.resolve(save);
+      if (!mounted || account != tracker.recoveryAccountKey) return;
+      await Future.wait([
+        tracker.loadDailyData(tracker.selectedDate),
+        tracker.loadWeightHistory(),
+      ]);
+      if (!mounted || account != tracker.recoveryAccountKey) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).saveConfirmed)),
+      );
+    } on ApiException catch (error) {
+      if (!mounted || account != tracker.recoveryAccountKey) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.localizedMessage(context))));
+    } catch (_) {
+      if (!mounted || account != tracker.recoveryAccountKey) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).commonError)),
+      );
     }
+  }
+
+  Future<void> _resumeMealDraft() async {
+    final draft = context.read<TrackerProvider>().mealDraft;
+    if (draft == null) return;
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            MealPhotoScreen(mealType: draft.mealType, pendingMeal: draft),
+      ),
+    );
+  }
+
+  Future<void> _onDeleteWater(String waterId) async {
+    final ok = await context.read<TrackerProvider>().deleteWaterEntry(waterId);
+    _showDeletionResult(ok);
+  }
+
+  Future<void> _onDeleteMeal(String mealType, List<FoodLogModel> foods) async {
+    final tracker = context.read<TrackerProvider>();
+    if (tracker.isLoading) return;
+    final ids = await showDialog<List<String>>(
+      context: context,
+      builder: (_) => BulkFoodDeleteDialog(
+        foods: List.of(foods),
+        mealLabel: _mealLabel(context, mealType),
+      ),
+    );
+    if (ids == null || ids.isEmpty || !mounted) return;
+    final ok = await tracker.deleteFoodEntries(ids);
+    _showDeletionResult(ok);
   }
 
   Future<void> _onDeleteFood(FoodLogModel food) async {
@@ -242,34 +364,53 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(AppLocalizations.of(context).trackerDeleteRecordTitle),
-        content: Text(AppLocalizations.of(context).trackerDeleteRecordBody(food.foodName)),
+        content: Text(
+          AppLocalizations.of(context).trackerDeleteRecordBody(food.foodName),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppLocalizations.of(context).commonCancel)
+            child: Text(AppLocalizations.of(context).commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(AppLocalizations.of(context).commonDelete)
-          )
-        ]
+            child: Text(AppLocalizations.of(context).commonDelete),
+          ),
+        ],
       ),
     );
     if (confirmed != true || !mounted) return;
 
     final tracker = context.read<TrackerProvider>();
     final ok = await tracker.deleteFoodEntry(food.id);
-    if (!mounted) return;
-    if (!ok && tracker.errorMessage != null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(tracker.errorMessage!),
-            behavior: SnackBarBehavior.floating
+    _showDeletionResult(ok);
+  }
+
+  Future<void> _repeatMeal(List<FoodLogModel> foods) async {
+    final meal = SavedMealModel(
+      id: '',
+      name:
+          foods.first.mealName ?? AppLocalizations.of(context).mealDefaultName,
+      mealType: foods.first.mealType,
+      date: foods.first.date,
+      ingredients: [
+        for (final food in foods)
+          MealIngredient(
+            name: food.foodName,
+            grams: food.quantity,
+            calories: food.calories,
+            protein: food.protein,
+            carbs: food.carbs,
+            fat: food.fat,
           ),
-        );
-    }
+      ],
+    );
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            MealPhotoScreen(mealType: meal.mealType, initialMeal: meal),
+      ),
+    );
   }
 
   Future<void> _openAddFood() async {
@@ -308,31 +449,31 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                 child: Text(
                   AppLocalizations.of(context).mealPhotoModeTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600
-                  )
-                )
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               ListTile(
                 leading: Icon(
                   Icons.restaurant_menu_outlined,
-                  color: theme.colorScheme.primary
+                  color: theme.colorScheme.primary,
                 ),
                 title: Text(AppLocalizations.of(context).mealPhotoScan),
                 subtitle: Text(
-                  AppLocalizations.of(context).mealPhotoScanSubtitle
+                  AppLocalizations.of(context).mealPhotoScanSubtitle,
                 ),
-                onTap: () => Navigator.of(ctx).pop('meal')
+                onTap: () => Navigator.of(ctx).pop('meal'),
               ),
               ListTile(
                 leading: const Icon(Icons.photo_camera_outlined),
                 title: Text(AppLocalizations.of(context).mealPhotoSingleItem),
                 subtitle: Text(
-                  AppLocalizations.of(context).mealPhotoSingleItemSubtitle
+                  AppLocalizations.of(context).mealPhotoSingleItemSubtitle,
                 ),
-                onTap: () => Navigator.of(ctx).pop('single')
+                onTap: () => Navigator.of(ctx).pop('single'),
               ),
-              const SizedBox(height: 8)
-            ]
+              const SizedBox(height: 8),
+            ],
           ),
         );
       },
@@ -356,18 +497,20 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                 child: Text(
                   AppLocalizations.of(context).trackerMealPickerTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600
-                  )
-                )
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-              for (final entry in _mealLabels.entries.where((e) => e.key != 'drinks'))
+              for (final entry in _mealLabels.entries.where(
+                (e) => e.key != 'drinks',
+              ))
                 ListTile(
                   leading: Icon(_iconForMeal(entry.key)),
                   title: Text(entry.value),
-                  onTap: () => Navigator.of(ctx).pop(entry.key)
+                  onTap: () => Navigator.of(ctx).pop(entry.key),
                 ),
-              const SizedBox(height: 8)
-            ]
+              const SizedBox(height: 8),
+            ],
           ),
         );
       },
@@ -383,15 +526,11 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     // rows into `foodLogs`, and a refetch would only flicker.
     if (mode == 'meal') {
       await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (_) => MealPhotoScreen(mealType: mealType)
-        ),
+        MaterialPageRoute(builder: (_) => MealPhotoScreen(mealType: mealType)),
       );
     } else {
       await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (_) => PhotoFoodScreen(mealType: mealType)
-        ),
+        MaterialPageRoute(builder: (_) => PhotoFoodScreen(mealType: mealType)),
       );
     }
   }
@@ -429,34 +568,34 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                 child: Text(
                   AppLocalizations.of(context).trackerCameraChoiceTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600
-                  )
-                )
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               ListTile(
                 leading: const Icon(Icons.restaurant),
                 title: Text(AppLocalizations.of(context).trackerCameraFood),
                 subtitle: Text(
-                  AppLocalizations.of(context).trackerCameraFoodSubtitle
+                  AppLocalizations.of(context).trackerCameraFoodSubtitle,
                 ),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _openPhotoFlow();
-                }
+                },
               ),
               ListTile(
                 leading: const Icon(Icons.local_drink_outlined),
                 title: Text(AppLocalizations.of(context).trackerCameraBeverage),
                 subtitle: Text(
-                  AppLocalizations.of(context).trackerCameraBeverageSubtitle
+                  AppLocalizations.of(context).trackerCameraBeverageSubtitle,
                 ),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _openPhotoBeverage();
-                }
+                },
               ),
-              const SizedBox(height: 8)
-            ]
+              const SizedBox(height: 8),
+            ],
           ),
         );
       },
@@ -473,33 +612,31 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
   /// [TrackerProvider] in-place.
   Future<void> _openPhotoBeverage() async {
     await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const PhotoBeverageScreen()
-      ),
+      MaterialPageRoute(builder: (_) => const PhotoBeverageScreen()),
     );
   }
 
   Future<void> _openWeightHistory() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const WeightHistoryScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const WeightHistoryScreen()));
     // No reload — the weight history screen calls loadWeightHistory()
     // itself on mount, and any new entry the user added there shows up
     // in this screen via the existing context.watch on the next frame.
   }
 
   Future<void> _openChat() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ChatScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ChatScreen()));
     // No reload — the chat screen is independent of the tracker; on
     // return the user lands back here with whatever state they left.
   }
 
   Future<void> _openProfile() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ProfileScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
     // No reload — `ProfileProvider.saveProfile` pushes the new
     // `UserModel` into `AuthProvider` directly, so any change the
     // user just made (name, targets, photo) is already visible via
@@ -507,9 +644,9 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
   }
 
   Future<void> _openSettings() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
   }
 
   Future<void> _openReanalyze(FoodLogModel food) async {
@@ -533,14 +670,13 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     // the caller. If we ever want a toast ("Уточнено!"), this is
     // where it would go.
     final provider = context.read<FoodRecognitionProvider>();
-    final cachedDescription =
-        provider.descriptionsByFoodLogId[food.id] ?? '';
+    final cachedDescription = provider.descriptionsByFoodLogId[food.id] ?? '';
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => EditFoodDescriptionScreen(
           foodLog: food,
-          initialDescription: cachedDescription
-        )
+          initialDescription: cachedDescription,
+        ),
       ),
     );
   }
@@ -589,40 +725,71 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
     final isViewingToday = _isSameDay(tracker.selectedDate, DateTime.now());
 
     return Scaffold(
-      // Minimal AppBar — the title text and the three trailing icon
-      // buttons (settings, profile, chat) have moved into the
-      // bottom-floating Dock below. The AppBar stays here purely
-      // for status-bar color/height consistency and the OS-conventional
-      // top-padding for the date-nav row that sits just under it.
-      //
-      // The default AppBar paints an opaque (surface-colored)
-      // background that breaks the Liquid Glass continuity — the
-      // top of the screen reads as a flat band, then the
-      // `GlassBackgroundGlow` (which only wraps `body`) starts
-      // further down. Making the AppBar transparent + extending
-      // the body behind it lets the glow continue uninterrupted
-      // from under the status bar down to the bottom, so the
-      // page reads as one continuous glass surface.
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0
-      ),
-      extendBodyBehindAppBar: true,
+      // Reserve the dock's real height, including the device gesture inset.
+      // Content ends above navigation instead of disappearing underneath it.
+      bottomNavigationBar: showInitialLoader
+          ? null
+          : AppDock(
+              items: [
+                DockItem(
+                  icon: Icons.camera_alt_outlined,
+                  tooltip: AppLocalizations.of(
+                    context,
+                  ).trackerDockCameraTooltip,
+                  // The Dock item is intentionally
+                  // parameterless — both food and beverage
+                  // flows share the same camera icon, and the
+                  // choice happens in `_showCameraChoice`'s
+                  // modal sheet. Keeping the chooser *outside*
+                  // the Dock's onTap callback lets the dock
+                  // icon stay "press to take a photo" with no
+                  // commitment to which downstream flow.
+                  onTap: isViewingToday ? _showCameraChoice : null,
+                ),
+                DockItem(
+                  icon: Icons.chat_bubble_outline,
+                  tooltip: AppLocalizations.of(context).trackerDockChatTooltip,
+                  onTap: _openChat,
+                ),
+                DockItem(
+                  icon: Icons.add,
+                  tooltip: AppLocalizations.of(
+                    context,
+                  ).trackerDockAddFoodTooltip,
+                  onTap: isViewingToday ? _openAddFood : null,
+                  emphasized: true,
+                ),
+                DockItem(
+                  icon: Icons.person_outline,
+                  tooltip: AppLocalizations.of(
+                    context,
+                  ).trackerDockProfileTooltip,
+                  onTap: _openProfile,
+                ),
+                DockItem(
+                  icon: Icons.settings_outlined,
+                  tooltip: AppLocalizations.of(
+                    context,
+                  ).trackerDockSettingsTooltip,
+                  onTap: _openSettings,
+                ),
+              ],
+            ),
       body: GlassBackgroundGlow(
         child: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: () async {
-              // Reload whichever day the user is currently looking at —
-              // pulling to refresh on a past date should refresh *that*
-              // day, not silently jump back to today.
-              await Future.wait([
-                tracker.loadDailyData(tracker.selectedDate),
-                tracker.loadWeightHistory(),
-              ]);
-            },
-            child: GlassScrollBehavior(
+          children: [
+            RefreshIndicator(
+              onRefresh: () async {
+                // Reload whichever day the user is currently looking at —
+                // pulling to refresh on a past date should refresh *that*
+                // day, not silently jump back to today.
+                await Future.wait([
+                  tracker.loadDailyData(tracker.selectedDate),
+                  tracker.loadWeightHistory(),
+                  tracker.loadGarden(),
+                ]);
+              },
+              child: GlassScrollBehavior(
                 // Disallow the iOS/Android overscroll glow so the
                 // glass cards in the ListView don't get visually
                 // re-rasterized as the indicator draws over them.
@@ -632,212 +799,177 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
                 // full rationale.
                 physics: const ClampingScrollPhysics(),
                 child: SafeArea(
-                // Status-bar inset for the scrollable content only.
-                // The transparent AppBar (paired with
-                // `extendBodyBehindAppBar: true`) lets the glass
-                // background extend behind the status bar so the
-                // page reads as one continuous surface, but it no
-                // longer reserves the status-bar gutter for us.
-                // Without this SafeArea the date-nav row would
-                // slide under the status bar / notch. `bottom:
-                // false` because the floating Dock at the bottom
-                // already manages its own bottom inset.
-                top: true,
-                bottom: false,
-                child: ListView(
-                  // Bottom padding bumped to clear the floating Dock's
-                  // height (~64 px) plus its 16 px margin so the last
-                  // food-log tile never hides under the pill. Top
-                  // stays 0 — SafeArea above already reserves the
-                  // status-bar gutter and the date-nav row sits flush
-                  // against it.
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                  children: [
-                // Date navigation row — anchored at the top so the user
-                // always knows what day they're looking at.
-                _DateNavRow(
-                  label: _dateLabel(context, tracker.selectedDate, DateTime.now()),
-                  canGoForward: !isViewingToday,
-                  onPrev: () => tracker.loadDailyData(
-                    tracker.selectedDate.subtract(const Duration(days: 1))
+                  top: true,
+                  bottom: false,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(8, 12, 8, 20),
+                        child: NutriMindBrand(),
+                      ),
+                      // The brand and date scroll naturally with the diary.
+                      _DateNavRow(
+                        label: _dateLabel(
+                          context,
+                          tracker.selectedDate,
+                          DateTime.now(),
+                        ),
+                        canGoForward: !isViewingToday,
+                        onPrev: () => tracker.loadDailyData(
+                          DiaryClock.shiftDay(tracker.selectedDate, -1),
+                        ),
+                        onNext: () => tracker.loadDailyData(
+                          DiaryClock.shiftDay(tracker.selectedDate, 1),
+                        ),
+                        onPickDate: _openDatePicker,
+                        // Streak badge — only on the actual current day.
+                        // Browsing past days is a "history" experience
+                        // and the streak concept doesn't change with it,
+                        // so the badge hides when the user navigates
+                        // backwards (which also avoids the badge feeling
+                        // out of context next to a "Yesterday" / "20.09"
+                        // label).
+                        trailingBadge: isViewingToday
+                            ? _buildStreakBadge(context, tracker.streak)
+                            : null,
+                      ),
+                      const SizedBox(height: 12),
+                      // Soft "verify your email" reminder. Renders SizedBox.shrink()
+                      // when there's no user, the user has no email, the user
+                      // already verified, or they dismissed the banner this
+                      // session — so the line below is effectively a no-op for
+                      // the vast majority of the time and the user never has
+                      // to think about it.
+                      DiaryRecoveryBanner(
+                        tracker: tracker,
+                        onResumeMeal: _resumeMealDraft,
+                        onResolveSave: _resolvePendingSave,
+                      ),
+                      const EmailVerificationBanner(),
+                      const SizedBox(height: 12),
+                      _CaloriesSummaryCard(
+                        consumed: tracker.totalCalories,
+                        target: auth.currentUser?.dailyCalTarget,
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (isViewingToday) ...[
+                        GardenCard(
+                          garden: tracker.garden,
+                          loading: tracker.gardenLoading,
+                          failed: tracker.gardenFailed,
+                          onOpen: _openGarden,
+                          onRetry: tracker.loadGarden,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      if (isViewingToday && !showInitialLoader) ...[
+                        DailyGoalsCard(
+                          calories: DailyGoalProgress(
+                            consumed: tracker.totalCalories,
+                            target: auth.currentUser?.dailyCalTarget
+                                ?.toDouble(),
+                          ),
+                          protein: DailyGoalProgress(
+                            consumed: tracker.totalProtein,
+                            target: auth.currentUser?.proteinTarget,
+                          ),
+                          carbs: DailyGoalProgress(
+                            consumed: tracker.totalCarbs,
+                            target: auth.currentUser?.carbsTarget,
+                          ),
+                          fat: DailyGoalProgress(
+                            consumed: tracker.totalFat,
+                            target: auth.currentUser?.fatTarget,
+                          ),
+                          onConfigure: _openProfile,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      // Entry point to the weight history screen — sits between
+                      // the calorie summary and the macro rows so it's the
+                      // first thing visible after calories.
+                      _WeightHistoryEntryCard(
+                        latestWeight: tracker.latestWeight,
+                        onTap: _openWeightHistory,
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (!isViewingToday) ...[
+                        _MacroRow(
+                          label: AppLocalizations.of(context).addFoodProtein,
+                          consumed: tracker.totalProtein,
+                          target: auth.currentUser?.proteinTarget,
+                          color: const Color(0xFF3B82F6), // blue-500
+                        ),
+                        const SizedBox(height: 8),
+                        _MacroRow(
+                          label: AppLocalizations.of(context).trackerFoodCarbs,
+                          consumed: tracker.totalCarbs,
+                          target: auth.currentUser?.carbsTarget,
+                          color: const Color(0xFFF97316), // orange-500
+                        ),
+                        const SizedBox(height: 8),
+                        _MacroRow(
+                          label: AppLocalizations.of(context).trackerFoodFat,
+                          consumed: tracker.totalFat,
+                          target: auth.currentUser?.fatTarget,
+                          color: const Color(0xFFA855F7), // purple-500
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      _WaterRow(
+                        waterLogs: tracker.waterLogs,
+                        isLoading: tracker.isLoading,
+                        onAdd: _onAddWater,
+                        onDelete: (id) => _onDeleteWater(id),
+                      ),
+                      const SizedBox(height: 24),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () => Navigator.of(context).push<bool>(
+                            MaterialPageRoute(
+                              builder: (_) => const SavedMealsScreen(),
+                            ),
+                          ),
+                          icon: const Icon(Icons.bookmark_border),
+                          label: Text(AppLocalizations.of(context).mealLibrary),
+                        ),
+                      ),
+                      _FoodLogSection(
+                        grouped: tracker.foodLogsByMeal,
+                        onRepeatMeal: _repeatMeal,
+                        isDeleting: tracker.isLoading,
+                        onDeleteMeal: _onDeleteMeal,
+                        isEmpty: tracker.foodLogs.isEmpty && !showInitialLoader,
+                        mealLabel: _mealLabel,
+                        onDelete: _onDeleteFood,
+                        // Only AI-generated rows have something to
+                        // correct (a textual description Gemini produced);
+                        // entries entered manually via `AddFoodScreen`
+                        // don't carry an AI description at all. Passing a
+                        // single conditional callback keeps the per-tile
+                        // logic inside `_FoodLogTile` trivial: show the
+                        // edit button iff this callback is non-null.
+                        onReanalyze: _openReanalyze,
+                      ),
+                    ],
                   ),
-                  onNext: () => tracker.loadDailyData(
-                    tracker.selectedDate.add(const Duration(days: 1))
-                  ),
-                  onPickDate: _openDatePicker,
-                  // Streak badge — only on the actual current day.
-                  // Browsing past days is a "history" experience
-                  // and the streak concept doesn't change with it,
-                  // so the badge hides when the user navigates
-                  // backwards (which also avoids the badge feeling
-                  // out of context next to a "Yesterday" / "20.09"
-                  // label).
-                  trailingBadge: isViewingToday
-                      ? _buildStreakBadge(context, tracker.streak)
-                      : null
                 ),
-                const SizedBox(height: 12),
-                // Soft "verify your email" reminder. Renders SizedBox.shrink()
-                // when there's no user, the user has no email, the user
-                // already verified, or they dismissed the banner this
-                // session — so the line below is effectively a no-op for
-                // the vast majority of the time and the user never has
-                // to think about it.
-                const EmailVerificationBanner(),
-                const SizedBox(height: 12),
-                _CaloriesSummaryCard(
-                  consumed: tracker.totalCalories,
-                  target: auth.currentUser?.dailyCalTarget
-                                ),
-                const SizedBox(height: 12),
-
-                if (isViewingToday && !showInitialLoader) ...[
-                  DailyGoalsCard(
-                    calories: DailyGoalProgress(consumed: tracker.totalCalories,
-                        target: auth.currentUser?.dailyCalTarget?.toDouble()),
-                    protein: DailyGoalProgress(consumed: tracker.totalProtein,
-                        target: auth.currentUser?.proteinTarget),
-                    carbs: DailyGoalProgress(consumed: tracker.totalCarbs,
-                        target: auth.currentUser?.carbsTarget),
-                    fat: DailyGoalProgress(consumed: tracker.totalFat,
-                        target: auth.currentUser?.fatTarget),
-                    onConfigure: _openProfile,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                // Entry point to the weight history screen — sits between
-                // the calorie summary and the macro rows so it's the
-                // first thing visible after calories.
-                _WeightHistoryEntryCard(
-                  latestWeight: tracker.latestWeight,
-                  onTap: _openWeightHistory
-                                ),
-                const SizedBox(height: 12),
-
-                if (!isViewingToday) ...[
-                _MacroRow(
-                  label: AppLocalizations.of(context).addFoodProtein,
-                  consumed: tracker.totalProtein,
-                  target: auth.currentUser?.proteinTarget,
-                  color: const Color(0xFF3B82F6) // blue-500
-                                ),
-                const SizedBox(height: 8),
-                _MacroRow(
-                  label: AppLocalizations.of(context).trackerFoodCarbs,
-                  consumed: tracker.totalCarbs,
-                  target: auth.currentUser?.carbsTarget,
-                  color: const Color(0xFFF97316) // orange-500
-                                ),
-                const SizedBox(height: 8),
-                _MacroRow(
-                  label: AppLocalizations.of(context).trackerFoodFat,
-                  consumed: tracker.totalFat,
-                  target: auth.currentUser?.fatTarget,
-                  color: const Color(0xFFA855F7) // purple-500
-                                ),
-                ],
-                const SizedBox(height: 16),
-                _WaterRow(
-                  waterLogs: tracker.waterLogs,
-                  isLoading: tracker.isLoading,
-                  onAdd: _onAddWater,
-                  onDelete: (id) => _onDeleteWater(id)
-                                ),
-                const SizedBox(height: 24),
-                _FoodLogSection(
-                  grouped: tracker.foodLogsByMeal,
-                  isEmpty: tracker.foodLogs.isEmpty && !showInitialLoader,
-                  mealLabel: _mealLabel,
-                  onDelete: _onDeleteFood,
-                  // Only AI-generated rows have something to
-                  // correct (a textual description Gemini produced);
-                  // entries entered manually via `AddFoodScreen`
-                  // don't carry an AI description at all. Passing a
-                  // single conditional callback keeps the per-tile
-                  // logic inside `_FoodLogTile` trivial: show the
-                  // edit button iff this callback is non-null.
-                  onReanalyze: _openReanalyze
-                                )
-              ]
-                )
-                )
-            )
-          ),
-          if (showInitialLoader)
-            Positioned.fill(
-              child: ColoredBox(
-                color: theme.colorScheme.surface.withValues(alpha: 0.6),
-                child: const Center(child: CircularProgressIndicator())
-              )
+              ),
             ),
-
-          // Bottom-floating Dock. Mirrors the iOS / macOS dock
-          // convention: a frosted-glass pill that hovers above the
-          // scrolling body, holding the five home-screen actions as
-          // icon buttons (camera / chat / add / profile / settings).
-          // The Dock's "only enabled when viewing today" rule is
-          // expressed on the camera and add entries — they're
-          // `onTap: null` on past dates so the dock renders them
-          // visibly-disabled (the DockItem helper dims them and
-          // ignores taps) rather than letting the user log entries
-          // against a date the rest of the UI wouldn't render.
-          // `Add food` is marked `emphasized: true` — the most-frequent
-          // action, anchored as a filled-circle brand button in the
-          // dock center, matching the iOS dock "primary app" treatment
-          // and reinforcing muscle memory from the prior FAB. The
-          // entry-order here is intentional: the emphasized button
-          // sits in the centre (index 2 of 5) so the visual weight
-          // stays symmetric regardless of how many non-emphasized
-          // items surround it.
-          if (showInitialLoader)
-            const SizedBox.shrink()
-          else
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: AppDock(
-                items: [
-                  DockItem(
-                    icon: Icons.camera_alt_outlined,
-                    tooltip: AppLocalizations.of(context).trackerDockCameraTooltip,
-                    // The Dock item is intentionally
-                    // parameterless — both food and beverage
-                    // flows share the same camera icon, and the
-                    // choice happens in `_showCameraChoice`'s
-                    // modal sheet. Keeping the chooser *outside*
-                    // the Dock's onTap callback lets the dock
-                    // icon stay "press to take a photo" with no
-                    // commitment to which downstream flow.
-                    onTap: isViewingToday ? _showCameraChoice : null
-                  ),
-                  DockItem(
-                    icon: Icons.chat_bubble_outline,
-                    tooltip: AppLocalizations.of(context).trackerDockChatTooltip,
-                    onTap: _openChat
-                  ),
-                  DockItem(
-                    icon: Icons.add,
-                    tooltip: AppLocalizations.of(context).trackerDockAddFoodTooltip,
-                    onTap: isViewingToday ? _openAddFood : null,
-                    emphasized: true
-                  ),
-                  DockItem(
-                    icon: Icons.person_outline,
-                    tooltip: AppLocalizations.of(context).trackerDockProfileTooltip,
-                    onTap: _openProfile
-                  ),
-                  DockItem(
-                    icon: Icons.settings_outlined,
-                    tooltip: AppLocalizations.of(context).trackerDockSettingsTooltip,
-                    onTap: _openSettings
-                  )
-                ]
-              )
-            )
-        ]
+            if (showInitialLoader)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: theme.colorScheme.surface.withValues(alpha: 0.6),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+              ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -846,7 +978,7 @@ class _TrackerHomeScreenState extends State<TrackerHomeScreen> {
 // Date navigation row
 // =============================================================================
 
-/// Sits directly under the AppBar: ‹  Today  › (or "Yesterday" / "dd.MM.yyyy").
+/// Sits below the scrolling wordmark: ‹ Today › (or a historical date).
 /// Tapping the label opens the system date picker. The forward chevron
 /// disables itself at today or later so the user can't navigate into the
 /// future.
@@ -885,7 +1017,7 @@ class _DateNavRow extends StatelessWidget {
           IconButton(
             tooltip: AppLocalizations.of(context).trackerDatePrevTooltip,
             icon: const Icon(Icons.chevron_left),
-            onPressed: onPrev
+            onPressed: onPrev,
           ),
           Expanded(
             child: Center(
@@ -895,7 +1027,7 @@ class _DateNavRow extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 8
+                    vertical: 8,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -903,20 +1035,20 @@ class _DateNavRow extends StatelessWidget {
                       Icon(
                         Icons.calendar_today_outlined,
                         size: 18,
-                        color: theme.colorScheme.primary
+                        color: theme.colorScheme.primary,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         label,
                         style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600
-                        )
-                      )
-                    ]
-                  )
-                )
-              )
-            )
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
           // Optional trailing badge (e.g. the streak chip). Sits
           // between the centre label and the forward chevron so
@@ -927,7 +1059,7 @@ class _DateNavRow extends StatelessWidget {
           if (trailingBadge != null)
             Padding(
               padding: const EdgeInsets.only(right: 4),
-              child: trailingBadge!
+              child: trailingBadge!,
             ),
           IconButton(
             tooltip: AppLocalizations.of(context).trackerDateNextTooltip,
@@ -935,9 +1067,9 @@ class _DateNavRow extends StatelessWidget {
             // Disable at today-or-later so the user can never navigate
             // into a day with no data (or, worse, future-tense dates the
             // tracker isn't designed to handle).
-            onPressed: canGoForward ? onNext : null
-          )
-        ]
+            onPressed: canGoForward ? onNext : null,
+          ),
+        ],
       ),
     );
   }
@@ -981,7 +1113,7 @@ class _WeightHistoryEntryCard extends StatelessWidget {
                 : Icons.add_circle_outline,
             color: hasWeight
                 ? theme.colorScheme.primary
-                : theme.colorScheme.onSurfaceVariant
+                : theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -991,29 +1123,28 @@ class _WeightHistoryEntryCard extends StatelessWidget {
                 Text(
                   AppLocalizations.of(context).trackerWeightCardTitle,
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant
-                  )
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   hasWeight
-                      ? AppLocalizations.of(context).trackerWeightCardCurrent(_fmtKg(latestWeight!))
+                      ? AppLocalizations.of(
+                          context,
+                        ).trackerWeightCardCurrent(_fmtKg(latestWeight!))
                       : AppLocalizations.of(context).trackerWeightCardAdd,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: hasWeight
                         ? theme.colorScheme.onSurface
-                        : theme.colorScheme.onSurfaceVariant
-                  )
-                )
-              ]
-            )
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
-          Icon(
-            Icons.chevron_right,
-            color: theme.colorScheme.onSurfaceVariant
-          )
-        ]
+          Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
+        ],
       ),
     );
   }
@@ -1109,8 +1240,9 @@ class _CaloriesSummaryCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   hasTarget
-                      ? AppLocalizations.of(context)
-                          .trackerCaloriesKcalOf(target!.round().toString())
+                      ? AppLocalizations.of(
+                          context,
+                        ).trackerCaloriesKcalOf(target!.round().toString())
                       : AppLocalizations.of(context).trackerCaloriesKcalOnly,
                   // The kcal number is the primary text on the card —
                   // full contrast, not muted. The previous version
@@ -1172,13 +1304,9 @@ class _MacroRow extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
-              shape: BoxShape.circle
+              shape: BoxShape.circle,
             ),
-            child: Icon(
-              _macroIcon(label),
-              size: 18,
-              color: color
-            )
+            child: Icon(_macroIcon(label), size: 18, color: color),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1188,8 +1316,8 @@ class _MacroRow extends StatelessWidget {
                 Text(
                   label,
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant
-                  )
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 ClipRRect(
@@ -1197,13 +1325,12 @@ class _MacroRow extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: ratio,
                     minHeight: 6,
-                    backgroundColor:
-                        theme.colorScheme.surfaceContainerHigh,
-                    valueColor: AlwaysStoppedAnimation<Color>(color)
-                  )
-                )
-              ]
-            )
+                    backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(width: 12),
           Text(
@@ -1211,10 +1338,10 @@ class _MacroRow extends StatelessWidget {
                 ? '$consumedRounded / ${_formatG(target!)} ${AppLocalizations.of(context).unitGramsShort}'
                 : '$consumedRounded ${AppLocalizations.of(context).unitGramsShort}',
             style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600
-            )
-          )
-        ]
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1223,13 +1350,19 @@ class _MacroRow extends StatelessWidget {
   /// Keeps each row scannable at a glance without needing the
   /// label's first letter to do all the work.
   IconData _macroIcon(String label) {
-    if (label.contains('Protein') || label.contains('Белки') || label.contains('ცილები')) {
+    if (label.contains('Protein') ||
+        label.contains('Белки') ||
+        label.contains('ცილები')) {
       return Icons.fitness_center_outlined;
     }
-    if (label.contains('Carbs') || label.contains('Углеводы') || label.contains('ნახშირწყლები')) {
+    if (label.contains('Carbs') ||
+        label.contains('Углеводы') ||
+        label.contains('ნახშირწყლები')) {
       return Icons.bakery_dining_outlined;
     }
-    if (label.contains('Fat') || label.contains('Жиры') || label.contains('ცხიმები')) {
+    if (label.contains('Fat') ||
+        label.contains('Жиры') ||
+        label.contains('ცხიმები')) {
       return Icons.opacity_outlined;
     }
     return Icons.circle_outlined;
@@ -1288,6 +1421,9 @@ class _WaterRow extends StatefulWidget {
 }
 
 class _WaterRowState extends State<_WaterRow> {
+  final _quickPickClock = Stopwatch()..start();
+  int _lastQuickPickAt = -1000;
+
   /// Tracks the id of an entry we just deleted so we can show an
   /// undo-style SnackBar with a single confirm. The undo itself is
   /// out of scope (would require a "recently deleted" buffer on the
@@ -1306,6 +1442,9 @@ class _WaterRowState extends State<_WaterRow> {
   /// the local selection state on success so the chip's visual
   /// feedback tracks the persisted state.
   Future<void> _logQuickPick(int ml) async {
+    final elapsed = _quickPickClock.elapsedMilliseconds;
+    if (elapsed - _lastQuickPickAt < 500) return;
+    _lastQuickPickAt = elapsed;
     final ok = await context.read<TrackerProvider>().addWaterEntry(ml);
     if (!ok || !mounted) return;
     setState(() => _selectedQuickPickMl = ml);
@@ -1325,13 +1464,8 @@ class _WaterRowState extends State<_WaterRow> {
       auth.currentUser?.currentWeight,
     );
 
-    final totalMl = widget.waterLogs.fold<int>(
-      0,
-      (sum, w) => sum + w.amount,
-    );
-    final ratio = goalMl > 0
-        ? (totalMl / goalMl).clamp(0.0, 1.0)
-        : 0.0;
+    final totalMl = widget.waterLogs.fold<int>(0, (sum, w) => sum + w.amount);
+    final ratio = goalMl > 0 ? (totalMl / goalMl).clamp(0.0, 1.0) : 0.0;
     final remainingMl = (goalMl - totalMl).clamp(0, goalMl);
     final pct = goalMl > 0 ? ((totalMl / goalMl) * 100).round() : 0;
     final goalReached = goalMl > 0 && totalMl >= goalMl;
@@ -1351,10 +1485,7 @@ class _WaterRowState extends State<_WaterRow> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.water_drop_outlined,
-                color: theme.colorScheme.primary
-              ),
+              Icon(Icons.water_drop_outlined, color: theme.colorScheme.primary),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1363,28 +1494,28 @@ class _WaterRowState extends State<_WaterRow> {
                     Text(
                       AppLocalizations.of(context).trackerWaterTitle,
                       style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant
-                      )
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       AppLocalizations.of(context).trackerWaterProgress(
                         _formatWaterAmount(context, totalMl),
-                        _formatWaterAmount(context, goalMl)
+                        _formatWaterAmount(context, goalMl),
                       ),
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600
-                      )
-                    )
-                  ]
-                )
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               FilledButton.tonalIcon(
                 onPressed: widget.isLoading ? null : widget.onAdd,
                 icon: const Icon(Icons.add, size: 18),
-                label: Text(AppLocalizations.of(context).commonSave)
-              )
-            ]
+                label: Text(AppLocalizations.of(context).commonSave),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Row(
@@ -1395,27 +1526,28 @@ class _WaterRowState extends State<_WaterRow> {
                   child: LinearProgressIndicator(
                     value: ratio,
                     minHeight: 6,
-                    backgroundColor:
-                        theme.colorScheme.surfaceContainerHigh,
+                    backgroundColor: theme.colorScheme.surfaceContainerHigh,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      theme.colorScheme.primary
-                    )
-                  )
-                )
+                      theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Text(
                 goalReached
                     ? AppLocalizations.of(context).trackerWaterGoalReached
-                    : AppLocalizations.of(context).trackerWaterPctOfGoal(pct.toString()),
+                    : AppLocalizations.of(
+                        context,
+                      ).trackerWaterPctOfGoal(pct.toString()),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: goalReached
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurfaceVariant,
-                  fontWeight: goalReached ? FontWeight.w600 : null
-                )
-              )
-            ]
+                  fontWeight: goalReached ? FontWeight.w600 : null,
+                ),
+              ),
+            ],
           ),
           if (remainingMl > 0)
             Padding(
@@ -1424,13 +1556,13 @@ class _WaterRowState extends State<_WaterRow> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   AppLocalizations.of(context).trackerWaterRemaining(
-                    _formatWaterAmount(context, remainingMl)
+                    _formatWaterAmount(context, remainingMl),
                   ),
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant
-                  )
-                )
-              )
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
             ),
           // Quick-pick chips — tapping a chip logs the corresponding
           // volume directly via the same path the add-sheet's submit
@@ -1459,8 +1591,8 @@ class _WaterRowState extends State<_WaterRow> {
                       // selection so a second tap on the same volume
                       // doesn't double-log it.
                       : () => _logQuickPick(ml),
-                )
-            ]
+                ),
+            ],
           ),
           if (widget.waterLogs.isNotEmpty)
             Padding(
@@ -1468,10 +1600,10 @@ class _WaterRowState extends State<_WaterRow> {
               child: _WaterLogList(
                 waterLogs: widget.waterLogs,
                 onDelete: _handleDelete,
-                recentlyDeletedId: _recentlyDeletedId
-              )
-            )
-        ]
+                recentlyDeletedId: _recentlyDeletedId,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -1525,17 +1657,17 @@ class _WaterLogList extends StatelessWidget {
                   child: Text(
                     _formatWaterAmount(context, w.amount),
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600
-                    )
-                  )
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 Expanded(
                   child: Text(
                     _formatHourMinute(w.createdAt),
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant
-                    )
-                  )
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
                 if (recentlyDeletedId == w.id)
                   SizedBox(
@@ -1543,8 +1675,8 @@ class _WaterLogList extends StatelessWidget {
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: theme.colorScheme.primary
-                    )
+                      color: theme.colorScheme.primary,
+                    ),
                   )
                 else
                   IconButton(
@@ -1552,12 +1684,12 @@ class _WaterLogList extends StatelessWidget {
                     icon: const Icon(Icons.delete_outline, size: 20),
                     color: theme.colorScheme.onSurfaceVariant,
                     visualDensity: VisualDensity.compact,
-                    onPressed: () => onDelete(w.id)
-                  )
-              ]
-            )
+                    onPressed: () => onDelete(w.id),
+                  ),
+              ],
+            ),
           ),
-        const SizedBox(height: 8)
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -1595,6 +1727,7 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting || context.read<TrackerProvider>().isLoading) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _isSubmitting = true);
 
@@ -1607,7 +1740,7 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
     final ok = await tracker.addWaterEntry(ml);
 
     if (!mounted) return;
-    setState(() => _isSubmitting = false);
+    if (!ok) setState(() => _isSubmitting = false);
 
     if (ok) {
       Navigator.of(context).pop();
@@ -1616,10 +1749,8 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text(
-              _localizedTrackerError(context, tracker)
-            ),
-            behavior: SnackBarBehavior.floating
+            content: Text(_localizedTrackerError(context, tracker)),
+            behavior: SnackBarBehavior.floating,
           ),
         );
     }
@@ -1634,7 +1765,7 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
           24,
           8,
           24,
-          24 + MediaQuery.of(context).viewInsets.bottom
+          24 + MediaQuery.of(context).viewInsets.bottom,
         ),
         child: Form(
           key: _formKey,
@@ -1645,36 +1776,45 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
               Text(
                 AppLocalizations.of(context).trackerWaterAddTitle,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600
-                )
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 AppLocalizations.of(context).trackerWaterAddInstructions,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant
-                )
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _litresCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 autofocus: true,
                 decoration: InputDecoration(
                   labelText: AppLocalizations.of(context).trackerWaterLiters,
                   border: const OutlineInputBorder(),
-                  hintText: AppLocalizations.of(context).trackerWaterHint
+                  hintText: AppLocalizations.of(context).trackerWaterHint,
                 ),
                 validator: (v) {
                   final raw = (v ?? '').trim();
-                  if (raw.isEmpty) return AppLocalizations.of(context).trackerWaterRequired;
+                  if (raw.isEmpty) {
+                    return AppLocalizations.of(context).trackerWaterRequired;
+                  }
                   final n = num.tryParse(raw.replaceAll(',', '.'));
-                  if (n == null) return AppLocalizations.of(context).commonErrorShort;
-                  if (n < 0.1) return AppLocalizations.of(context).trackerWaterMin;
-                  if (n > 10) return AppLocalizations.of(context).trackerWaterMax;
+                  if (n == null) {
+                    return AppLocalizations.of(context).commonErrorShort;
+                  }
+                  if (n < 0.1) {
+                    return AppLocalizations.of(context).trackerWaterMin;
+                  }
+                  if (n > 10) {
+                    return AppLocalizations.of(context).trackerWaterMax;
+                  }
                   return null;
-                }
+                },
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -1683,7 +1823,9 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
                 children: [
                   for (final v in _quickPicks)
                     ActionChip(
-                      label: Text(_formatWaterAmount(context, (v * 1000).round())),
+                      label: Text(
+                        _formatWaterAmount(context, (v * 1000).round()),
+                      ),
                       onPressed: () {
                         _litresCtrl.text = v.toString();
                         // Keep the cursor at the end of the new value
@@ -1692,15 +1834,15 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
                         _litresCtrl.selection = TextSelection.collapsed(
                           offset: _litresCtrl.text.length,
                         );
-                      }
-                    )
-                ]
+                      },
+                    ),
+                ],
               ),
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: _isSubmitting ? null : _submit,
                 style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48)
+                  minimumSize: const Size.fromHeight(48),
                 ),
                 child: _isSubmitting
                     ? const SizedBox(
@@ -1708,14 +1850,14 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.2,
-                          color: Colors.white
-                        )
+                          color: Colors.white,
+                        ),
                       )
-                    : Text(AppLocalizations.of(context).commonSave)
-              )
-            ]
-          )
-        )
+                    : Text(AppLocalizations.of(context).commonSave),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1726,14 +1868,20 @@ class _AddWaterSheetState extends State<_AddWaterSheet> {
 class _FoodLogSection extends StatelessWidget {
   const _FoodLogSection({
     required this.grouped,
+    required this.onRepeatMeal,
     required this.isEmpty,
     required this.mealLabel,
     required this.onDelete,
     required this.onReanalyze,
+    required this.onDeleteMeal,
+    required this.isDeleting,
   });
 
   final Map<String, List<FoodLogModel>> grouped;
+  final void Function(List<FoodLogModel> foods) onRepeatMeal;
   final bool isEmpty;
+  final bool isDeleting;
+  final void Function(String mealType, List<FoodLogModel> foods) onDeleteMeal;
 
   /// BuildContext-aware meal-name resolver. The section header needs
   /// to render the active locale's label for each meal bucket, so
@@ -1758,9 +1906,9 @@ class _FoodLogSection extends StatelessWidget {
           child: Text(
             AppLocalizations.of(context).trackerEmptyLog,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant
-                )
-          )
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
         ),
       );
     }
@@ -1780,10 +1928,9 @@ class _FoodLogSection extends StatelessWidget {
     final known = knownOrder
         .where(grouped.containsKey)
         .map((k) => MapEntry(k, grouped[k]!));
-    final unknown = grouped.entries
-        .where((e) => !knownOrder.contains(e.key))
-        .toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    final unknown =
+        grouped.entries.where((e) => !knownOrder.contains(e.key)).toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
 
     // Each meal bucket becomes one [GlassCard] containing the
     // bucket header + its tiles. The card's outer shape is what
@@ -1806,7 +1953,7 @@ class _FoodLogSection extends StatelessWidget {
           child: GlassCard(
             padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
             borderRadius: BorderRadius.circular(18),
-                  child: Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
@@ -1818,10 +1965,17 @@ class _FoodLogSection extends StatelessWidget {
                         child: Text(
                           mealLabel(context, key),
                           style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurfaceVariant
-                              )
-                        )
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: AppLocalizations.of(context).bulkDeleteTooltip,
+                        icon: const Icon(Icons.delete_sweep_outlined, size: 21),
+                        onPressed: isDeleting
+                            ? null
+                            : () => onDeleteMeal(key, entries),
                       ),
                       // Calorie pill — small, right-aligned, brand
                       // tinted. The flame icon + kcal number is the
@@ -1840,12 +1994,14 @@ class _FoodLogSection extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary
-                              .withValues(alpha: 0.12),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.12,
+                          ),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.18),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.18,
+                            ),
                             width: 0.5,
                           ),
                         ),
@@ -1871,33 +2027,43 @@ class _FoodLogSection extends StatelessWidget {
                           ],
                         ),
                       ),
-                    ]
-                  )
+                    ],
+                  ),
                 ),
-                for (final food in entries)
-                  // Entry animation: when a new food log lands, the
-                  // matching tile gets a fresh key → fresh
-                  // mount → fires the TweenAnimationBuilder once.
-                  // Existing tiles re-mount with no animation
-                  // because their data didn't change.
-                  _EntryAnimation(
-                    key: ValueKey(food.id),
-                    child: _FoodLogTile(
-                      food: food,
-                      onDelete: () => onDelete(food),
-                      // The edit affordance is conditional on
-                      // `aiGenerated`: manually-entered rows don't
-                      // carry an AI description to refine, so
-                      // passing `null` here makes the tile render
-                      // with only the existing delete icon.
-                      onReanalyze: food.aiGenerated
-                          ? () => onReanalyze?.call(food)
-                          : null
+                for (final group in groupDiaryMeals(entries))
+                  if (group.first.mealId != null)
+                    LoggedMealTile(
+                      key: ValueKey(group.first.mealId),
+                      ingredients: group,
+                      onRepeat: isDeleting ? null : () => onRepeatMeal(group),
+                      onDelete: isDeleting
+                          ? null
+                          : () => onDeleteMeal(key, group),
                     )
-                  )
-              ]
-            )
-          )
+                  else
+                    // Entry animation: when a new food log lands, the
+                    // matching tile gets a fresh key → fresh
+                    // mount → fires the TweenAnimationBuilder once.
+                    // Existing tiles re-mount with no animation
+                    // because their data didn't change.
+                    _EntryAnimation(
+                      key: ValueKey(group.first.id),
+                      child: _FoodLogTile(
+                        food: group.first,
+                        onDelete: () => onDelete(group.first),
+                        // The edit affordance is conditional on
+                        // `aiGenerated`: manually-entered rows don't
+                        // carry an AI description to refine, so
+                        // passing `null` here makes the tile render
+                        // with only the existing delete icon.
+                        onReanalyze: group.first.aiGenerated
+                            ? () => onReanalyze?.call(group.first)
+                            : null,
+                      ),
+                    ),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -1999,14 +2165,14 @@ class _FoodLogTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w600
-        )
+          fontWeight: FontWeight.w600,
+        ),
       ),
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant
-        )
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
       ),
       // Trailing holds both action icons when the row is AI-
       // generated (render side-by-side via `Row(mainAxisSize:
@@ -2019,14 +2185,14 @@ class _FoodLogTile extends StatelessWidget {
             IconButton(
               tooltip: AppLocalizations.of(context).trackerTooltipRefine,
               icon: const Icon(Icons.edit_outlined),
-              onPressed: onReanalyze
+              onPressed: onReanalyze,
             ),
           IconButton(
             tooltip: AppLocalizations.of(context).trackerTooltipDelete,
             icon: const Icon(Icons.delete_outline),
-            onPressed: onDelete
-          )
-        ]
+            onPressed: onDelete,
+          ),
+        ],
       ),
     );
   }
