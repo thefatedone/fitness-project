@@ -1,293 +1,111 @@
-# NutriMind — AI-Powered Nutrition & Fitness Tracker
-
 <div align="center">
+  <img src="flutter_app/assets/branding/nutrimind-icon.png" alt="Иконка NutriMind — буква N с листьями" width="104" />
 
-![NutriMind Logo](https://img.shields.io/badge/NutriMind-22c55e?style=for-the-badge&logo=leaf&logoColor=black)
-![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker)
+  <h1>NutriMind</h1>
+  <p><strong>Питайся осознанно. Наблюдай, как растут твои привычки.</strong></p>
+  <p>Дневник питания с распознаванием блюд по фото,<br />персональными целями и маленьким садом, который растёт вместе с тобой.</p>
 
-**Your intelligent nutrition companion — track meals, analyze macros, and get personalized AI-powered guidance.**
+  <p>
+    <a href="#возможности">Возможности</a> ·
+    <a href="#маленькие-шаги-живой-сад">Мой сад</a> ·
+    <a href="#локальный-запуск">Запуск</a> ·
+    <a href="#документация">Документация</a>
+  </p>
 
-[Live Demo](#-quick-start) · [Features](#-features) · [Tech Stack](#-tech-stack) · [API Docs](#-api-reference)
-
+  <p><sub>Flutter · Next.js · FastAPI · PostgreSQL</sub></p>
 </div>
 
 ---
 
-## ✨ Features
+## Возможности
 
-### 🍎 Meal & Nutrition Tracking
-- Log breakfast, lunch, dinner, and snacks with detailed macro tracking
-- Interactive CalorieRing visualization showing daily progress
-- Animated MacroBars for protein, carbs, and fat targets
-- Water intake tracker with 8-glass interface
+**От фотографии до дневника — за несколько шагов.** Сфотографируй блюдо, проверь распознанные ингредиенты и порции, сохрани результат. Любимые блюда можно добавить повторно без нового сканирования.
 
-### 🤖 AI Nutrition Coach
-- Streaming AI chat powered by Anthropic Claude
-- Personalized recommendations based on your daily intake
-- Context-aware responses considering your nutrition goals
-- Chat history persistence
+| Каждый день | Что внутри |
+| :--- | :--- |
+| **Питание под контролем** | Калории, белки, жиры и углеводы относительно личных целей. Компактный индикатор оставшихся калорий и баланс дня. |
+| **Больше, чем калории** | Учёт воды, история веса, навигация по дням и персональные настройки питания. |
+| **Помощник рядом** | AI-чат с контекстом питания и целей пользователя. |
+| **Мотивация без давления** | Стрик дневника и личный сад с пятью стадиями роста. Пропущенный день не уничтожает растение. |
+| **Продуманные детали** | Отмена удаления, восстановление незавершённых сохранений при сбоях сети и защита от дублей при повторном запросе. |
+| **В твоём ритме** | Смена дня по часовому поясу устройства. Мобильный интерфейс на русском, английском и грузинском. |
 
-### 📊 Smart Dashboard
-- Real-time daily summary with date navigation
-- 7-day weight progress chart (Recharts)
-- Auto-calculated BMR, TDEE, and macro targets
-- Goal-based nutrition targets
+## Маленькие шаги, живой сад
 
-### 👤 User Profile
-- Full measurements tracking (height, weight, activity level)
-- Multiple dietary preferences and allergy management
-- BMI calculation with health categorization
-- Goal-based target recalculation
+<div align="center">
+  <img src="flutter_app/assets/garden/seed.webp" alt="Первая стадия авокадо — косточка" width="18%" />
+  <img src="flutter_app/assets/garden/root.webp" alt="Вторая стадия — первые корни" width="18%" />
+  <img src="flutter_app/assets/garden/sprout.webp" alt="Третья стадия — росток" width="18%" />
+  <img src="flutter_app/assets/garden/leaves.webp" alt="Четвёртая стадия — молодое растение" width="18%" />
+  <img src="flutter_app/assets/garden/tree.webp" alt="Пятая стадия — взрослое дерево" width="18%" />
+  <p><sub>Пять стадий роста · Одно дерево за 21 день с записями</sub></p>
+</div>
 
-### 🛡️ Admin Panel
-- User management with suspend/activate controls
-- Platform analytics with growth charts
-- Goal and activity level distribution insights
+Один день с записью еды — один шаг роста. Дни не обязаны идти подряд, а количество блюд и попадание в калораж не ускоряют растение. Есть авокадо для этого тоже не нужно.
 
----
+В саду видны текущая стадия, накопленные дни и путь до следующего этапа. Будущие стадии можно рассмотреть заранее; выращенные деревья остаются в коллекции.
 
-## 🏗️ Tech Stack
+## Устройство проекта
 
-### Frontend
-| Technology | Purpose |
-|------------|---------|
-| **Next.js 16** | React framework with Turbopack |
-| **TypeScript** | Type-safe development |
-| **Tailwind CSS v4** | Utility-first styling |
-| **Framer Motion** | Animations & transitions |
-| **Recharts** | Data visualization |
-| **Radix UI** | Accessible component primitives |
-| **Lucide React** | Icon library |
+| Часть | Технологии | Исходники |
+| :--- | :--- | :--- |
+| Мобильное приложение | Flutter / Dart · iOS и Android | [`flutter_app/`](flutter_app/) |
+| Веб-приложение | Next.js 16 · React · TypeScript | [`nutrimind/`](nutrimind/) |
+| Общий API | FastAPI · SQLAlchemy · Alembic · Gemini | [`backend/`](backend/) |
+| Локальная инфраструктура | PostgreSQL · Redis · MailHog · Docker Compose | [`docker-compose.yml`](docker-compose.yml) |
 
-### Backend
-| Technology | Purpose |
-|------------|---------|
-| **FastAPI** | Async Python web framework |
-| **SQLAlchemy 2.0** | Async ORM with type safety |
-| **PostgreSQL** | Primary database |
-| **Redis** | Caching & session storage |
-| **JWT + bcrypt** | Authentication |
-| **Anthropic Claude** | AI chat integration |
-| **Alembic** | Database migrations |
+Мобильный и веб-клиенты работают с общим API. Telegram-бот и стек наблюдаемости Elastic подключаются отдельно через Compose-профили. Проект находится в активной разработке; автоматический production-деплой пока не настроен.
 
-### Infrastructure
-| Technology | Purpose |
-|------------|---------|
-| **Docker Compose** | Container orchestration |
-| **python-jose** | JWT token handling |
-| **pydantic v2** | Data validation |
+## Локальный запуск
 
----
+Нужны Docker Compose и Make; на macOS можно использовать OrbStack. Команды выполняются из корня клонированного репозитория.
 
-## 🚀 Quick Start
+**1. Подготовь окружение.** Для первого запуска скопируй шаблон; существующий `.env` сохраняй.
 
-### Prerequisites
-
-- Docker & Docker Compose
-- Node.js 18+ (for local frontend development)
-- Python 3.12+ (for local backend development)
-- Anthropic API key (for AI features)
-
-### 1. Clone & Configure
-
-```bash
-git clone https://github.com/yourusername/nutrimind.git
-cd nutrimind
+```sh
+cp .env.example .env
 ```
 
-Create `backend/.env`:
+В `.env` задай свой `JWT_SECRET` и ключи Gemini (`GEMINI_API_KEY`, `GOOGLE_GEMINI_API_KEY`) для AI-функций. Локальные секреты не добавляй в Git.
 
-```env
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/nutrimind
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-super-secret-key-change-in-production
-GEMINI_API_KEY=your-gemini-api-key
+**2. Запусти окружение разработки.**
+
+```sh
+make dev
 ```
 
-### 2. Start with Docker
+Backend перезагружается при изменении кода, веб поддерживает Fast Refresh. Первый запуск собирает образы и устанавливает зависимости.
 
-```bash
-docker-compose up -d
+| Открыть | Адрес по умолчанию |
+| :--- | :--- |
+| Веб-приложение | [localhost:3000](http://localhost:3000) |
+| Интерактивная документация API | [localhost:8000/api/docs](http://localhost:8000/api/docs) |
+| Проверка доступности API | [localhost:8000/health](http://localhost:8000/health) |
+| Локальная почта MailHog | [localhost:8025](http://localhost:8025) |
+
+`make dev-logs` покажет логи, `make help` — доступные команды. Изменения схемы БД применяются отдельно через Alembic: перезагрузка сервера не заменяет миграции.
+
+**3. Запусти мобильное приложение.** Нужен Flutter и инструменты целевой платформы: Xcode для iOS или Android SDK для Android.
+
+```sh
+cd flutter_app
+flutter pub get
+flutter devices
+flutter run -d <DEVICE_ID> --dart-define=API_BASE_URL=<BACKEND_URL>
 ```
 
-Services will be available at:
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
+Замени `<DEVICE_ID>` идентификатором из списка устройств, а `<BACKEND_URL>` — адресом API: `http://localhost:8000` для iOS Simulator, `http://10.0.2.2:8000` для стандартного Android Emulator или LAN-адресом компьютера для физического телефона. Телефон и компьютер должны быть в одной доступной локальной сети. Для установки на iPhone потребуется настроить подпись в Xcode — [инструкция](docs/MOBILE_PERFORMANCE.md).
 
-### 3. Seed Demo Data
+## Документация
 
-```bash
-docker-compose run backend python seed.py
-```
-
-**Demo credentials:**
-- User: `demo@nutrimind.app` / `Demo123!`
-- Admin: `admin@nutrimind.app` / `Admin123!`
-
-### 4. Local Development
-
-```bash
-# Frontend
-cd nutrimind && npm install && npm run dev
-
-# Backend (separate terminal)
-cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
-```
-
----
-
-## 📁 Project Structure
-
-```
-nutrimind/
-├── public/                  # Static assets
-├── src/
-│   ├── app/                 # Next.js App Router
-│   │   ├── (auth)/         # Auth pages (login, register)
-│   │   ├── (dashboard)/    # Protected dashboard pages
-│   │   │   ├── tracker/    # Daily nutrition tracking
-│   │   │   ├── assistant/   # AI chat interface
-│   │   │   └── profile/    # User settings
-│   │   ├── (admin)/        # Admin panel pages
-│   │   │   ├── users/      # User management
-│   │   │   └── analytics/  # Platform analytics
-│   │   └── page.tsx        # Landing page
-│   ├── components/
-│   │   ├── dashboard/      # Dashboard UI components
-│   │   │   ├── CalorieRing.tsx
-│   │   │   ├── MacroBar.tsx
-│   │   │   ├── MealCard.tsx
-│   │   │   ├── AddFoodModal.tsx
-│   │   │   └── WaterTracker.tsx
-│   │   ├── landing/        # Landing page sections
-│   │   └── ui/             # Shared UI components
-│   └── lib/
-│       └── utils.ts        # Utility functions
-└── package.json
-
-backend/
-├── app/
-│   ├── api/v1/routes/      # API endpoints
-│   │   ├── auth.py         # Authentication
-│   │   ├── users.py        # User management
-│   │   ├── tracker.py      # Food & water logging
-│   │   └── ai.py           # AI chat
-│   ├── models/             # SQLAlchemy models
-│   ├── schemas/            # Pydantic schemas
-│   ├── services/           # Business logic
-│   └── core/               # Config, security, database
-├── alembic/                # Database migrations
-├── seed.py                 # Demo data seeder
-└── requirements.txt
-```
-
----
-
-## 🔌 API Reference
-
-### Authentication
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/auth/register` | Create new account |
-| `POST` | `/api/v1/auth/login` | Login (email or phone) |
-| `POST` | `/api/v1/auth/refresh` | Refresh access token |
-
-### User
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/users/me` | Get current user profile |
-| `PUT` | `/api/v1/users/me` | Update profile & recalculate targets |
-
-### Tracker
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/tracker/daily` | Get daily food/water summary |
-| `POST` | `/api/v1/tracker/food` | Log a food entry |
-| `PUT` | `/api/v1/tracker/food/{id}` | Update food entry |
-| `DELETE` | `/api/v1/tracker/food/{id}` | Delete food entry |
-| `POST` | `/api/v1/tracker/water` | Log water intake |
-| `POST` | `/api/v1/tracker/weight` | Log weight entry |
-| `GET` | `/api/v1/tracker/weight/history` | Get weight history |
-
-### AI Assistant
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/ai/chat` | Stream AI response (SSE) |
-| `GET` | `/api/v1/ai/history` | Get chat history |
-| `DELETE` | `/api/v1/ai/history` | Clear chat history |
-
-### Admin
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/users/admin/users` | List all users |
-| `PUT` | `/api/v1/users/admin/users/{id}` | Update user status |
-| `DELETE` | `/api/v1/users/admin/users/{id}` | Delete user |
-
----
-
-## 🎨 Design System
-
-### Color Palette
-
-| Name | Hex | Usage |
-|------|-----|-------|
-| **Primary** | `#22c55e` | CTAs, success states, accents |
-| **Background** | `#0a0a0a` | Page background |
-| **Surface** | `#111111` | Cards, panels |
-| **Border** | `#1a1a1a` | Dividers, borders |
-| **Text Primary** | `#ffffff` | Headings, important text |
-| **Text Secondary** | `#9ca3af` | Body text |
-| **Text Muted** | `#6b7280` | Labels, hints |
-
-### Typography
-
-- **Font**: Inter (Google Fonts)
-- **Headings**: Bold, 2xl–4xl
-- **Body**: Regular, sm–base
-- **Labels**: Medium, xs–sm
-
----
-
-## 🔒 Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DATABASE_URL` | PostgreSQL connection string | ✅ |
-| `REDIS_URL` | Redis connection string | ✅ |
-| `JWT_SECRET` | Secret for JWT signing | ✅ |
-| `GEMINI_API_KEY` | Gemini API key (meal-photo + chat) | ✅ |
-
----
-
-## 📈 Future Roadmap
-
-- [ ] Image-based food recognition (AI vision)
-- [ ] Social features (friends, challenges)
-- [ ] Recipe suggestions based on preferences
-- [ ] Apple Health / Google Fit integration
-- [ ] Meal planning with weekly targets
-- [ ] Custom food database upload
-
----
-
-## 📄 License
-
-MIT License — feel free to use this for your own projects.
+- [Локальная разработка и hot reload](docs/DEVELOPMENT.md) · [OrbStack и контейнеры](ORBSTACK.md)
+- [Сохранённые блюда](docs/SAVED_MEALS.md) · [Отмена удаления и восстановление](docs/DIARY_RECOVERY.md)
+- [Защита от повторных сохранений](docs/IDEMPOTENT_SAVES.md) · [Даты и часовые пояса](docs/DIARY_TIME.md)
+- [Личный сад](docs/GARDEN.md) · [Дневные цели](docs/DAILY_GOALS.md)
+- [Проверка производительности на телефоне](docs/MOBILE_PERFORMANCE.md) · [Фирменная иконка](docs/BRANDING.md)
 
 ---
 
 <div align="center">
-
-**Built with ❤️ for better nutrition**
-
+  <p><strong>Маленькие шаги каждый день.</strong><br /><sub>NutriMind · <a href="LICENSE">MIT License</a></sub></p>
 </div>
