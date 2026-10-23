@@ -776,5 +776,10 @@
   "@caloriesRemaining": {"placeholders": {"amount": {"type": "String"}}},
   "caloriesReached": "Goal reached",
   "caloriesAbove": "{amount} kcal above goal",
-  "@caloriesAbove": {"placeholders": {"amount": {"type": "String"}}}
+  "@caloriesAbove": {"placeholders": {"amount": {"type": "String"}}},
+  "gardenCurrentStage": "Your stage: {stage} · {number} of 5",
+  "@gardenCurrentStage": {"placeholders": {"stage": {"type": "String"}, "number": {"type": "int"}}},
+  "gardenCurrentStageTag": "Your stage",
+  "gardenStageDays": "{count} days",
+  "@gardenStageDays": {"placeholders": {"count": {"type": "int"}}}
 }

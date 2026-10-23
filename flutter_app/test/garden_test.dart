@@ -174,31 +174,77 @@ void main() {
       }
     },
   );
-  testWidgets('preview changes the illustration without awarding progress', (
-    tester,
-  ) async {
-    final tracker = TrackerProvider()..garden = garden(7, logged: true);
-    addTearDown(tracker.dispose);
-    await tester.pumpWidget(
-      host(
-        ChangeNotifierProvider.value(
-          value: tracker,
-          child: GardenScreen(onAddFood: () {}),
+  testWidgets(
+    'preview switches in place and retains actual stage and growth days',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final tracker = TrackerProvider()..garden = garden(7, logged: true);
+      addTearDown(tracker.dispose);
+      await tester.pumpWidget(
+        host(
+          ChangeNotifierProvider.value(
+            value: tracker,
+            child: GardenScreen(onAddFood: () {}),
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    final futureStage = find.byKey(const ValueKey('garden-stage-4'));
-    await tester.ensureVisible(futureStage);
-    await tester.pumpAndSettle();
-    await tester.tap(futureStage);
-    await tester.pumpAndSettle();
-    expect(find.text('Предпросмотр этапа'), findsOneWidget);
-    expect(tracker.garden!.totalDays, 7);
-    expect(tracker.garden!.stage, 2);
-    await tester.ensureVisible(find.text('Моё растение'));
-    await tester.tap(find.text('Моё растение'));
-    await tester.pumpAndSettle();
-    expect(find.text('Предпросмотр этапа'), findsNothing);
-  });
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Ваш этап: Росток · 3 из 5'), findsOneWidget);
+      expect(find.text('Дней роста: 7 / 21'), findsOneWidget);
+      final gallery = find.byKey(const PageStorageKey('garden-stages-gallery'));
+      final futureStage = find.byKey(const ValueKey('garden-stage-4'));
+      await tester.ensureVisible(futureStage);
+      await tester.pumpAndSettle();
+      final horizontal = tester
+          .state<ScrollableState>(
+            find.descendant(of: gallery, matching: find.byType(Scrollable)),
+          )
+          .position;
+      final vertical = tester
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byType(ListView),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+      vertical.jumpTo(20);
+      await tester.pump();
+      final x = horizontal.pixels;
+      final y = vertical.pixels;
+      expect(x, greaterThan(0));
+      await tester.tap(futureStage);
+      await tester.pumpAndSettle();
+      expect(horizontal.pixels, closeTo(x, .1));
+      expect(vertical.pixels, closeTo(y, .1));
+      expect(tester.widget<GardenScene>(find.byType(GardenScene)).stage, 4);
+      expect(find.text('Предпросмотр этапа'), findsOneWidget);
+      expect(tracker.garden!.totalDays, 7);
+      expect(tracker.garden!.stage, 2);
+      expect(find.text('Дней роста: 7 / 21'), findsOneWidget);
+      expect(find.text('Ваш этап: Росток · 3 из 5'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('garden-current-stage-marker')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('garden-stage-3')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<GardenScene>(find.byType(GardenScene)).stage, 3);
+      expect(horizontal.pixels, closeTo(x, .1));
+      expect(vertical.pixels, closeTo(y, .1));
+      await tester.ensureVisible(find.text('Моё растение'));
+      await tester.tap(find.text('Моё растение'));
+      await tester.pumpAndSettle();
+      vertical.jumpTo(y);
+      await tester.pumpAndSettle();
+      expect(tester.widget<GardenScene>(find.byType(GardenScene)).stage, 2);
+      expect(find.text('Предпросмотр этапа'), findsNothing);
+      expect(tracker.garden!.growthDays, 7);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

@@ -3374,6 +3374,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{amount} kcal above goal'**
   String caloriesAbove(String amount);
+
+  /// No description provided for @gardenCurrentStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your stage: {stage} · {number} of 5'**
+  String gardenCurrentStage(String stage, int number);
+
+  /// No description provided for @gardenCurrentStageTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Your stage'**
+  String get gardenCurrentStageTag;
+
+  /// No description provided for @gardenStageDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days'**
+  String gardenStageDays(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -1819,4 +1819,17 @@ class AppLocalizationsKa extends AppLocalizations {
   String caloriesAbove(String amount) {
     return 'მიზანზე $amount კკალ-ით მეტი';
   }
+
+  @override
+  String gardenCurrentStage(String stage, int number) {
+    return 'შენი ეტაპი: $stage · $number / 5';
+  }
+
+  @override
+  String get gardenCurrentStageTag => 'შენი ეტაპი';
+
+  @override
+  String gardenStageDays(int count) {
+    return '$count დღე';
+  }
 }

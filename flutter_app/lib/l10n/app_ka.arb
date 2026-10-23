@@ -747,5 +747,10 @@
   "@caloriesRemaining": {"placeholders": {"amount": {"type": "String"}}},
   "caloriesReached": "მიზანი მიღწეულია",
   "caloriesAbove": "მიზანზე {amount} კკალ-ით მეტი",
-  "@caloriesAbove": {"placeholders": {"amount": {"type": "String"}}}
+  "@caloriesAbove": {"placeholders": {"amount": {"type": "String"}}},
+  "gardenCurrentStage": "შენი ეტაპი: {stage} · {number} / 5",
+  "@gardenCurrentStage": {"placeholders": {"stage": {"type": "String"}, "number": {"type": "int"}}},
+  "gardenCurrentStageTag": "შენი ეტაპი",
+  "gardenStageDays": "{count} დღე",
+  "@gardenStageDays": {"placeholders": {"count": {"type": "int"}}}
 }

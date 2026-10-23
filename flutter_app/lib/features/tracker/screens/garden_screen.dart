@@ -17,25 +17,18 @@ class GardenScreen extends StatefulWidget {
 class _GardenScreenState extends State<GardenScreen> {
   int? _previewStage;
   final ScrollController _scroll = ScrollController();
+  final ScrollController _stagesScroll = ScrollController();
 
   @override
   void dispose() {
     _scroll.dispose();
+    _stagesScroll.dispose();
     super.dispose();
   }
 
   void _showStage(int stage) {
-    setState(() => _previewStage = stage);
-    if (!_scroll.hasClients) return;
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _scroll.jumpTo(0);
-    } else {
-      _scroll.animateTo(
-        0,
-        duration: const Duration(milliseconds: 450),
-        curve: Curves.easeOutCubic,
-      );
-    }
+    final current = context.read<TrackerProvider>().garden?.stage;
+    setState(() => _previewStage = stage == current ? null : stage);
   }
 
   @override
@@ -100,6 +93,47 @@ class _GardenScreenState extends State<GardenScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
                   children: [
+                    Padding(
+                      key: const ValueKey('garden-current-progress'),
+                      padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.gardenCurrentStage(
+                              gardenStageLabel(l10n, model.stage),
+                              model.stage + 1,
+                            ),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            l10n.gardenGrowthCount(model.growthDays),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      l10n.gardenStagesTitle,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _StageGallery(
+                      key: const PageStorageKey('garden-stages-gallery'),
+                      controller: _stagesScroll,
+                      current: model.stage,
+                      selected: _previewStage ?? model.stage,
+                      onSelect: _showStage,
+                    ),
+                    const SizedBox(height: 14),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(28),
                       child: SizedBox(
@@ -146,18 +180,6 @@ class _GardenScreenState extends State<GardenScreen> {
                         height: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 22),
-                    Text(
-                      l10n.gardenStagesTitle,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _StageGallery(
-                      selected: _previewStage ?? model.stage,
-                      onSelect: _showStage,
-                    ),
                     const SizedBox(height: 18),
                     _GardenPanel(
                       child: Column(
@@ -178,11 +200,6 @@ class _GardenScreenState extends State<GardenScreen> {
                           ),
                           const SizedBox(height: 16),
                           _Stages(model: model),
-                          const SizedBox(height: 16),
-                          Text(
-                            l10n.gardenGrowthCount(model.growthDays),
-                            style: theme.textTheme.labelMedium,
-                          ),
                         ],
                       ),
                     ),
@@ -409,7 +426,15 @@ class _Week extends StatelessWidget {
 }
 
 class _StageGallery extends StatelessWidget {
-  const _StageGallery({required this.selected, required this.onSelect});
+  const _StageGallery({
+    super.key,
+    required this.selected,
+    required this.current,
+    required this.controller,
+    required this.onSelect,
+  });
+  final ScrollController controller;
+  final int current;
   final int selected;
   final ValueChanged<int> onSelect;
 
@@ -418,8 +443,9 @@ class _StageGallery extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final dark = theme.brightness == Brightness.dark;
-    final large = MediaQuery.textScalerOf(context).scale(14) > 21;
+    final large = MediaQuery.textScalerOf(context).scale(14) > 17;
     return SingleChildScrollView(
+      controller: controller,
       scrollDirection: Axis.horizontal,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -430,10 +456,12 @@ class _StageGallery extends StatelessWidget {
               child: Semantics(
                 button: true,
                 selected: selected == i,
-                label: gardenStageLabel(l10n, i),
+                label: i == current
+                    ? '${gardenStageLabel(l10n, i)}, ${l10n.gardenCurrentStageTag}'
+                    : gardenStageLabel(l10n, i),
                 child: SizedBox(
                   width: large ? 132 : 94,
-                  height: large ? null : 180,
+                  height: large ? null : 190,
                   child: Material(
                     color: selected == i
                         ? (dark
@@ -468,11 +496,24 @@ class _StageGallery extends StatelessWidget {
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              '${GardenModel.thresholds[i]}',
+                              l10n.gardenStageDays(GardenModel.thresholds[i]),
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
+                            const SizedBox(height: 4),
+                            if (i == current)
+                              Text(
+                                l10n.gardenCurrentStageTag,
+                                key: const ValueKey(
+                                  'garden-current-stage-marker',
+                                ),
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                           ],
                         ),
                       ),

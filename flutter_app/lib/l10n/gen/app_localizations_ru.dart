@@ -1841,4 +1841,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String caloriesAbove(String amount) {
     return 'Выше цели на $amount ккал';
   }
+
+  @override
+  String gardenCurrentStage(String stage, int number) {
+    return 'Ваш этап: $stage · $number из 5';
+  }
+
+  @override
+  String get gardenCurrentStageTag => 'Ваш этап';
+
+  @override
+  String gardenStageDays(int count) {
+    return '$count дн.';
+  }
 }

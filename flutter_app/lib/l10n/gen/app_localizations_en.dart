@@ -1828,4 +1828,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String caloriesAbove(String amount) {
     return '$amount kcal above goal';
   }
+
+  @override
+  String gardenCurrentStage(String stage, int number) {
+    return 'Your stage: $stage · $number of 5';
+  }
+
+  @override
+  String get gardenCurrentStageTag => 'Your stage';
+
+  @override
+  String gardenStageDays(int count) {
+    return '$count days';
+  }
 }

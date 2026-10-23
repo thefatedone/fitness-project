@@ -747,5 +747,10 @@
   "@caloriesRemaining": {"placeholders": {"amount": {"type": "String"}}},
   "caloriesReached": "Цель достигнута",
   "caloriesAbove": "Выше цели на {amount} ккал",
-  "@caloriesAbove": {"placeholders": {"amount": {"type": "String"}}}
+  "@caloriesAbove": {"placeholders": {"amount": {"type": "String"}}},
+  "gardenCurrentStage": "Ваш этап: {stage} · {number} из 5",
+  "@gardenCurrentStage": {"placeholders": {"stage": {"type": "String"}, "number": {"type": "int"}}},
+  "gardenCurrentStageTag": "Ваш этап",
+  "gardenStageDays": "{count} дн.",
+  "@gardenStageDays": {"placeholders": {"count": {"type": "int"}}}
 }
