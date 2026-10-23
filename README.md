@@ -1,15 +1,15 @@
 <div align="center">
-  <img src="flutter_app/assets/branding/nutrimind-icon.png" alt="Иконка NutriMind — буква N с листьями" width="104" />
+  <img src="flutter_app/assets/branding/nutrimind-icon.png" alt="NutriMind icon — a leaf-inspired letter N" width="104" />
 
   <h1>NutriMind</h1>
-  <p><strong>Питайся осознанно. Наблюдай, как растут твои привычки.</strong></p>
-  <p>Дневник питания с распознаванием блюд по фото,<br />персональными целями и маленьким садом, который растёт вместе с тобой.</p>
+  <p><strong>Eat mindfully. Watch your habits grow.</strong></p>
+  <p>A nutrition diary with meal recognition from photos,<br />personal goals, and a little garden that grows with you.</p>
 
   <p>
-    <a href="#возможности">Возможности</a> ·
-    <a href="#маленькие-шаги-живой-сад">Мой сад</a> ·
-    <a href="#локальный-запуск">Запуск</a> ·
-    <a href="#документация">Документация</a>
+    <a href="#features">Features</a> ·
+    <a href="#small-steps-a-growing-garden">My garden</a> ·
+    <a href="#local-setup">Getting started</a> ·
+    <a href="#documentation">Documentation</a>
   </p>
 
   <p><sub>Flutter · Next.js · FastAPI · PostgreSQL</sub></p>
@@ -17,75 +17,75 @@
 
 ---
 
-## Возможности
+## Features
 
-**От фотографии до дневника — за несколько шагов.** Сфотографируй блюдо, проверь распознанные ингредиенты и порции, сохрани результат. Любимые блюда можно добавить повторно без нового сканирования.
+**From photo to diary in just a few steps.** Take a picture of your meal, review the recognized ingredients and portions, and save the result. Add your favorite meals again without scanning them each time.
 
-| Каждый день | Что внутри |
+| Every day | What you get |
 | :--- | :--- |
-| **Питание под контролем** | Калории, белки, жиры и углеводы относительно личных целей. Компактный индикатор оставшихся калорий и баланс дня. |
-| **Больше, чем калории** | Учёт воды, история веса, навигация по дням и персональные настройки питания. |
-| **Помощник рядом** | AI-чат с контекстом питания и целей пользователя. |
-| **Мотивация без давления** | Стрик дневника и личный сад с пятью стадиями роста. Пропущенный день не уничтожает растение. |
-| **Продуманные детали** | Отмена удаления, восстановление незавершённых сохранений при сбоях сети и защита от дублей при повторном запросе. |
-| **В твоём ритме** | Смена дня по часовому поясу устройства. Мобильный интерфейс на русском, английском и грузинском. |
+| **Nutrition at a glance** | Calories, protein, fat, and carbs against your personal targets. A compact remaining-calorie indicator and daily balance. |
+| **Beyond calories** | Water tracking, weight history, day navigation, and personal nutrition settings. |
+| **A helping hand** | An AI chat assistant with context about your nutrition and goals. |
+| **Motivation without pressure** | A diary streak and a personal garden with five growth stages. Missing a day does not destroy your plant. |
+| **Thoughtful details** | Undo deletion, recover unfinished saves after network failures, and prevent duplicates when retrying requests. |
+| **At your own pace** | Day changes follow your device's time zone. The mobile interface supports English, Russian, and Georgian. |
 
-## Маленькие шаги, живой сад
+## Small steps, a growing garden
 
 <div align="center">
-  <img src="flutter_app/assets/garden/seed.webp" alt="Первая стадия авокадо — косточка" width="18%" />
-  <img src="flutter_app/assets/garden/root.webp" alt="Вторая стадия — первые корни" width="18%" />
-  <img src="flutter_app/assets/garden/sprout.webp" alt="Третья стадия — росток" width="18%" />
-  <img src="flutter_app/assets/garden/leaves.webp" alt="Четвёртая стадия — молодое растение" width="18%" />
-  <img src="flutter_app/assets/garden/tree.webp" alt="Пятая стадия — взрослое дерево" width="18%" />
-  <p><sub>Пять стадий роста · Одно дерево за 21 день с записями</sub></p>
+  <img src="flutter_app/assets/garden/seed.webp" alt="Avocado stage one — seed" width="18%" />
+  <img src="flutter_app/assets/garden/root.webp" alt="Stage two — first roots" width="18%" />
+  <img src="flutter_app/assets/garden/sprout.webp" alt="Stage three — sprout" width="18%" />
+  <img src="flutter_app/assets/garden/leaves.webp" alt="Stage four — young plant" width="18%" />
+  <img src="flutter_app/assets/garden/tree.webp" alt="Stage five — mature tree" width="18%" />
+  <p><sub>Five growth stages · One tree for every 21 days with food entries</sub></p>
 </div>
 
-Один день с записью еды — один шаг роста. Дни не обязаны идти подряд, а количество блюд и попадание в калораж не ускоряют растение. Есть авокадо для этого тоже не нужно.
+One day with a food entry earns one step of growth. Days do not need to be consecutive, and neither logging more meals nor hitting your calorie target makes the plant grow faster. You do not need to eat avocados, either.
 
-В саду видны текущая стадия, накопленные дни и путь до следующего этапа. Будущие стадии можно рассмотреть заранее; выращенные деревья остаются в коллекции.
+Your garden shows the current stage, days of growth, and progress toward the next stage. Preview future stages at any time; fully grown trees stay in your collection.
 
-## Устройство проекта
+## Project structure
 
-| Часть | Технологии | Исходники |
+| Component | Technologies | Source |
 | :--- | :--- | :--- |
-| Мобильное приложение | Flutter / Dart · iOS и Android | [`flutter_app/`](flutter_app/) |
-| Веб-приложение | Next.js 16 · React · TypeScript | [`nutrimind/`](nutrimind/) |
-| Общий API | FastAPI · SQLAlchemy · Alembic · Gemini | [`backend/`](backend/) |
-| Локальная инфраструктура | PostgreSQL · Redis · MailHog · Docker Compose | [`docker-compose.yml`](docker-compose.yml) |
+| Mobile app | Flutter / Dart · iOS and Android | [`flutter_app/`](flutter_app/) |
+| Web app | Next.js 16 · React · TypeScript | [`nutrimind/`](nutrimind/) |
+| Shared API | FastAPI · SQLAlchemy · Alembic · Gemini | [`backend/`](backend/) |
+| Local infrastructure | PostgreSQL · Redis · MailHog · Docker Compose | [`docker-compose.yml`](docker-compose.yml) |
 
-Мобильный и веб-клиенты работают с общим API. Telegram-бот и стек наблюдаемости Elastic подключаются отдельно через Compose-профили. Проект находится в активной разработке; автоматический production-деплой пока не настроен.
+The mobile and web clients share the same API. The Telegram bot and Elastic observability stack are optional Compose profiles. The project is under active development; automated production deployment is not yet configured.
 
-## Локальный запуск
+## Local setup
 
-Нужны Docker Compose и Make; на macOS можно использовать OrbStack. Команды выполняются из корня клонированного репозитория.
+You will need Docker Compose and Make; on macOS, you can use OrbStack. Run these commands from the root of the cloned repository.
 
-**1. Подготовь окружение.** Для первого запуска скопируй шаблон; существующий `.env` сохраняй.
+**1. Configure your environment.** Copy the template on your first run; keep any existing `.env` file.
 
 ```sh
 cp .env.example .env
 ```
 
-В `.env` задай свой `JWT_SECRET` и ключи Gemini (`GEMINI_API_KEY`, `GOOGLE_GEMINI_API_KEY`) для AI-функций. Локальные секреты не добавляй в Git.
+Set your own `JWT_SECRET` and Gemini keys (`GEMINI_API_KEY`, `GOOGLE_GEMINI_API_KEY`) in `.env` to enable AI features. Keep local secrets out of Git.
 
-**2. Запусти окружение разработки.**
+**2. Start the development environment.**
 
 ```sh
 make dev
 ```
 
-Backend перезагружается при изменении кода, веб поддерживает Fast Refresh. Первый запуск собирает образы и устанавливает зависимости.
+The backend reloads when its code changes, and the web app supports Fast Refresh. The first run builds the images and installs dependencies.
 
-| Открыть | Адрес по умолчанию |
+| Service | Default address |
 | :--- | :--- |
-| Веб-приложение | [localhost:3000](http://localhost:3000) |
-| Интерактивная документация API | [localhost:8000/api/docs](http://localhost:8000/api/docs) |
-| Проверка доступности API | [localhost:8000/health](http://localhost:8000/health) |
-| Локальная почта MailHog | [localhost:8025](http://localhost:8025) |
+| Web app | [localhost:3000](http://localhost:3000) |
+| Interactive API documentation | [localhost:8000/api/docs](http://localhost:8000/api/docs) |
+| API health check | [localhost:8000/health](http://localhost:8000/health) |
+| MailHog local inbox | [localhost:8025](http://localhost:8025) |
 
-`make dev-logs` покажет логи, `make help` — доступные команды. Изменения схемы БД применяются отдельно через Alembic: перезагрузка сервера не заменяет миграции.
+Use `make dev-logs` to view logs and `make help` to list available commands. Database schema changes must be applied separately through Alembic; server reloads do not replace migrations.
 
-**3. Запусти мобильное приложение.** Нужен Flutter и инструменты целевой платформы: Xcode для iOS или Android SDK для Android.
+**3. Run the mobile app.** Install Flutter and the tools for your target platform: Xcode for iOS or the Android SDK for Android.
 
 ```sh
 cd flutter_app
@@ -94,18 +94,18 @@ flutter devices
 flutter run -d <DEVICE_ID> --dart-define=API_BASE_URL=<BACKEND_URL>
 ```
 
-Замени `<DEVICE_ID>` идентификатором из списка устройств, а `<BACKEND_URL>` — адресом API: `http://localhost:8000` для iOS Simulator, `http://10.0.2.2:8000` для стандартного Android Emulator или LAN-адресом компьютера для физического телефона. Телефон и компьютер должны быть в одной доступной локальной сети. Для установки на iPhone потребуется настроить подпись в Xcode — [инструкция](docs/MOBILE_PERFORMANCE.md).
+Replace `<DEVICE_ID>` with an identifier from the device list and `<BACKEND_URL>` with your API address: `http://localhost:8000` for iOS Simulator, `http://10.0.2.2:8000` for the standard Android Emulator, or your computer's LAN address for a physical phone. The phone and computer must share an accessible local network. Installing on an iPhone requires signing setup in Xcode — see the [guide](docs/MOBILE_PERFORMANCE.md).
 
-## Документация
+## Documentation
 
-- [Локальная разработка и hot reload](docs/DEVELOPMENT.md) · [OrbStack и контейнеры](ORBSTACK.md)
-- [Сохранённые блюда](docs/SAVED_MEALS.md) · [Отмена удаления и восстановление](docs/DIARY_RECOVERY.md)
-- [Защита от повторных сохранений](docs/IDEMPOTENT_SAVES.md) · [Даты и часовые пояса](docs/DIARY_TIME.md)
-- [Личный сад](docs/GARDEN.md) · [Дневные цели](docs/DAILY_GOALS.md)
-- [Проверка производительности на телефоне](docs/MOBILE_PERFORMANCE.md) · [Фирменная иконка](docs/BRANDING.md)
+- [Local development and hot reload](docs/DEVELOPMENT.md) · [OrbStack and containers](ORBSTACK.md)
+- [Saved meals](docs/SAVED_MEALS.md) · [Undo deletion and recovery](docs/DIARY_RECOVERY.md)
+- [Duplicate-save prevention](docs/IDEMPOTENT_SAVES.md) · [Dates and time zones](docs/DIARY_TIME.md)
+- [Personal garden](docs/GARDEN.md) · [Daily goals](docs/DAILY_GOALS.md)
+- [Performance testing on a phone](docs/MOBILE_PERFORMANCE.md) · [App icon and branding](docs/BRANDING.md)
 
 ---
 
 <div align="center">
-  <p><strong>Маленькие шаги каждый день.</strong><br /><sub>NutriMind · <a href="LICENSE">MIT License</a></sub></p>
+  <p><strong>Small steps, every day.</strong><br /><sub>NutriMind · <a href="LICENSE">MIT License</a></sub></p>
 </div>
